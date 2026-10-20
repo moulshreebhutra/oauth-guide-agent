@@ -89,6 +89,7 @@ export default function Live() {
     <main>
       <PageHead
         center
+        compact={!!guide}
         eyebrow="Live agent"
         title={<>Research any app, <mark className="hl">get a shareable guide</mark></>}
         lede="Type an app name or website. The agent searches, reads the provider's pages, and writes a guide. Quotes are checked by code against the pages it actually read; anything it cannot back up is downgraded."
@@ -97,6 +98,12 @@ export default function Live() {
           <input value={app} onChange={(e) => setApp(e.target.value)} placeholder="e.g. Linear, or zoom.us" maxLength={120} aria-label="App name or website" />
           <button className="btn" disabled={busy || app.trim().length < 2}>{busy ? "Working…" : "Generate guide"}</button>
         </form>
+        {guide && cachedAt && !busy && (
+          <p className="cachenote">
+            Saved copy from {Math.max(1, Math.round((Date.now() - cachedAt) / 60_000))} minute(s) ago, kept for 6 hours.{" "}
+            <button type="button" className="linkbtn" onClick={() => run(null, true)}>Write a fresh one</button>
+          </p>
+        )}
         {(busy || steps.length > 0 || err) && (
           <div className="agentlog" aria-live="polite">
             {busy && <p className="now"><span className="spin" aria-hidden /> {now} <span className="muted">{secs}s</span></p>}
@@ -127,15 +134,9 @@ export default function Live() {
           </div>
         )}
       </PageHead>
-      {guide && cachedAt && (
-        <p className="muted" style={{ textAlign: "center" }}>
-          Saved copy from {Math.max(1, Math.round((Date.now() - cachedAt) / 60_000))} minute(s) ago, kept for 6 hours.{" "}
-          <button type="button" className="linkbtn" disabled={busy} onClick={() => run(null, true)}>Write a fresh one</button>
-        </p>
-      )}
-      {guide && <GuideView g={guide.g} notes={guide.notes} />}
+      {guide && <GuideView g={guide.g} notes={guide.notes} embedded />}
       {guide && (
-        <p className="wrap" style={{ paddingTop: 24 }}>
+        <p className="wrap sharebar">
           {share && (
             <button className="btn" onClick={() => { navigator.clipboard.writeText(location.origin + share); setCopied(true); }}>
               {copied ? "Link copied" : "Copy share link"}

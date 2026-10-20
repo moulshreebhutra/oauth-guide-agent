@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 
 /** Dark page header band, the same pattern composio.dev uses at the top of every page. */
-export function PageHead({ eyebrow, title, lede, children, center }: { eyebrow?: ReactNode; title: ReactNode; lede?: ReactNode; children?: ReactNode; center?: boolean }) {
+export function PageHead({ eyebrow, title, lede, children, center, compact }: { eyebrow?: ReactNode; title: ReactNode; lede?: ReactNode; children?: ReactNode; center?: boolean; compact?: boolean }) {
   return (
-    <div className={`band pagehead${center ? " center" : ""}`}>
+    <div className={`band pagehead${center ? " center" : ""}${compact ? " compact" : ""}`}>
       <div className="wrap">
         {eyebrow && <p className="eyebrow">{eyebrow}</p>}
         <h1>{title}</h1>

@@ -56,7 +56,7 @@ function ClaimList({ title, items, emptyText }: { title: string; items: Claim[];
   );
 }
 
-export function GuideView({ g, notes = [], back = false, banner }: { g: Guide; notes?: string[]; back?: boolean; banner?: string }) {
+export function GuideView({ g, notes = [], back = false, banner, embedded = false }: { g: Guide; notes?: string[]; back?: boolean; banner?: string; embedded?: boolean }) {
   const mins = g.effort.hands_on_minutes;
   const toc = [
     "Who does what", "Steps", "Requirements",
@@ -67,7 +67,7 @@ export function GuideView({ g, notes = [], back = false, banner }: { g: Guide; n
     "Next actions", "What was tested", "What we are unsure about", "Sources",
   ];
   return (
-    <article className="guide">
+    <article className={`guide${embedded ? " embedded" : ""}`}>
       <PageHead
         eyebrow={<>{back && <><Link href="/" className="back">← All guides</Link><br /></>}{g.generated_by === "agent" ? "Generated live by the agent, not human-checked" : "Researched guide"}</>}
         title={<span className="titlerow"><Logo slug={g.slug} app={g.app} size={52} />{g.app}</span>}

@@ -164,8 +164,9 @@ a.cmp:hover{background:#fafafa}
 .guide-body h2{font-size:1.75rem;margin:64px 0 20px;padding-top:32px;border-top:1px solid var(--rule)}
 .guide-body section:first-of-type h2{margin-top:0;border-top:0;padding-top:0}
 .banner{background:var(--card);border:1px solid var(--rule);border-left:4px solid var(--l2);padding:14px 18px;margin:0 0 24px;font-size:15px}
-.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));margin:0;border:1px solid var(--rule);background:var(--card)}
-.fact{padding:22px;border-top:4px solid var(--rule);border-right:1px solid var(--rule)}
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;margin:0 0 56px;border:1px solid var(--rule);background:var(--rule)}
+@media(max-width:720px){.facts{grid-template-columns:1fr}}
+.fact{padding:24px;background:var(--card);border-top:4px solid var(--rule)}
 .fact.tier-1{border-top-color:var(--l1)}.fact.tier-2{border-top-color:var(--l2)}.fact.tier-3{border-top-color:var(--l3)}.fact.tier-4{border-top-color:var(--l4)}
 .fact .k{font:12px var(--mono);text-transform:uppercase;color:var(--muted)}.fact strong{display:block;font-weight:500;font-size:1.3rem;letter-spacing:-.02em;margin:6px 0}
 .fact p{font-size:14px;line-height:1.55;color:var(--muted);margin:.6em 0 0}
@@ -316,3 +317,14 @@ footer a{color:#fff}
 
 .linkbtn { background: none; border: 0; padding: 0; font: inherit; color: var(--accent, #2a5bd7); text-decoration: underline; cursor: pointer; }
 .linkbtn:disabled { opacity: .5; cursor: default; }
+
+/* generated guides: logo tile readable on the dark band, one continuous header, even spacing */
+.band .logo.mono{background:#fff;color:var(--ink);border-color:#fff}
+.pagehead.compact{padding:48px 0 40px}
+.pagehead.compact h1{font-size:clamp(1.9rem,3.2vw,2.6rem);max-width:none}
+.pagehead.compact .lede{display:none}
+.guide.embedded .pagehead{padding-top:48px;border-top:1px solid var(--dk-rule)}
+.cachenote{margin:20px 0 0;text-align:center;font-size:14px;color:var(--dk-muted)}
+.cachenote .linkbtn{color:#fff}
+.sharebar{padding-top:8px;padding-bottom:72px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.guide-body>section+section{margin-top:0}
