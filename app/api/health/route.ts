@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { storeKind } from "@/lib/store";
 import { rateLimit } from "@/lib/safety";
 import { safeError, callGroq, callOpenRouter } from "@/lib/llm";
 import { embeddingsPrebuilt } from "@/lib/embed";
@@ -21,8 +22,9 @@ export async function GET(req: Request) {
   const shared = async (f: () => Promise<string>) => { const t0 = Date.now(); try { await f(); return { configured: true, ok: true, ms: Date.now() - t0 }; } catch (e) { return { configured: true, ok: false, ms: Date.now() - t0, error: safeError(e).slice(0, 200) }; } };
   const openrouter = process.env.OPENROUTER_API_KEY ? await shared(() => callOpenRouter("Say ok", 15_000, 0)) : none;
   const providers = { claude, openrouter };
+  const cache = storeKind();
   const key = process.env.GEMINI_API_KEY;
-  if (!key) return Response.json({ providers, claude, keyConfigured: false });
+  if (!key) return Response.json({ providers, claude, cache, keyConfigured: false });
   const client = new GoogleGenAI({ apiKey: key });
   let listed: string[] = [];
   let listError: string | undefined;
@@ -49,5 +51,5 @@ export async function GET(req: Request) {
     }),
   );
   const groq: unknown = process.env.GROQ_API_KEY ? await shared(() => callGroq("Say ok", 15_000, 0)) : { configured: false };
-  return Response.json({ providers, claude, embeddingsPrebuilt: embeddingsPrebuilt(), keyConfigured: true, groq, modelsVisibleToKey: listed, listError, tests });
+  return Response.json({ providers, claude, cache, embeddingsPrebuilt: embeddingsPrebuilt(), keyConfigured: true, groq, modelsVisibleToKey: listed, listError, tests });
 }

@@ -1,6 +1,7 @@
 import { generate, hasModel } from "@/lib/llm";
 import { skillText } from "@/data/skill";
 import { checkCitations, type Hit } from "@/lib/rag";
+import { cacheGet as sharedGet, cacheSet as sharedSet } from "@/lib/store";
 import { rateLimit } from "@/lib/safety";
 import { searchHybrid } from "@/lib/embed";
 import { search } from "@/lib/rag";
@@ -13,10 +14,8 @@ const passageView = (h: Hit) => ({ id: h.id, slug: h.slug, app: h.app, section: 
 
 
 // Successful AI answers are remembered for 6 hours, so repeat questions (and the example chips) answer instantly and never depend on Google being up.
-const CACHE = new Map<string, { at: number; body: unknown }>();
 const cacheKey = (q: string, slug?: string) => `${slug ?? "*"}|${q.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim()}`;
-const cacheGet = (k: string) => { const v = CACHE.get(k); return v && Date.now() - v.at < 6 * 3600_000 ? v.body : undefined; };
-const cachePut = (k: string, body: unknown) => { if (CACHE.size > 300) CACHE.delete(CACHE.keys().next().value!); CACHE.set(k, { at: Date.now(), body }); };
+const cachePut = (k: string, body: unknown) => { void sharedSet("ask:" + k, body); };
 
 export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
@@ -30,7 +29,7 @@ export async function POST(req: Request) {
   const other = OTHER_APPS.find((a) => lower.includes(` ${a} `));
 
   const ck = cacheKey(question, slug);
-  if (body.phase !== "quick") { const hit = cacheGet(ck); if (hit) return Response.json(hit); }
+  if (body.phase !== "quick") { const hit = await sharedGet<unknown>("ask:" + ck, 6 * 3600_000); if (hit) return Response.json(hit.value); }
 
   const phase = body.phase === "quick" ? "quick" : "write";
   const quick = phase === "quick";

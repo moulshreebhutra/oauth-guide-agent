@@ -1,4 +1,5 @@
 import { generateGuide } from "@/lib/agent";
+import { cacheGet, cacheSet } from "@/lib/store";
 import { cleanAppInput, rateLimit } from "@/lib/safety";
 import { mintShareToken } from "@/lib/share";
 import { appFromInput } from "@/lib/webask";
@@ -6,9 +7,8 @@ import { appFromInput } from "@/lib/webask";
 export const maxDuration = 300; // writing a whole guide with a model takes longer than 60s; the page shows progress meanwhile
 
 // A finished guide is remembered for 6 hours, so a repeat request costs nothing and returns at once.
-// (Memory of this server instance only; the browser keeps its own copy too.)
+// Stored in Vercel Blob when it is connected (shared by all visitors), else in this instance's memory; the browser keeps its own copy too.
 const TTL_MS = 6 * 3600_000;
-const CACHE = new Map<string, { at: number; guide: any; notes: string[] }>();
 const keyOf = (i: { name: string; site?: string }) => `${i.name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()}|${(i.site ?? "").toLowerCase()}`;
 
 export async function POST(req: Request) {
@@ -22,8 +22,8 @@ export async function POST(req: Request) {
   const input = { ...raw, name: named };
 
   const key = keyOf(input);
-  const hit = CACHE.get(key);
-  const fresh = hit && Date.now() - hit.at < TTL_MS && body.refresh !== true ? hit : undefined;
+  const hit = body.refresh === true ? undefined : await cacheGet<{ guide: any; notes: string[] }>("guide:" + key, TTL_MS);
+  const fresh = hit ? { at: hit.at, guide: hit.value.guide, notes: hit.value.notes } : undefined;
   // cached answers cost nothing, so they do not count against the hourly limit
   if (!fresh && !rateLimit(ip, 5)) return new Response(JSON.stringify({ error: "Rate limit: 5 live guides per hour per visitor. Browse the library or try later." }), { status: 429 });
 
@@ -44,8 +44,7 @@ export async function POST(req: Request) {
         for await (const ev of generateGuide(input)) {
           send(ev);
           if (ev.type === "guide") {
-            if (CACHE.size > 100) CACHE.delete(CACHE.keys().next().value!);
-            CACHE.set(key, { at: Date.now(), guide: ev.guide, notes: ev.notes });
+            await cacheSet("guide:" + key, { guide: ev.guide, notes: ev.notes });
             const token = mintShareToken(ev.guide);
             if (token) send({ type: "share", path: `/s/${token}` });
           }

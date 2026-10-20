@@ -45,7 +45,7 @@ Every claim carries one tag: **tested** (we did it), **sourced** (a quoted excer
 - The live agent reads `docs.composio.dev/toolkits/<app>` first, then picks searches and pages (JSON actions). Code executes them under an action and time budget (6 actions, about 45 s of research, about 190 s in total), refuses repeated or reworded searches and pages that no search or link returned, runs three fixed searches for review, access-tier and quota pages and reads the best matches, makes sure a provider page about registering the app was read, blocks private/loopback addresses on every redirect, and treats page text as data.
 - Models: each call goes through a small router (`lib/llm.ts`) that tries **Claude** or **Groq** first, then **Gemini** or **OpenRouter**, then Claude again as the last resort; writing a whole guide goes to Claude first with most of the time. A provider without a key is skipped and every failure is reported by name. Verified live: Claude, Groq, OpenRouter. Gemini is wired in but currently answers 429/503 until billing is enabled on the Google project, so it is optional.
 - Web search is Tavily (`TAVILY_API_KEY`); DuckDuckGo is the keyless fallback but blocks most cloud hosts. When a page blocks the fetch, the search engine's own copy of its text is used and labelled.
-- Finished guides are cached for six hours (server memory and the browser); a repeat request returns at once and does not count against the rate limit. If every model fails, Ask returns a summary composed by code from the guides' own sentences, labelled as not written by AI.
+- Finished guides are cached for six hours (shared in Vercel Blob when a Blob store is connected, otherwise server memory; plus the browser); a repeat request returns at once and does not count against the rate limit. If every model fails, Ask returns a summary composed by code from the guides' own sentences, labelled as not written by AI.
 - `/api/health` shows which models your key can see and which answer right now (never the key). `npm run check:live -- <url>` runs an end-to-end check of the deployed site.
 
 ## Run it
@@ -83,3 +83,6 @@ Deploy: import the repo in Vercel (Next.js, no build settings), add the variable
 - Guide page buttons: copy as Markdown, copy an agent brief (stops where a person must act), print or save PDF, copy a README badge.
 - `/api/guides` and `/api/guides/<slug>`: JSON for agents and tools. `/llms.txt` describes them. `/badge/<slug>` returns an SVG badge.
 - Model fallbacks: Claude, Groq, Gemini and OpenRouter as described under Agents. Groq and OpenRouter answered live in testing; Gemini did not (quota).
+
+### Shared cache (optional, free)
+In Vercel: Storage → Create → Blob → connect to this project. Vercel adds `BLOB_READ_WRITE_TOKEN` itself (never commit it). With it, finished guides and Ask answers are stored in Blob and shared across visitors and server instances; without it the app uses memory. `/api/health` reports `cache: "vercel-blob"` or `"memory"`.

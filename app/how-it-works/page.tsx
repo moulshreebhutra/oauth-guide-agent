@@ -204,7 +204,7 @@ const TECH: [string, string][] = [
   ["Tavily search, then fetch", "Search finds the provider's pages. Fetch reads them (private addresses blocked, size and time capped). When a site shows a bot check, the text the search engine read is used and labelled as such. Results that are news, jobs, app-store pages or about another product are filtered out."],
   ["Composio API and public toolkit docs", "Tell us whether Composio manages the OAuth app and which auth methods the toolkit supports."],
   ["Signed share links", "A guide is packed into the URL and signed with HMAC-SHA256 using a server secret. Nothing is stored; only this server can mint a valid link."],
-  ["Caches and limits", "Answers and guides are remembered for 6 hours on the server and in your browser. Ask allows 20 questions an hour and the Live agent 5 new guides an hour per visitor; repeats cost nothing."],
+  ["Caches and limits", "Answers and guides are remembered for 6 hours in your browser and on the server (in Vercel Blob when connected, so every visitor shares them). Ask allows 20 questions an hour and the Live agent 5 new guides an hour per visitor; repeats cost nothing."],
   ["Tests", "81 automated tests cover the schema, quote checks, the claim-versus-page checks, retrieval, the AI router, link signing and the text cleaning. Run with npm test."],
 ];
 
