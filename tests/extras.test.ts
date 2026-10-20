@@ -294,4 +294,5 @@ test("enforce: a figure missing from the cited pages is downgraded, off-topic un
   assert.equal(r.guide.gotchas[1].tag, "inferred");
   assert.ok(OFF_TOPIC_TITLE.test("Airtable account email verification"));
   assert.ok(!OFF_TOPIC_TITLE.test("Quota modes | Spotify for Developers"));
+  assert.ok(OFF_TOPIC_TITLE.test("Intercom's workspace review process | Intercom Help"));
 });

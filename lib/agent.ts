@@ -116,6 +116,8 @@ You write OAuth-app setup guides for developers. Hard rules:
 - Write the difficulty rationale in plain words for a developer. Never mention forums, evidence rules, tags or "tier" mechanics inside it.
 - Cite the page a claim actually came from. A step taken from Composio's setup guide must cite that guide, not an unrelated overview page. Do not cite a pricing or marketing page for a registration claim.
 - Gotchas and requirements are about registering the app, authorizing, reviewing, limits and expiry. Leave out unrelated API endpoint trivia, other processes you are only ruling out, and login reminders.
+- When two pages give different figures for the same limit or rule (for example an older and a newer policy), do not state both as facts: use the more recent page, say the other differs, and put the conflict in "uncertainties".
+- A figure given only as an example ("e.g., more than 15 calls per second") is an example, not a hard limit; say "for example".
 - Carry the qualifier of the quote: if a limit or rule is stated for "private apps", "paid plans", "organizations" or one product, say so; never present it as a general rule.
 - The approval wait describes the review THIS developer would face. Do not mix two different reviews (for example an app review and a customer-account or email-sender review) in one wait or one sourced item, and never write "treat as unknown" inside a sourced item; split it or tag it unknown.
 - Ignore pages about the provider's own customer onboarding (account, workspace or sender approval), product reviews, release notes and unrelated features. If you read the provider's console documentation (for example "Create an app integration"), cite it for the console steps instead of leaving them inferred.
@@ -266,8 +268,10 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
         yield { type: "tool", name: "search_web", arg: q, result: `${r.length} ${r.length === 1 ? "result" : "results"}`, data: { items: r.slice(0, 8) } };
         const score = (x: { title: string; url: string }) => {
           const host = new URL(x.url).hostname;
+          // forum pages on the provider's own domain and off-topic titles (account checks, reviews, release notes) are never gate pages
+          if (OFF_TOPIC_TITLE.test(x.title) || COMMUNITY_PAGE.test(x.url.replace(/^https?:\/\/[^/]+/, "") + " " + x.title) || /^(community|forum|forums|discuss|answers)\./.test(host)) return 0;
           const own = host.includes(cslug) || (input.site ? host.endsWith(input.site.replace(/^www\./, "")) : false);
-          return (own ? 4 : OFFICIAL_HINT.test(host) ? 1 : 0) + (GATE_WORDS.test(x.title + x.url) && !OFF_TOPIC_TITLE.test(x.title) ? 3 : 0);
+          return (own ? 4 : OFFICIAL_HINT.test(host) ? 1 : 0) + (GATE_WORDS.test(x.title + x.url) ? 3 : 0);
         };
         const cand = r.filter((x) => !fetched.some((f) => f.url === x.url) && score(x) >= 4).sort((a, b) => score(b) - score(a)).slice(0, 2);
         for (const c of cand) {
