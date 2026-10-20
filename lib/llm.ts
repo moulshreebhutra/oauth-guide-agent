@@ -51,15 +51,23 @@ export async function callGroq(prompt: string, ms: number, temperature: number):
 }
 
 async function callAnthropic(prompt: string, ms: number, _temperature?: number, maxTokens = 4096): Promise<string> {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const post = (extra: Record<string, unknown>) => fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": process.env.ANTHROPIC_API_KEY!, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || "claude-haiku-5-5", max_tokens: maxTokens, messages: [{ role: "user", content: prompt }] }),
+    body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || "claude-haiku-5-5", max_tokens: maxTokens, messages: [{ role: "user", content: prompt }], ...extra }),
     signal: AbortSignal.timeout(ms),
   });
+  // Thinking tokens eat the output budget and add seconds; these tasks do not need them. If the model rejects the switch, retry without it.
+  let res = await post({ thinking: { type: "disabled" } });
+  if (res.status === 400) {
+    const body = await res.text();
+    if (!/thinking/i.test(body)) throw new Error(`HTTP 400 ${body.slice(0, 160)}`);
+    res = await post({});
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 160)}`);
   const j: any = await res.json();
   const t = (j?.content ?? []).filter((c: any) => c?.type === "text").map((c: any) => c.text ?? "").join("");
+  if (j?.stop_reason === "max_tokens" && maxTokens >= 6000) throw new Error(`reply was cut off at the ${maxTokens}-token limit`);
   if (!t) throw new Error(`empty answer (stop_reason ${j?.stop_reason ?? "unknown"}, ${j?.usage?.output_tokens ?? "?"} output tokens)`);
   return String(t);
 }

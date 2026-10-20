@@ -50,6 +50,7 @@ You write OAuth-app setup guides for developers. Hard rules:
 - Difficulty tier: 1 self-serve, 2 light checks, 3 review required, 4 gated/partner approval. Explain the rationale.
 - For each step say who does it: "you", "agent" or "either". Use "you" with "why_not_agent" when it needs the user's signed-in session, secrets, legal or business decisions.
 - Say "unknown" instead of guessing. Put open questions in "uncertainties".
+- SIZE: the whole JSON must stay under about 3,500 words. Keep every text field under 220 characters, at most 8 steps, at most 6 evidence entries with quotes under 200 characters, at most 5 gotchas. Output minified JSON only.
 `;
 
 export async function* generateGuide(input: { name: string; site?: string }): AsyncGenerator<Ev> {
@@ -167,7 +168,7 @@ EXAMPLE:\n${exampleGuide()}\n\nCALIBRATION (how our researched guides judged sim
     let draft: any;
     try {
       if (attempt && Date.now() - T0 > TOTAL_BUDGET_MS - 20_000) break;
-      draft = parseJson(await ask(attempt ? `${base}\n\nYour previous attempt failed validation: ${lastErr}\nReturn a corrected full JSON object.` : base, Math.max(12_000, Math.min(WRITE_TIMEOUT_MS, TOTAL_BUDGET_MS - (Date.now() - T0))), true, 8000));
+      draft = parseJson(await ask(attempt ? `${base}\n\nYour previous attempt failed: ${lastErr}\nReturn a corrected, SHORTER, complete JSON object (an unfinished or too-long reply is invalid).` : base, Math.max(12_000, Math.min(WRITE_TIMEOUT_MS, TOTAL_BUDGET_MS - (Date.now() - T0))), true, 16000));
     } catch (e: any) {
       lastErr = e instanceof SyntaxError ? "the model returned unparseable JSON" : safeErrorLong(e);
       continue;
