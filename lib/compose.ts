@@ -20,8 +20,12 @@ const brief = (t: string, max = 260) => {
 const note = (tag?: string | null) => (tag === "inferred" ? " (our estimate)" : tag === "unknown" ? " (not stated by the provider)" : tag === "reported" ? " (reported, not official)" : "");
 const line = (label: string, h: Hit, max?: number) => `- **${label}:** ${brief(clean(h), max)}${note(h.tag)} [${h.id}]`;
 
-export function compose(hits: Hit[]): { text: string; cited: string[] } {
+export function compose(hits: Hit[], opts: { web?: boolean } = {}): { text: string; cited: string[] } {
   if (!hits.length) return { text: "", cited: [] };
+  if (opts.web) {
+    const top = hits.slice(0, 4);
+    return { text: [`Most relevant passages from the pages we just read about ${top[0].app}:`, ...top.map((h) => `- **${h.section}:** ${brief(clean(h), 260)} [${h.id}]`)].join("\n"), cited: top.map((h) => h.id) };
+  }
   const slugs = [...new Set(hits.map((h) => h.slug))];
   const used: Hit[] = [];
   const out: string[] = [];

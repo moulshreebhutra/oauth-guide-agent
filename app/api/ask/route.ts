@@ -4,6 +4,7 @@ import { rateLimit } from "@/lib/safety";
 import { searchHybrid } from "@/lib/embed";
 import { search } from "@/lib/rag";
 import { compose } from "@/lib/compose";
+import { extractApp, researchApp, webPrompt } from "@/lib/webask";
 
 export const maxDuration = 60;
 
@@ -38,11 +39,41 @@ export async function POST(req: Request) {
   const GENERAL_NOTE = "Not from our guides: this is the AI's general knowledge, so it may be out of date and nothing here is tagged or sourced. For a researched, quote-checked guide, use the live agent.";
   const noGuides = !!other || !search(question, { k: 1, slug }).length;
   if (noGuides) {
-    if (quick) return Response.json({ mode: "none", general: true, answer: null, passages: [], message: other ? `The guides do not cover ${other[0].toUpperCase() + other.slice(1)}. Checking with the AI's general knowledge…` : "The guides do not cover that. Checking with the AI's general knowledge…" });
-    if (!process.env.GEMINI_API_KEY) return Response.json({ mode: "none", answer: null, passages: [], message: "The guides do not cover that. Try naming an app, or use the live agent to research it." });
+    if (quick) return Response.json({ mode: "none", general: true, answer: null, passages: [], message: "Not in our library. Researching it on the web now…", app: other ? other[0].toUpperCase() + other.slice(1) : extractApp(question) ?? null });
+    const appName = other ? other[0].toUpperCase() + other.slice(1) : extractApp(question);
+    const anyModel = !!(process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY || process.env.OPENROUTER_API_KEY);
+    // 1) agentic: research the app on the web now, answer only from the pages read
+    if (appName) {
+      try {
+        const r = await researchApp(appName, question, 18_000);
+        if (r.passages.length) {
+          const sources = r.pages.map((p) => ({ url: p.url, title: p.title }));
+          const view = r.passages.map((p) => ({ id: p.id, slug: "web", app: r.app, section: p.section, text: p.text, tag: null, url: p.url }));
+          let text = "";
+          if (anyModel) {
+            try {
+              text = (await generate(webPrompt(question, r), { temperature: 0.1, timeoutMs: 26_000, deadlineMs: 30_000, race: true, fast: true, models: ["gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.8-flash"] })).trim();
+              const ids = new Set(r.passages.map((p) => p.id));
+              const { cited, invalid } = checkCitations(text, ids);
+              if (!cited.length || invalid.length) text = "";
+            } catch { text = ""; }
+          }
+          const used = text ? view.filter((p) => checkCitations(text, new Set(view.map((v) => v.id))).cited.includes(p.id)) : view.slice(0, 4);
+          const out = text
+            ? { mode: "answer", web: true, app: r.app, answer: text, passages: used, sources, composio: r.composio, message: `${r.app} is not in our library. This answer was researched just now from ${sources.length} page(s) listed below. It is not human-checked.` }
+            : { mode: "answer", web: true, extractive: true, composed: true, app: r.app, answer: compose(view as any, { web: true }).text, passages: used, sources, composio: r.composio, message: `${r.app} is not in our library. These are the most relevant passages from pages read just now; the AI model could not write a summary in time.` };
+          if (text) cachePut(ck, out);
+          return Response.json(out);
+        }
+      } catch (e: any) { console.error("ask: web research failed:", e?.message); }
+    }
+    // 2) nothing readable on the web: say so, then fall back to labelled general knowledge
+    if (!anyModel) return Response.json({ mode: "none", answer: null, passages: [], message: "The guides do not cover that and the web research found nothing readable. Try adding the provider's developer-docs address in the live agent." });
     try {
-      const text = (await generate(`You help developers with OAuth app setup. Answer briefly (max 150 words, plain text, no markdown asterisks, short lines starting with "- " for lists). Be accurate; if you are not sure of a fact such as a duration or limit, say you are not sure instead of guessing. Do not claim to have checked any documentation.\nQUESTION: ${question}`, { temperature: 0.2, timeoutMs: 40_000, deadlineMs: 44_000, race: true, fast: true, models: ["gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.8-flash"] })).trim();
-      { const out = { mode: "answer", general: true, answer: text, passages: [], message: GENERAL_NOTE }; cachePut(ck, out); return Response.json(out); }
+      const text = (await generate(`You help developers with OAuth app setup. Answer briefly (max 150 words, plain text, no markdown asterisks, short lines starting with "- " for lists). Be accurate; if you are not sure of a fact such as a duration or limit, say you are not sure instead of guessing. Do not claim to have checked any documentation.\nQUESTION: ${question}`, { temperature: 0.2, timeoutMs: 22_000, deadlineMs: 24_000, race: true, fast: true, models: ["gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.8-flash"] })).trim();
+      const out = { mode: "answer", general: true, answer: text, passages: [], message: GENERAL_NOTE };
+      cachePut(ck, out);
+      return Response.json(out);
     } catch (e: any) {
       return Response.json({ mode: "none", answer: null, passages: [], message: "The guides do not cover that, and the AI model could not answer in time. Try again, or use the live agent.", detail: String(e?.message ?? e).slice(0, 300) });
     }

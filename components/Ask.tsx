@@ -3,8 +3,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Tag } from "./GuideView";
 
-type Passage = { id: string; slug: string; app: string; section: string; text: string; tag: string | null };
-type Result = { composed?: boolean; general?: boolean; mode: "answer" | "passages" | "none"; answer: string | null; passages: Passage[]; message?: string; detail?: string; error?: string; extractive?: boolean };
+type Passage = { url?: string; id: string; slug: string; app: string; section: string; text: string; tag: string | null };
+type Result = { web?: boolean; sources?: { url: string; title: string }[]; app?: string | null; composed?: boolean; general?: boolean; mode: "answer" | "passages" | "none"; answer: string | null; passages: Passage[]; message?: string; detail?: string; error?: string; extractive?: boolean };
 
 /** Render the answer: **bold**, bullet lines, and [slug#n] citations as links to the guide. No HTML is ever injected. */
 function Answer({ text }: { text: string }) {
@@ -16,6 +16,7 @@ function Answer({ text }: { text: string }) {
           <span key={i} className="cite">
             {t.slice(1, -1).split(/[,;\s]+/).filter(Boolean).map((id) => {
               const slug = id.split("#")[0];
+              if (/^w\d+$/.test(slug)) return <a key={id} href="#sources" title="One of the pages read just now">{id}</a>;
               return <Link key={id} href={`/guide/${slug}`} title={`Open the ${slug} guide`}>{id}</Link>;
             })}
           </span>
@@ -33,6 +34,7 @@ function Answer({ text }: { text: string }) {
 }
 
 const STEPS = ["Finding the passages", "Asking the AI model", "Checking its citations"];
+const WEB_STEPS = ["Not in the library: searching the web", "Reading the provider's pages", "Writing from what was read"];
 
 async function post(body: object, ms: number): Promise<Result> {
   const r = await fetch("/api/ask", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(ms) });
@@ -89,7 +91,9 @@ export function Ask({ slug, examples }: { slug?: string; examples: string[] }) {
     }
   }
 
-  const step = phase === "quick" ? 0 : phase === "writing" ? (secs < 12 ? 1 : 2) : 3;
+  const webMode = !!res?.general || !!res?.web;
+  const steps = webMode ? WEB_STEPS : STEPS;
+  const step = phase === "quick" ? 0 : phase === "writing" ? (secs < (webMode ? 10 : 12) ? 1 : 2) : 3;
 
   return (
     <section className="ask" aria-label="Ask the guides">
@@ -108,22 +112,22 @@ export function Ask({ slug, examples }: { slug?: string; examples: string[] }) {
       {busy && (
         <div className="loader" role="status" aria-live="polite">
           <ol>
-            {STEPS.map((s, i) => (
+            {steps.map((s, i) => (
               <li key={s} className={i < step ? "done" : i === step ? "now" : ""}>
                 <span className="dot" aria-hidden />{s}
               </li>
             ))}
           </ol>
           <div className="bar" aria-hidden><i /></div>
-          <p className="muted small">{phase === "quick" ? "Searching the guides…" : `The AI is writing your answer from the guides. This usually takes 5 to 25 seconds. ${secs}s so far.`}</p>
+          <p className="muted small">{phase === "quick" ? "Searching the guides…" : (webMode ? `Researching live: reading pages, then writing. This takes 15 to 45 seconds. ${secs}s so far.` : `The AI is writing your answer from the guides. This usually takes 5 to 25 seconds. ${secs}s so far.`)}</p>
         </div>
       )}
 
       {res?.error && <p className="err">{res.error}</p>}
       {res && !res.error && !(busy && res.extractive && !res.general) && (
         <div className="answer" aria-live="polite">
-          <p className={`badge ${res.general ? "b-gen" : res.extractive || res.mode === "passages" ? "b-quote" : "b-ai"}`}>
-            {res.general ? "AI general knowledge · not from our guides" : res.extractive || res.mode === "passages" ? "Summarised by code from the guides · no AI used" : "AI answer · written from the guides below"}
+          <p className={`badge ${res.web ? "b-ai" : res.general ? "b-gen" : res.extractive || res.mode === "passages" ? "b-quote" : "b-ai"}`}>
+            {res.web ? (res.extractive ? "Researched live · passages from pages just read" : "Researched live from the web · not in our library · not human-checked") : res.general ? "AI general knowledge · not from our guides" : res.extractive || res.mode === "passages" ? "Summarised by code from the guides · no AI used" : "AI answer · written from the guides below"}
           </p>
           {res.answer && !res.extractive && res.mode === "answer" && <Answer text={res.answer} />}
           {res.answer && res.extractive && <Answer text={res.answer} />}
@@ -132,11 +136,11 @@ export function Ask({ slug, examples }: { slug?: string; examples: string[] }) {
           {res.detail && !busy && <details><summary className="small">Why there is no AI answer</summary><p className="muted small">{res.detail}</p></details>}
           {res.passages.length > 0 && (
             <>
-              <h3>{res.extractive ? "Passages behind this summary" : "Passages the answer rests on"}</h3>
+              <h3 id="sources">{res.web ? "Pages read just now" : res.extractive ? "Passages behind this summary" : "Passages the answer rests on"}</h3>
               <ul className="passages">
                 {res.passages.map((p) => (
                   <li key={p.id}>
-                    <div className="ptop"><Link href={`/guide/${p.slug}`}>{p.app} · {p.section}</Link> {p.tag && <Tag t={p.tag} />} <span className="pid">{p.id}</span></div>
+                    <div className="ptop">{p.url ? <a href={p.url} target="_blank" rel="noreferrer">{p.app} · {p.section}</a> : <Link href={`/guide/${p.slug}`}>{p.app} · {p.section}</Link>} {p.tag && <Tag t={p.tag} />} <span className="pid">{p.id}</span></div>
                     <p>{p.text.replace(/^[^.]*\.\s/, "")}</p>
                   </li>
                 ))}

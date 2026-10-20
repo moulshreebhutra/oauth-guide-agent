@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "validate": "tsx scripts/validate.ts",
-    "check:live": "tsx scripts/check-live.ts", "test": "tsx --test tests/guardrails.test.ts tests/share.test.ts tests/guides-index.test.ts",
+    "check:live": "tsx scripts/check-live.ts", "test": "tsx --test tests/guardrails.test.ts tests/share.test.ts tests/guides-index.test.ts tests/ask-retrieval.test.ts",
     "verify-quotes": "tsx scripts/verify-quotes.ts"
   },
   "dependencies": {

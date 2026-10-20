@@ -116,6 +116,7 @@ export function GuideView({ g, notes = [], back = false, banner }: { g: Guide; n
           <p>
             <Tag t={g.composio_managed.tag} /> {g.composio_managed.note}
           </p>
+          {g.composio_managed.status !== "unknown" && g.evidence.find((e) => e.url.startsWith("https://docs.composio.dev/toolkits/")) && <p><a href={g.evidence.find((e) => e.url.startsWith("https://docs.composio.dev/toolkits/"))!.url} target="_blank" rel="noreferrer">Open Composio's toolkit page</a></p>}
         </div>
       </div>
 

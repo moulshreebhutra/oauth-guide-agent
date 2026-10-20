@@ -80,7 +80,12 @@ export async function probeOAuthDiscovery(domain: string) {
 /** Composio's managed-auth flag for a toolkit. Needs COMPOSIO_API_KEY; response shape is unverified, so we only report what we can read. */
 export async function checkComposioManaged(slug: string): Promise<{ status: "yes" | "no" | "unknown"; note: string }> {
   const key = process.env.COMPOSIO_API_KEY;
-  if (!key) return { status: "unknown", note: "COMPOSIO_API_KEY not configured on this server." };
+  if (!key) {
+    // no API key: read Composio's public toolkit docs page instead
+    const page = await composioToolkit(slug);
+    if (page && page.status !== "unknown") return { status: page.status, note: `Composio's toolkit page lists ${page.methods.join(", ") || "its auth methods"} and says "Composio-managed OAuth ${page.status === "yes" ? "available" : "not available"}".` };
+    return { status: "unknown", note: page ? "Composio's toolkit page was found but does not state managed-auth status." : `No Composio toolkit page found for '${slug}'.` };
+  }
   try {
     const res = await fetch(`https://backend.composio.dev/api/v3.1/toolkits/${encodeURIComponent(slug)}`, { headers: { "x-api-key": key } });
     if (res.status === 404) return { status: "unknown", note: `No Composio toolkit named '${slug}' was found.` };
@@ -92,4 +97,28 @@ export async function checkComposioManaged(slug: string): Promise<{ status: "yes
   } catch (e: any) {
     return { status: "unknown", note: `Composio lookup failed: ${e.message}` };
   }
+}
+
+
+/** Pure parser so it can be tested offline: what does Composio's toolkit page say about auth? */
+export function parseComposioToolkit(text: string): { status: "yes" | "no" | "unknown"; methods: string[] } {
+  const status = /Composio-managed OAuth not available/i.test(text) ? "no" : /Composio-managed OAuth available/i.test(text) ? "yes" : "unknown";
+  const methods = [...new Set((text.match(/\b(OAuth2|OAUTH2|S2S_OAUTH2|API[_ ]?KEY|BEARER_TOKEN|BASIC|OAuth1)\b/g) ?? []).map((m) => m.replace("OAUTH2", "OAuth2").replace("API_KEY", "API Key")))];
+  return { status, methods };
+}
+
+/** Composio's public toolkit docs page. States auth methods and whether Composio manages the OAuth app, no API key needed. */
+export async function composioToolkit(name: string): Promise<{ url: string; title: string; text: string; status: "yes" | "no" | "unknown"; methods: string[] } | null> {
+  const base = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const tries = [...new Set([base, base.replace(/(inc|app|api)$/, "")])].filter((x) => x.length > 1);
+  for (const slug of tries) {
+    try {
+      const r = await fetchPage(`https://docs.composio.dev/toolkits/${slug}`);
+      if (r.status !== 200 || !/Authentication/i.test(r.text)) continue;
+      return { url: r.url, title: r.title || `Composio docs - ${slug}`, text: r.text.slice(0, 6000), ...parseComposioToolkit(r.text) };
+    } catch {
+      /* no such toolkit page */
+    }
+  }
+  return null;
 }

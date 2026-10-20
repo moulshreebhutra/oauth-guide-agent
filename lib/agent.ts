@@ -1,5 +1,5 @@
 import { generate, safeError } from "./llm";
-import { fetchPage, searchWeb, probeOAuthDiscovery, checkComposioManaged } from "./tools";
+import { fetchPage, searchWeb, probeOAuthDiscovery, checkComposioManaged, composioToolkit } from "./tools";
 import { enforce, type Fetched } from "./postprocess";
 import type { Guide } from "./schema";
 import { search } from "./rag";
@@ -58,6 +58,12 @@ export async function* generateGuide(input: { name: string; site?: string }): As
   // Fixed, cheap probes first
   const managed = await checkComposioManaged(input.name.toLowerCase().replace(/[^a-z0-9]/g, ""));
   yield { type: "tool", name: "check_composio_managed", arg: input.name, result: `${managed.status}: ${managed.note}` };
+
+  const toolkit = await composioToolkit(input.name);
+  if (toolkit) {
+    fetched.push({ url: toolkit.url, title: toolkit.title, text: toolkit.text, official: true });
+    yield { type: "tool", name: "composio_toolkit_page", arg: input.name, result: `${toolkit.status === "yes" ? "managed OAuth available" : toolkit.status === "no" ? "managed OAuth not available" : "status not stated"}; auth: ${toolkit.methods.join(", ") || "n/a"}` };
+  }
 
   if (input.site) {
     const disc = await probeOAuthDiscovery(input.site);
