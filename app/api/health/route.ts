@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { rateLimit } from "@/lib/safety";
-import { safeError } from "@/lib/llm";
+import { safeError, callGroq, callOpenRouter } from "@/lib/llm";
 import { embeddingsPrebuilt } from "@/lib/embed";
 
 export const maxDuration = 30;
@@ -25,10 +25,11 @@ export async function GET(req: Request) {
     } catch (e) { return { configured: true, ok: false, error: safeError(e) }; }
   };
   const none = { configured: false };
+  const shared = async (f: () => Promise<string>) => { const t0 = Date.now(); try { await f(); return { configured: true, ok: true, ms: Date.now() - t0 }; } catch (e) { return { configured: true, ok: false, ms: Date.now() - t0, error: safeError(e).slice(0, 200) }; } };
   const [grok, bedrock, openrouter] = await Promise.all([
     process.env.XAI_API_KEY ? ping("https://api.x.ai/v1/chat/completions", { authorization: `Bearer ${process.env.XAI_API_KEY}` }, { model: process.env.XAI_MODEL || "grok-4", max_tokens: 5, messages: [{ role: "user", content: "Say ok" }] }) : none,
     process.env.AWS_BEARER_TOKEN_BEDROCK ? ping(`https://bedrock-runtime.${process.env.BEDROCK_REGION || "us-east-1"}.amazonaws.com/model/${encodeURIComponent(process.env.BEDROCK_MODEL_ID || "us.amazon.nova-lite-v1:0")}/converse`, { authorization: `Bearer ${process.env.AWS_BEARER_TOKEN_BEDROCK}` }, { messages: [{ role: "user", content: [{ text: "Say ok" }] }], inferenceConfig: { maxTokens: 5 } }) : none,
-    process.env.OPENROUTER_API_KEY ? ping("https://openrouter.ai/api/v1/chat/completions", { authorization: `Bearer ${process.env.OPENROUTER_API_KEY}` }, { model: process.env.OPENROUTER_MODEL || "meta-llama/llama-3.3-70b-instruct:free", max_tokens: 5, messages: [{ role: "user", content: "Say ok" }] }) : none,
+    process.env.OPENROUTER_API_KEY ? shared(() => callOpenRouter("Say ok", 15_000, 0)) : none,
   ]);
   const providers = { claude, grok, bedrock, openrouter };
   const key = process.env.GEMINI_API_KEY;
@@ -58,13 +59,6 @@ export async function GET(req: Request) {
       }
     }),
   );
-  let groq: unknown = { configured: false };
-  if (process.env.GROQ_API_KEY) {
-    const t0 = Date.now();
-    try {
-      const r = await fetch("https://api.groq.com/openai/v1/chat/completions", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${process.env.GROQ_API_KEY}` }, body: JSON.stringify({ model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile", max_tokens: 5, messages: [{ role: "user", content: "Say ok" }] }), signal: AbortSignal.timeout(15_000) });
-      groq = { configured: true, ok: r.ok, status: r.status, ms: Date.now() - t0 };
-    } catch (e) { groq = { configured: true, ok: false, error: safeError(e) }; }
-  }
+  const groq: unknown = process.env.GROQ_API_KEY ? await shared(() => callGroq("Say ok", 15_000, 0)) : { configured: false };
   return Response.json({ providers, claude, embeddingsPrebuilt: embeddingsPrebuilt(), keyConfigured: true, groq, modelsVisibleToKey: listed, listError, tests });
 }

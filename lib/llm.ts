@@ -11,7 +11,7 @@ export const safeError = (e: unknown) =>
     .replace(/\s+/g, " ")
     .slice(0, 220);
 
-async function callOpenRouter(prompt: string, ms: number, temperature: number): Promise<string> {
+export async function callOpenRouter(prompt: string, ms: number, temperature: number): Promise<string> {
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${process.env.OPENROUTER_API_KEY}` },
@@ -25,7 +25,7 @@ async function callOpenRouter(prompt: string, ms: number, temperature: number): 
   return String(t);
 }
 
-async function callGroq(prompt: string, ms: number, temperature: number): Promise<string> {
+export async function callGroq(prompt: string, ms: number, temperature: number): Promise<string> {
   // Groq retires models from time to time, so try the configured one, then current alternatives
   const models = [process.env.GROQ_MODEL, "openai/gpt-oss-120b", "llama-3.3-70b-versatile", "openai/gpt-oss-20b"].filter(Boolean) as string[];
   let last = "";
