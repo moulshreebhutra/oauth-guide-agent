@@ -100,7 +100,7 @@ export default function Live() {
         title={<>Research any app, <mark className="hl">get a shareable guide</mark></>}
         lede="Type an app name or website. The agent searches, reads the provider's pages, and writes a guide. Quotes are checked by code against the pages it actually read; anything it cannot back up is downgraded."
       >
-        <form onSubmit={run} className="liveform">
+        <form onSubmit={(e) => run(e, true)} className="liveform">
           <input value={app} onChange={(e) => setApp(e.target.value)} placeholder="e.g. Linear, or zoom.us" maxLength={120} aria-label="App name or website" />
           <button className="btn" disabled={busy || app.trim().length < 2}>{busy ? "Working…" : "Generate guide"}</button>
         </form>
