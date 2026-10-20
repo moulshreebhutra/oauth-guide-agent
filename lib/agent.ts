@@ -4,6 +4,9 @@ import { enforce, type Fetched } from "./postprocess";
 import type { Guide } from "./schema";
 import { search } from "./rag";
 import { RAW_GUIDES } from "@/data/guides";
+import { FAMILY } from "./webask";
+import { guideMarkdown } from "./export";
+import { loadGuide } from "./guides";
 
 export type Ev =
   | { type: "status"; msg: string }
@@ -20,8 +23,8 @@ const WRITE_TIMEOUT_MS = 30_000;
 const PER_PAGE_PROMPT_CHARS = 9000;
 const OFFICIAL_HINT = /(docs?|developers?|developer|learn|support|help|api)\./i;
 
-async function ask(prompt: string, timeoutMs = ACTION_TIMEOUT_MS, json = true): Promise<string> {
-  return generate(prompt, { json, timeoutMs });
+async function ask(prompt: string, timeoutMs = ACTION_TIMEOUT_MS, json = true, maxTokens?: number): Promise<string> {
+  return generate(prompt, { json, timeoutMs, maxTokens });
 }
 
 function parseJson(s: string): any {
@@ -84,6 +87,15 @@ export async function* generateGuide(input: { name: string; site?: string }): As
     yield { type: "tool", name: "fetch_composio_guide", arg: cslug, result: `${p.text.length} chars` };
   } catch {
     yield { type: "tool", name: "fetch_composio_guide", arg: cslug, result: "no Composio guide at that address" };
+  }
+
+  // A product registered through a parent platform (Instagram -> Meta): our researched parent guide is evidence too.
+  // Provider docs such as Facebook's are built by JavaScript and often come back empty when fetched, so this matters.
+  const fam = FAMILY[cslug];
+  const famGuide = fam ? loadGuide(fam.slug) : undefined;
+  if (fam && famGuide) {
+    fetched.push({ url: `https://oauth-guide-agent.vercel.app/guide/${fam.slug}`, title: `Our researched ${fam.parent} guide (${input.name} is registered through ${fam.parent})`, text: guideMarkdown(famGuide), official: false });
+    yield { type: "tool", name: "parent_platform_guide", arg: fam.parent, result: `${input.name} is registered through ${fam.parent}; using our ${fam.parent} guide as evidence` };
   }
 
   // RAG step: pull how our researched guides judged difficulty/review for similar apps, so tiers stay consistent.
@@ -154,7 +166,7 @@ EXAMPLE:\n${exampleGuide()}\n\nCALIBRATION (how our researched guides judged sim
     let draft: any;
     try {
       if (attempt && Date.now() - T0 > TOTAL_BUDGET_MS - WRITE_TIMEOUT_MS) break;
-      draft = parseJson(await ask(attempt ? `${base}\n\nYour previous attempt failed validation: ${lastErr}\nReturn a corrected full JSON object.` : base, WRITE_TIMEOUT_MS));
+      draft = parseJson(await ask(attempt ? `${base}\n\nYour previous attempt failed validation: ${lastErr}\nReturn a corrected full JSON object.` : base, WRITE_TIMEOUT_MS, true, 8000));
     } catch (e: any) {
       lastErr = e instanceof SyntaxError ? "the model returned unparseable JSON" : safeError(e);
       continue;

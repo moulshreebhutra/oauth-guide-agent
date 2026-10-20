@@ -15,7 +15,7 @@ async function callOpenRouter(prompt: string, ms: number, temperature: number): 
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${process.env.OPENROUTER_API_KEY}` },
-    body: JSON.stringify({ model: process.env.OPENROUTER_MODEL || "meta-llama/llama-3.3-70b-instruct:free", temperature, max_tokens: 700, messages: [{ role: "user", content: prompt }] }),
+    body: JSON.stringify({ model: process.env.OPENROUTER_MODEL || "openrouter/free", temperature, max_tokens: 700, messages: [{ role: "user", content: prompt }] }),
     signal: AbortSignal.timeout(ms),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 120)}`);
@@ -48,17 +48,17 @@ async function callGroq(prompt: string, ms: number, temperature: number): Promis
   throw new Error(last);
 }
 
-async function callAnthropic(prompt: string, ms: number, _temperature?: number): Promise<string> {
+async function callAnthropic(prompt: string, ms: number, _temperature?: number, maxTokens = 4096): Promise<string> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": process.env.ANTHROPIC_API_KEY!, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || "claude-haiku-5-5", max_tokens: 900, messages: [{ role: "user", content: prompt }] }),
+    body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || "claude-haiku-5-5", max_tokens: maxTokens, messages: [{ role: "user", content: prompt }] }),
     signal: AbortSignal.timeout(ms),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 160)}`);
   const j: any = await res.json();
-  const t = j?.content?.map((c: any) => c.text ?? "").join("");
-  if (!t) throw new Error("empty answer");
+  const t = (j?.content ?? []).filter((c: any) => c?.type === "text").map((c: any) => c.text ?? "").join("");
+  if (!t) throw new Error(`empty answer (stop_reason ${j?.stop_reason ?? "unknown"}, ${j?.usage?.output_tokens ?? "?"} output tokens)`);
   return String(t);
 }
 
@@ -95,7 +95,7 @@ async function callXai(prompt: string, ms: number, temperature: number): Promise
 }
 
 let lastPaidErr = "";
-type GenOpts = { json?: boolean; timeoutMs?: number; temperature?: number; models?: string[]; deadlineMs?: number; race?: boolean; fast?: boolean; only?: "gemini" };
+type GenOpts = { maxTokens?: number; json?: boolean; timeoutMs?: number; temperature?: number; models?: string[]; deadlineMs?: number; race?: boolean; fast?: boolean; only?: "gemini" };
 
 /**
  * Public entry. Providers are tried in three tiers, one provider per tier:
@@ -110,7 +110,7 @@ export async function generate(prompt: string, opts: GenOpts = {}): Promise<stri
   const p = opts.json ? `${prompt}\n\nReturn ONLY valid JSON: no prose before or after it and no code fences.` : prompt;
   const env = process.env;
   const run: Record<string, (ms: number) => Promise<string>> = {
-    claude: (ms) => callAnthropic(p, ms, temp),
+    claude: (ms) => callAnthropic(p, ms, temp, opts.maxTokens),
     groq: (ms) => callGroq(p, ms, temp),
     bedrock: (ms) => callBedrock(p, ms, temp),
     grok: (ms) => callXai(p, ms, temp),
@@ -129,8 +129,8 @@ export async function generate(prompt: string, opts: GenOpts = {}): Promise<stri
     const name = pool[Math.floor(Math.random() * pool.length)];
     const left = total - (Date.now() - started);
     if (left < 3000) { errors.push(`${name}: no time left`); break; }
-    const share = Math.max(3000, Math.floor(left / (tiers.length - i)));
-    try { return await run[name](Math.min(share, 20_000)); }
+    const share = i < tiers.length - 1 ? Math.max(3000, Math.floor(left * 0.6)) : left;
+    try { return await run[name](Math.min(share, 30_000)); }
     catch (e) { errors.push(`${name}: ${safeError(e)}`); used.add(name); }
   }
   throw new Error(errors.join(" | ").slice(0, 900));
