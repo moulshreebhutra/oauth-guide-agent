@@ -152,7 +152,7 @@ export function GuideView({ g, notes = [], back = false, banner, embedded = fals
               <p>
                 <Md t={s.detail} /> <Cites ids={s.evidence} />
               </p>
-              {s.why_not_agent && <p className="muted small">Why you: <Md t={s.why_not_agent} /></p>}
+              {s.why_not_agent && <p className="muted small stepwhy">Why you: <Md t={s.why_not_agent} /></p>}
             </li>
           ))}
         </ol>

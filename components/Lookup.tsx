@@ -10,10 +10,15 @@ export function Lookup({ options }: { options: Opt[] }) {
   const [q, setQ] = useState("");
   const router = useRouter();
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  // Only the app itself opens a library guide. A product-specific query ("linkedin ads", "microsoft teams") goes to the live agent.
+  const FILLER = /\b(api|apis|oauth2?|developer|developers|app|apps|integration|docs|setup|guide)\b/gi;
   const hit = (v: string) => {
-    const n = norm(v);
+    const n = norm(v.replace(FILLER, " "));
     if (n.length < 2) return undefined;
-    return options.find((o) => norm(o.app).includes(n) || norm(o.slug).includes(n) || (n.length > 3 && n.includes(norm(o.app.replace(/\s*\(.*\)/, "")))));
+    return options.find((o) => {
+      const full = norm(o.app), base = norm(o.app.replace(/\s*\(.*\)/, ""));
+      return n === full || n === base || n === norm(o.slug) || (n.length >= 3 && (full.startsWith(n) || base.startsWith(n) || (o.app.match(/\((.*)\)/)?.[1] ?? "").split(/[,/]| and /).some((x) => norm(x) === n)));
+    });
   };
   const [asked, setAsked] = useState("");
   // a sentence rather than an app name or website is a question for the Ask engine

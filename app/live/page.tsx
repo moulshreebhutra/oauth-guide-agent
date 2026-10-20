@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GuideView } from "@/components/GuideView";
 import { Md } from "@/components/Md";
 import { PageHead } from "@/components/PageHead";
@@ -14,6 +14,8 @@ export default function Live() {
   useEffect(() => { try { const q = new URLSearchParams(location.search).get("app"); if (q) { setApp(q.slice(0, 120)); if (new URLSearchParams(location.search).get("go") === "1") setAuto(true); } } catch {} }, []);
   const [auto, setAuto] = useState(false);
   useEffect(() => { if (auto && app.trim().length >= 2) { setAuto(false); void run(null); } }); // eslint-disable-line react-hooks/exhaustive-deps
+  const logRef = useRef<HTMLDetailsElement>(null);
+  const setAllSteps = (open: boolean) => { const root = logRef.current; if (!root) return; if (open) root.open = true; root.querySelectorAll<HTMLDetailsElement>("details.stone").forEach((d) => { d.open = open; }); };
   const [busy, setBusy] = useState(false);
   const [steps, setSteps] = useState<Step[]>([]);
   const [now, setNow] = useState("");
@@ -121,19 +123,23 @@ export default function Live() {
               </div>
             )}
             {steps.length > 0 && (
-              <details className="agrun">
+              <details className="agrun" ref={logRef}>
                 <summary>
                   <span>{busy ? "What the agent has done so far" : "How this guide was researched"}</span>
                   <em>{steps.length} step{steps.length === 1 ? "" : "s"}{steps.some((x) => x.state === "warn") ? ` · ${steps.filter((x) => x.state === "warn").length} with a problem` : ""}</em>
                 </summary>
+                <div className="agtools">
+                  <button type="button" className="linkbtn" onClick={() => setAllSteps(true)}>Expand all steps</button>
+                  <button type="button" className="linkbtn" onClick={() => setAllSteps(false)}>Collapse all</button>
+                </div>
                 <ol className="agsteps">
-                  {steps.map((st) => {
+                  {steps.map((st, idx) => {
                     const sub0 = st.data?.items ? `${st.data.items.length} results` : st.data?.url ? hostOf(st.data.url) : "";
                     const sub = sub0 && !st.title.includes(sub0) ? sub0 : "";
                     const body = st.detail || st.data;
                     const row = (
                       <>
-                        <span className="dot" aria-hidden>{st.state === "warn" ? "!" : "✓"}</span>
+                        <span className="dot" aria-hidden>{st.state === "warn" ? "!" : idx + 1}</span>
                         <span className="stxt"><b>{st.title}</b>{sub && <small>{sub}</small>}</span>
                       </>
                     );
@@ -145,11 +151,11 @@ export default function Live() {
                             <div className="stbody">
                               {st.detail && <p className="dtext"><Md t={st.detail} /></p>}
                               {st.data?.facts && st.data.facts.length > 0 && (
-                                <div><h4>What it found</h4><ul className="facts-list">{st.data.facts.map((f, i) => <li key={i}><Md t={f} /></li>)}</ul></div>
+                                <div className="stgroup"><h4>What it found</h4><ul className="facts-list">{st.data.facts.map((f, i) => <li key={i}><Md t={f} /></li>)}</ul></div>
                               )}
                               {!st.data?.facts?.length && st.data?.excerpt && <p className="dtext"><Md t={st.data.excerpt} />{st.data.excerpt.length >= 400 ? "…" : ""}</p>}
                               {st.data?.items && (
-                                <ul className="dlinks">{st.data.items.map((it) => <li key={it.url}><a href={it.url} target="_blank" rel="noreferrer">{it.title.slice(0, 90)}</a><span>{hostOf(it.url)}</span></li>)}</ul>
+                                <div className="stgroup"><h4>{st.data.items.length} results</h4><ul className="dlinks">{st.data.items.map((it) => <li key={it.url}><a href={it.url} target="_blank" rel="noreferrer">{it.title.slice(0, 90)}</a><span>{hostOf(it.url)}</span></li>)}</ul></div>
                               )}
                               {st.data?.url && <a className="dopen" href={st.data.url} target="_blank" rel="noreferrer">{st.data.title ? `Open: ${st.data.title.slice(0, 60)}` : "Open the page"}</a>}
                             </div>
