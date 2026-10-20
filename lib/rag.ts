@@ -111,7 +111,8 @@ export function search(query: string, opts: { k?: number; slug?: string; index?:
 
 /** Which passage ids does an answer cite, and are they all ones we actually retrieved? */
 export function checkCitations(answer: string, allowed: Set<string>): { cited: string[]; invalid: string[] } {
-  const ids = [...answer.matchAll(/\[([a-z0-9-]+#\d+)\]/g)].map((m) => m[1]);
+  // accepts [a#1], [a#1, b#2] and [a#1][b#2]
+  const ids = [...answer.matchAll(/\[([^\]]*#\d+[^\]]*)\]/g)].flatMap((m) => m[1].split(/[,;\s]+/).filter((x) => /^[a-z0-9-]+#\d+$/.test(x)));
   const cited = [...new Set(ids.filter((i) => allowed.has(i)))];
   const invalid = [...new Set(ids.filter((i) => !allowed.has(i)))];
   return { cited, invalid };

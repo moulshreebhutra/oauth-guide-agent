@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   const phase = body.phase === "quick" ? "quick" : "write";
   const quick = phase === "quick";
   // quick: keyword search only, no network call, answers in milliseconds. write: hybrid retrieval + the model.
-  const { hits, mode: retrieval } = quick ? { hits: search(question, { k: 6, slug }), mode: "keyword" as const } : await searchHybrid(question, { k: 6, slug });
+  const { hits, mode: retrieval } = quick ? { hits: search(question, { k: 8, slug }), mode: "keyword" as const } : await searchHybrid(question, { k: 8, slug });
   if (!hits.length)
     return Response.json({ mode: "none", answer: null, passages: [], message: "The guides do not cover that. Try naming an app, or use the live agent to research it." });
 
