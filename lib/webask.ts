@@ -83,10 +83,14 @@ export async function researchApp(app: string, question: string, budgetMs = 20_0
   steps.push(`read ${pages.length} page(s)`);
 
   // 4. chunk and rank against the question
-  const all = pages.flatMap((p, k) => toPassages(k + 1, p, app));
+  const decode = (t: string) => t.replace(/&#0?39;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+  // tool/action name lists (e.g. INSTAGRAM_GET_MEDIA ...) say nothing about setup or approval: drop passages made mostly of them
+  const isToolList = (t: string) => ((t.match(/\b[A-Z]{3,}(?:_[A-Z0-9]+){1,}\b/g) || []).length >= 4);
+  const all = pages.flatMap((p, k) => toPassages(k + 1, p, app)).map((p) => ({ ...p, text: decode(p.text) })).filter((p) => !isToolList(p.text));
   const query = `${question} ${app} oauth app review approval`;
   const ix = buildIndex(all);
-  const ranked = all.length ? search(query, { index: ix, k: 8 }) : [];
+  const topical = /oauth|authoriz|authentic|scope|permission|review|approv|verif|app ?id|client|credential|redirect|business|creator|register|developer|access token/i;
+  const ranked = all.length ? (search(query, { index: ix, k: 14 }) as unknown as WebPassage[]).sort((a, b) => Number(topical.test(b.text)) - Number(topical.test(a.text))).slice(0, 8) : [];
   const keep = (ranked.length ? ranked : all.slice(0, 6)) as WebPassage[];
   const byId = new Map(all.map((p) => [p.id, p]));
   const passages = keep.map((h) => byId.get(h.id)!).filter(Boolean);
