@@ -3,6 +3,8 @@ import { GoogleGenAI } from "@google/genai";
 /** One place that calls Gemini: tries the configured model, then free-tier fallbacks, and reports WHY it failed. */
 const FALLBACKS = ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
 
+export const safeErrorLong = (e: unknown) => String((e as any)?.message ?? e).replace(/AIza[0-9A-Za-z_-]{20,}/g, "[key]").replace(/sk-[0-9A-Za-z_-]{20,}/g, "[key]").replace(/\s+/g, " ").slice(0, 700);
+
 export const safeError = (e: unknown) =>
   String((e as any)?.message ?? e)
     .replace(/^This operation was aborted$/i, "no reply before the time limit")
@@ -95,7 +97,7 @@ async function callXai(prompt: string, ms: number, temperature: number): Promise
 }
 
 let lastPaidErr = "";
-type GenOpts = { accept?: (text: string) => boolean; maxTokens?: number; json?: boolean; timeoutMs?: number; temperature?: number; models?: string[]; deadlineMs?: number; race?: boolean; fast?: boolean; only?: "gemini" };
+type GenOpts = { heavy?: boolean; accept?: (text: string) => boolean; maxTokens?: number; json?: boolean; timeoutMs?: number; temperature?: number; models?: string[]; deadlineMs?: number; race?: boolean; fast?: boolean; only?: "gemini" };
 
 /**
  * Public entry. Providers are tried in three tiers, one provider per tier:
@@ -107,7 +109,7 @@ export async function generate(prompt: string, opts: GenOpts = {}): Promise<stri
   const started = Date.now();
   const total = Math.min(opts.deadlineMs ?? opts.timeoutMs ?? 28_000, 50_000);
   const temp = opts.temperature ?? 0.2;
-  const p = opts.json ? `${prompt}\n\nReturn ONLY valid JSON: no prose before or after it and no code fences.` : prompt;
+  const p = opts.json ? `${prompt}\n\nReturn ONLY valid JSON, minified (no indentation or line breaks): no prose before or after it and no code fences.` : prompt;
   const env = process.env;
   const run: Record<string, (ms: number) => Promise<string>> = {
     claude: (ms) => callAnthropic(p, ms, temp, opts.maxTokens),
@@ -118,7 +120,11 @@ export async function generate(prompt: string, opts: GenOpts = {}): Promise<stri
     gemini: (ms) => generateCore(p, { ...opts, only: "gemini", race: true, fast: true, timeoutMs: ms, deadlineMs: ms }),
   };
   const have: Record<string, boolean> = { claude: !!env.ANTHROPIC_API_KEY, groq: !!env.GROQ_API_KEY, bedrock: !!env.AWS_BEARER_TOKEN_BEDROCK, grok: !!env.XAI_API_KEY, openrouter: !!env.OPENROUTER_API_KEY, gemini: !!env.GEMINI_API_KEY };
-  const tiers = [["claude", "groq", "bedrock", "grok"], ["gemini", "openrouter"], ["claude"]].map((t) => t.filter((n) => have[n])).filter((t) => t.length);
+  // Groq's free tier takes about 8,000 tokens a minute and OpenRouter's free models write long JSON badly:
+  // keep both away from big requests, and let a heavy job (a whole guide) go to Claude first with most of the time.
+  if (p.length > 12_000) have.groq = false;
+  if (opts.heavy) have.openrouter = false;
+  const tiers = (opts.heavy ? [["claude", "bedrock", "grok"], ["gemini", "groq"], ["claude"]] : [["claude", "groq", "bedrock", "grok"], ["gemini", "openrouter"], ["claude"]]).map((t) => t.filter((n) => have[n])).filter((t) => t.length);
   if (!tiers.length) throw new Error("No AI model is configured on the server");
   const errors: string[] = [];
   const used = new Set<string>();
@@ -129,7 +135,7 @@ export async function generate(prompt: string, opts: GenOpts = {}): Promise<stri
     const name = pool[Math.floor(Math.random() * pool.length)];
     const left = total - (Date.now() - started);
     if (left < 3000) { errors.push(`${name}: no time left`); break; }
-    const share = i < tiers.length - 1 ? Math.max(3000, Math.floor(left * 0.6)) : left;
+    const share = i < tiers.length - 1 ? Math.max(3000, Math.floor(left * (opts.heavy && i === 0 ? 0.8 : 0.6))) : left;
     try {
       const out = await run[name](Math.min(share, 30_000));
       // a reply that fails the caller's format check counts as a failure, so the next provider gets a turn

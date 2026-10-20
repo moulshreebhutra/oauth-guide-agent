@@ -1,4 +1,4 @@
-import { generate, hasModel, safeError } from "./llm";
+import { generate, hasModel, safeError, safeErrorLong } from "./llm";
 import { fetchPage, searchWeb, probeOAuthDiscovery, checkComposioManaged, composioToolkit } from "./tools";
 import { enforce, type Fetched } from "./postprocess";
 import type { Guide } from "./schema";
@@ -17,15 +17,15 @@ export type Ev =
 
 const excerpt = (t: string, n = 700) => t.replace(/\s+/g, " ").trim().slice(0, n);
 const MAX_ACTIONS = 5;
-const RESEARCH_BUDGET_MS = 22_000; // stop researching early so the whole run fits a 60s function limit
-const TOTAL_BUDGET_MS = 52_000;
+const RESEARCH_BUDGET_MS = 15_000; // stop researching early so the whole run fits a 60s function limit
+const TOTAL_BUDGET_MS = 55_000;
 const ACTION_TIMEOUT_MS = 12_000;
-const WRITE_TIMEOUT_MS = 30_000;
+const WRITE_TIMEOUT_MS = 38_000;
 const PER_PAGE_PROMPT_CHARS = 9000;
 const OFFICIAL_HINT = /(docs?|developers?|developer|learn|support|help|api)\./i;
 
 async function ask(prompt: string, timeoutMs = ACTION_TIMEOUT_MS, json = true, maxTokens?: number): Promise<string> {
-  return generate(prompt, { json, timeoutMs, maxTokens, accept: json ? (t) => { try { parseJson(t); return true; } catch { return false; } } : undefined });
+  return generate(prompt, { json, timeoutMs, maxTokens, heavy: (maxTokens ?? 0) >= 6000, accept: json ? (t) => { try { parseJson(t); return true; } catch { return false; } } : undefined });
 }
 
 function parseJson(s: string): any {
@@ -166,10 +166,10 @@ EXAMPLE:\n${exampleGuide()}\n\nCALIBRATION (how our researched guides judged sim
   for (let attempt = 0; attempt < 2; attempt++) {
     let draft: any;
     try {
-      if (attempt && Date.now() - T0 > TOTAL_BUDGET_MS - WRITE_TIMEOUT_MS) break;
-      draft = parseJson(await ask(attempt ? `${base}\n\nYour previous attempt failed validation: ${lastErr}\nReturn a corrected full JSON object.` : base, WRITE_TIMEOUT_MS, true, 8000));
+      if (attempt && Date.now() - T0 > TOTAL_BUDGET_MS - 20_000) break;
+      draft = parseJson(await ask(attempt ? `${base}\n\nYour previous attempt failed validation: ${lastErr}\nReturn a corrected full JSON object.` : base, Math.max(12_000, Math.min(WRITE_TIMEOUT_MS, TOTAL_BUDGET_MS - (Date.now() - T0))), true, 8000));
     } catch (e: any) {
-      lastErr = e instanceof SyntaxError ? "the model returned unparseable JSON" : safeError(e);
+      lastErr = e instanceof SyntaxError ? "the model returned unparseable JSON" : safeErrorLong(e);
       continue;
     }
     draft.slug = slug;
@@ -183,5 +183,5 @@ EXAMPLE:\n${exampleGuide()}\n\nCALIBRATION (how our researched guides judged sim
     }
     lastErr = r.error;
   }
-  yield { type: "error", msg: `Could not produce a guide that passed validation (${lastErr.slice(0, 300)}). Nothing was shown rather than showing something unchecked.` };
+  yield { type: "error", msg: `Could not produce a guide that passed validation (${lastErr.slice(0, 700)}). Nothing was shown rather than showing something unchecked.` };
 }
