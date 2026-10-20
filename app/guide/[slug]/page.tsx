@@ -14,7 +14,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   return (
     <main>
       <GuideView g={g} back />
-      <div className="wrap narrow">
+      <div className="wrap narrow mid">
       <Ask slug={g.slug} examples={[`How long does ${g.app.split(" ")[0]} approval take?`, `What must I do myself for ${g.app.split(" ")[0]}?`, `What goes wrong most often?`]} />
       </div>
     </main>

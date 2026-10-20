@@ -399,3 +399,83 @@ blockquote em,.guide-body em{font-style:italic}
 .hw-tech>div:last-child{border-bottom:0}
 .hw-tech dt{font-weight:600}.hw-tech dd{margin:0;color:var(--muted);line-height:1.55}
 @media(max-width:720px){.hw-tech>div{grid-template-columns:1fr;gap:4px}}
+
+/* =====================================================================
+   Polish layer: one set of alignment, spacing, state and motion rules.
+   Motion is limited to 160ms colour, border and shadow changes, one fade
+   when a fold opens, and a 1px press. Nothing moves on its own.
+   ===================================================================== */
+:root{--ease:cubic-bezier(.2,.6,.2,1);--t:.16s}
+h1,h2,h3{text-wrap:balance}
+p,li,.lede{text-wrap:pretty}
+
+/* alignment: body copy sits on the same left edge as a left-aligned page header */
+.wrap.narrow{max-width:1200px}
+.wrap.narrow>*{max-width:760px}
+.wrap.narrow.mid{max-width:760px;margin-left:auto;margin-right:auto}
+.wrap.narrow.mid>*{max-width:none}
+.plan.narrow{max-width:1200px}
+.plan>.order,.plan>.verdict,.plan>.finding,.plan>p,.plan>h2,.plan>h3{max-width:820px}
+.pickgrid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.prose>h2:first-child,.hw h2:first-child{margin-top:0}
+
+/* states */
+.btn,.chip,.pick,.cmprow,.finding,.fact,.stage,.toc a,.links a,.topnav a,.back,.linkbtn,summary,
+.askform input,.liveform input,.lookup input,.agsteps .stone>summary,.hw-table td,.evidence a,
+.guide-body a,.answer-text a,.passages a,.cites a,a.cite{
+  transition:background-color var(--t) var(--ease),color var(--t) var(--ease),border-color var(--t) var(--ease),box-shadow var(--t) var(--ease),text-decoration-color var(--t) var(--ease),transform var(--t) var(--ease)}
+.btn:not(:disabled):active,.chip:not(:disabled):active,.pick:active{transform:translateY(1px)}
+.chip:hover,.pick:hover{border-color:var(--ink)}
+.dark .chip:hover,.band .chip:hover{border-color:#fff}
+.finding:hover,.fact:hover,.stage:hover{border-color:#bdbdbd}
+.cmprow:hover{background:#fafaff}
+.hw-table tbody tr:hover td{background:#fafafa}
+.topnav .links a{text-underline-offset:6px;text-decoration:underline;text-decoration-color:transparent}
+.topnav .links a:hover{text-decoration-color:currentColor}
+.toc a{border-left:2px solid transparent}
+.back:hover{transform:translateX(-2px)}
+summary{cursor:pointer}
+summary:hover{color:var(--ink)}
+.band summary:hover,.agrun>summary:hover{color:#fff}
+
+/* inputs: a clear focus state in both light and dark bands */
+.askform input:focus,.liveform input:focus,.lookup input:focus{outline:none;border-color:var(--blue-2);box-shadow:0 0 0 3px rgba(42,49,255,.22)}
+.band .liveform input:focus,.dark .askform input:focus,.lookup input:focus{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.18)}
+.askform input::placeholder,.liveform input::placeholder{opacity:.8}
+
+/* one gentle fade when a fold opens */
+@keyframes unfold{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+details[open]>*:not(summary){animation:unfold .18s var(--ease)}
+
+/* rhythm: the same space above and below every full-width section */
+section.band,.band.pagehead{scroll-margin-top:72px}
+.sechead{margin-bottom:40px}
+.guide-body section{margin-bottom:8px}
+.finding+.finding{margin-top:12px}
+@media(max-width:720px){
+  .pagehead{padding:48px 0 44px}
+  .hw{margin-bottom:48px}
+  .hw h2,.guide-body h2{font-size:1.5rem}
+  .sechead{margin-bottom:28px}
+  .wrap.narrow>*{max-width:none}
+  .guide-body h2{margin-top:44px;padding-top:24px}
+  .agrun>summary{flex-wrap:wrap}
+  .runcard{padding:14px}
+}
+@media(prefers-reduced-motion:reduce){details[open]>*:not(summary){animation:none}.btn:active,.chip:active,.pick:active,.back:hover{transform:none}}
+.plan.narrow>.pickgrid{max-width:none}
+@media(max-width:640px){
+  .askform,.liveform,.lookup{flex-wrap:wrap}
+  .askform input,.liveform input,.lookup input{min-width:0;width:100%;flex:1 1 100%}
+  .askform .btn,.liveform .btn,.lookup .btn{width:100%;text-align:center}
+  .topnav .links{gap:4px 14px}
+}
+@media(max-width:720px){
+  /* one tidy row for the menu: it scrolls sideways instead of wrapping onto three lines */
+  .topnav .wrap{flex-direction:column;align-items:flex-start;gap:8px;padding-top:12px;padding-bottom:0}
+  .topnav .links{display:flex;flex-wrap:nowrap;gap:0 4px;overflow-x:auto;white-space:nowrap;width:calc(100% + 40px);margin:0 -20px;padding:0 20px 12px;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent)}
+  .topnav .links::-webkit-scrollbar{display:none}
+  .topnav .links a{padding:6px 10px;flex:none}
+  .pickgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pick{padding:10px}
+}
