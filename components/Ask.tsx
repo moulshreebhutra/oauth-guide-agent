@@ -1,4 +1,5 @@
 "use client";
+import { Md } from "./Md";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Tag } from "./GuideView";
@@ -9,8 +10,7 @@ type Result = { web?: boolean; sources?: { url: string; title: string }[]; app?:
 /** Render the answer: **bold**, bullet lines, and [slug#n] citations as links to the guide. No HTML is ever injected. */
 function Answer({ text }: { text: string }) {
   const parts = (line: string) =>
-    line.split(/(\*\*[^*]+\*\*|\[[^\]]*#\d+[^\]]*\])/g).map((t, i) => {
-      if (/^\*\*[^*]+\*\*$/.test(t)) return <strong key={i}>{t.slice(2, -2)}</strong>;
+    line.split(/(\[[^\]]*#\d+[^\]]*\])/g).map((t, i) => {
       if (/^\[[^\]]*#\d+[^\]]*\]$/.test(t))
         return (
           <span key={i} className="cite">
@@ -21,7 +21,7 @@ function Answer({ text }: { text: string }) {
             })}
           </span>
         );
-      return t.replace(/\*\*/g, "");
+      return <Md key={i} t={t} />;
     });
   return (
     <div className="answer-text">
@@ -141,7 +141,7 @@ export function Ask({ slug, examples }: { slug?: string; examples: string[] }) {
                 {res.passages.map((p) => (
                   <li key={p.id}>
                     <div className="ptop">{p.url ? <a href={p.url} target="_blank" rel="noreferrer">{p.app} · {p.section}</a> : <Link href={`/guide/${p.slug}`}>{p.app} · {p.section}</Link>} {p.tag && <Tag t={p.tag} />} <span className="pid">{p.id}</span></div>
-                    <p>{p.text.replace(/^[^.]*\.\s/, "")}</p>
+                    <p><Md t={p.text.replace(/^[^.]*\.\s/, "")} /></p>
                   </li>
                 ))}
               </ul>

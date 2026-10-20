@@ -146,3 +146,11 @@ test("usablePage drops JS shells and pages that are not about the app", () => {
   assert.equal(usablePage("Discord apps can be verified once they reach 75 servers. ".repeat(10), "Discord"), true);
   assert.equal(usablePage("zoom.us marketplace apps need review. ".repeat(12), "zoom.us"), true);
 });
+
+import { cleanText, decodeEntities, prettyTitle } from "../lib/text";
+test("text helpers clean markdown, entities and url titles", () => {
+  assert.equal(decodeEntities("app users&#039; accounts &amp; more"), "app users' accounts & more");
+  assert.equal(cleanText("# Meta overview\n- [Instagram API](https://x.com/a) **works** with `code`"), "Meta overview - Instagram API works with code");
+  assert.equal(prettyTitle("https://developers.facebook.com/documentation/instagram-platform/app-review", "https://developers.facebook.com/documentation/instagram-platform/app-review"), "developers.facebook.com: instagram platform / app review");
+  assert.equal(prettyTitle("Real title", "https://x.com"), "Real title");
+});

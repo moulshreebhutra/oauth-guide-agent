@@ -4,6 +4,8 @@ import { PageHead } from "./PageHead";
 import { Logo } from "./Logo";
 import { GuideActions } from "./GuideActions";
 import { agentBrief, guideMarkdown } from "@/lib/export";
+import { Md } from "./Md";
+import { prettyTitle } from "@/lib/text";
 
 const idOf = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
@@ -45,7 +47,7 @@ function ClaimList({ title, items, emptyText }: { title: string; items: Claim[];
         <ul className="claims">
           {items.map((c, i) => (
             <li key={i}>
-              <Tag t={c.tag} /> {c.text} <Cites ids={c.evidence} />
+              <Tag t={c.tag} /> <Md t={c.text} /> <Cites ids={c.evidence} />
             </li>
           ))}
         </ul>
@@ -71,7 +73,7 @@ export function GuideView({ g, notes = [], back = false, banner, embedded = fals
       <PageHead
         eyebrow={<>{back && <><Link href="/" className="back">← All guides</Link><br /></>}{g.generated_by === "agent" ? "Generated live by the agent, not human-checked" : "Researched guide"}</>}
         title={<span className="titlerow"><Logo slug={g.slug} app={g.app} size={52} />{g.app}</span>}
-        lede={g.summary}
+        lede={<Md t={g.summary} />}
       >
         <div className="meta">
           <span>Tier {g.difficulty.tier} · {g.difficulty.label}</span>
@@ -94,7 +96,7 @@ export function GuideView({ g, notes = [], back = false, banner, embedded = fals
             Tier {g.difficulty.tier} · {g.difficulty.label}
           </strong>
           <p>
-            <Tag t={g.difficulty.tag} /> {g.difficulty.rationale} <Cites ids={g.difficulty.evidence} />
+            <Tag t={g.difficulty.tag} /> <Md t={g.difficulty.rationale} /> <Cites ids={g.difficulty.evidence} />
           </p>
         </div>
         <div className="fact">
@@ -103,21 +105,21 @@ export function GuideView({ g, notes = [], back = false, banner, embedded = fals
             {mins.min}-{mins.max} min
           </strong>
           <p>
-            <Tag t={g.effort.tag} /> {g.effort.basis}
+            <Tag t={g.effort.tag} /> <Md t={g.effort.basis} />
           </p>
         </div>
         <div className="fact">
           <span className="k">Approval wait</span>
           <strong>{g.wait.headline ?? g.wait.display ?? (g.wait.range ? `${g.wait.range.min_days}-${g.wait.range.max_days} days` : "No stated wait")}</strong>
           <p>
-            <Tag t={g.wait.tag} /> {g.wait.statement} <Cites ids={g.wait.evidence} />
+            <Tag t={g.wait.tag} /> <Md t={g.wait.statement} /> <Cites ids={g.wait.evidence} />
           </p>
         </div>
         <div className="fact">
           <span className="k">Composio managed auth</span>
           <strong>{g.composio_managed.status === "yes" ? "Available" : g.composio_managed.status === "no" ? "Not available" : "Not confirmed"}</strong>
           <p>
-            <Tag t={g.composio_managed.tag} /> {g.composio_managed.note}
+            <Tag t={g.composio_managed.tag} /> <Md t={g.composio_managed.note} />
           </p>
           {g.composio_managed.status !== "unknown" && g.evidence.find((e) => e.url.startsWith("https://docs.composio.dev/toolkits/")) && <p><a href={g.evidence.find((e) => e.url.startsWith("https://docs.composio.dev/toolkits/"))!.url} target="_blank" rel="noreferrer">Open Composio's toolkit page</a></p>}
         </div>
@@ -128,11 +130,11 @@ export function GuideView({ g, notes = [], back = false, banner, embedded = fals
         <div className="split">
           <div>
             <h3>An agent can</h3>
-            <ul>{g.agent_vs_you.agent_can.map((x, i) => <li key={i}>{x}</li>)}</ul>
+            <ul>{g.agent_vs_you.agent_can.map((x, i) => <li key={i}><Md t={x} /></li>)}</ul>
           </div>
           <div>
             <h3>You must</h3>
-            <ul>{g.agent_vs_you.you_must.map((x, i) => <li key={i}>{x}</li>)}</ul>
+            <ul>{g.agent_vs_you.you_must.map((x, i) => <li key={i}><Md t={x} /></li>)}</ul>
           </div>
         </div>
       </section>
@@ -148,9 +150,9 @@ export function GuideView({ g, notes = [], back = false, banner, embedded = fals
                 <Tag t={s.tag} />
               </div>
               <p>
-                {s.detail} <Cites ids={s.evidence} />
+                <Md t={s.detail} /> <Cites ids={s.evidence} />
               </p>
-              {s.why_not_agent && <p className="muted small">Why you: {s.why_not_agent}</p>}
+              {s.why_not_agent && <p className="muted small">Why you: <Md t={s.why_not_agent} /></p>}
             </li>
           ))}
         </ol>
@@ -167,16 +169,16 @@ export function GuideView({ g, notes = [], back = false, banner, embedded = fals
           {g.blockers.map((b, i) => (
             <details key={i}>
               <summary>
-                <Tag t={b.tag} /> {b.symptom}
+                <Tag t={b.tag} /> <Md t={b.symptom} />
               </summary>
               <p>
-                <b>Likely cause:</b> {b.likely_cause}
+                <b>Likely cause:</b> <Md t={b.likely_cause} />
               </p>
               <p>
-                <b>Fix:</b> {b.fix}
+                <b>Fix:</b> <Md t={b.fix} />
               </p>
               <p>
-                <b>Escalate when:</b> {b.escalate_when} <Cites ids={b.evidence} />
+                <b>Escalate when:</b> <Md t={b.escalate_when} /> <Cites ids={b.evidence} />
               </p>
             </details>
           ))}
@@ -185,7 +187,7 @@ export function GuideView({ g, notes = [], back = false, banner, embedded = fals
 
       <section id="next-actions">
         <h2>Next actions</h2>
-        <ul>{g.next_actions.map((x, i) => <li key={i}>{x}</li>)}</ul>
+        <ul>{g.next_actions.map((x, i) => <li key={i}><Md t={x} /></li>)}</ul>
       </section>
 
       <section id="what-was-tested">
@@ -206,11 +208,11 @@ export function GuideView({ g, notes = [], back = false, banner, embedded = fals
 
       <section id="what-we-are-unsure-about">
         <h2>What we are unsure about</h2>
-        <ul>{g.uncertainties.map((x, i) => <li key={i}>{x}</li>)}</ul>
+        <ul>{g.uncertainties.map((x, i) => <li key={i}><Md t={x} /></li>)}</ul>
         {notes.length > 0 && (
           <details>
             <summary>Automatic checks applied ({notes.length})</summary>
-            <ul>{notes.map((n, i) => <li key={i}>{n}</li>)}</ul>
+            <ul>{notes.map((n, i) => <li key={i}><Md t={n} /></li>)}</ul>
           </details>
         )}
       </section>
@@ -220,8 +222,8 @@ export function GuideView({ g, notes = [], back = false, banner, embedded = fals
         <ol className="evidence">
           {g.evidence.map((e) => (
             <li key={e.id} id={`ev-${e.id}`}>
-              <b>[{e.id}]</b> <a href={e.url} target="_blank" rel="noreferrer">{e.title}</a> {e.official ? "" : <em>(not provider-owned)</em>}
-              <blockquote>{e.excerpt}</blockquote>
+              <b>[{e.id}]</b> <a href={e.url} target="_blank" rel="noreferrer">{prettyTitle(e.title, e.url)}</a> {e.official ? "" : <em>(not provider-owned)</em>}
+              <blockquote><Md t={e.excerpt} /></blockquote>
               <span className="muted small">
                 retrieved {e.retrieved_at} · quote check: {e.quote_check === "verified" ? "matched the page text by code" : e.quote_check === "failed" ? "NOT found in page" : "not yet re-matched against the raw page"}
               </span>

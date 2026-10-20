@@ -328,3 +328,9 @@ footer a{color:#fff}
 .cachenote .linkbtn{color:#fff}
 .sharebar{padding-top:8px;padding-bottom:72px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 .guide-body>section+section{margin-top:0}
+
+/* inline markdown from model text */
+code.ic{font:.88em var(--mono);background:var(--card);border:1px solid var(--rule);padding:1px 5px}
+a.cite{font:.82em var(--mono);text-decoration:underline;margin:0 1px}
+.claims strong,.steps strong{font-weight:600}
+blockquote em,.guide-body em{font-style:italic}

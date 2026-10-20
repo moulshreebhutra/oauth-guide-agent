@@ -1,4 +1,5 @@
 import { generate, hasModel, safeError, safeErrorLong } from "./llm";
+import { cleanText } from "./text";
 import { fetchPage, fetchReadable, searchWeb, probeOAuthDiscovery, checkComposioManaged, composioToolkit } from "./tools";
 import { enforce, type Fetched } from "./postprocess";
 import type { Guide } from "./schema";
@@ -15,7 +16,7 @@ export type Ev =
   | { type: "guide"; guide: Guide; notes: string[] }
   | { type: "error"; msg: string };
 
-const excerpt = (t: string, n = 700) => t.replace(/\s+/g, " ").trim().slice(0, n);
+const excerpt = (t: string, n = 700) => cleanText(t).slice(0, n);
 const MAX_ACTIONS = 5;
 const RESEARCH_BUDGET_MS = 20_000; // stop researching early so the whole run fits a 60s function limit
 const TOTAL_BUDGET_MS = 170_000;

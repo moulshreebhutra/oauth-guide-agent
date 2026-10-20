@@ -1,4 +1,5 @@
 import { assertSafeUrl } from "./safety";
+import { decodeEntities } from "./text";
 
 const UA = "Mozilla/5.0 (compatible; OAuthGuideAgent/0.1; research bot for a take-home demo)";
 const MAX_BYTES = 1_500_000;
@@ -10,12 +11,7 @@ export function htmlToText(html: string): { title: string; text: string } {
     .replace(/<(script|style|noscript|svg|nav|footer|header)[\s\S]*?<\/\1>/gi, " ")
     .replace(/<br\s*\/?>|<\/(p|div|li|h[1-6]|tr)>/gi, "\n")
     .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&rsquo;|&lsquo;/g, "'")
+    .replace(/&(?:#\d+|#x[0-9a-f]+|[a-z]+);/gi, (m) => decodeEntities(m))
     .replace(/[ \t]+/g, " ")
     .replace(/\n\s*\n+/g, "\n")
     .trim();
