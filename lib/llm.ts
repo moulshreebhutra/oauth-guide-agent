@@ -9,20 +9,26 @@ export const safeError = (e: unknown) =>
     .replace(/\s+/g, " ")
     .slice(0, 220);
 
-export async function generate(prompt: string, opts: { json?: boolean; timeoutMs?: number; temperature?: number } = {}): Promise<string> {
+export async function generate(
+  prompt: string,
+  opts: { json?: boolean; timeoutMs?: number; temperature?: number; models?: string[]; deadlineMs?: number } = {},
+): Promise<string> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY is not set on the server");
-  const models = [...new Set([process.env.GEMINI_MODEL, ...FALLBACKS].filter(Boolean) as string[])];
+  const models = [...new Set([...(opts.models ?? []), process.env.GEMINI_MODEL, ...FALLBACKS].filter(Boolean) as string[])];
   const client = new GoogleGenAI({ apiKey: key });
+  const started = Date.now();
   const failures: string[] = [];
   for (const model of models) {
+    const left = (opts.deadlineMs ?? Infinity) - (Date.now() - started);
+    if (left < 2500) break;
     try {
       const res = await client.models.generateContent({
         model,
         contents: prompt,
         config: {
           temperature: opts.temperature ?? 0.2,
-          abortSignal: AbortSignal.timeout(opts.timeoutMs ?? 15_000),
+          abortSignal: AbortSignal.timeout(Math.min(opts.timeoutMs ?? 15_000, left)),
           ...(opts.json ? { responseMimeType: "application/json" } : {}),
         },
       });
@@ -31,9 +37,8 @@ export async function generate(prompt: string, opts: { json?: boolean; timeoutMs
     } catch (e) {
       const msg = safeError(e);
       failures.push(`${model}: ${msg}`);
-      // a bad key or exhausted project will fail every model; do not burn the time budget retrying
-      if (/API key|API_KEY|permission|PERMISSION_DENIED|UNAUTHENTICATED|401|403/i.test(msg)) break;
-      if (/abort|timeout/i.test(msg)) break;
+      // a bad key fails every model, so stop. Overload (503), quota (429), timeouts and unknown models move on to the next model.
+      if (/API key not valid|API_KEY_INVALID|PERMISSION_DENIED|UNAUTHENTICATED/i.test(msg)) break;
     }
   }
   throw new Error(failures.join(" | ").slice(0, 400));

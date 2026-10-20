@@ -3,13 +3,15 @@ import { ABOUT } from "@/lib/about";
 
 export function About() {
   return (
-    <section id="about" className="band about" aria-labelledby="about-h">
+    <section id="about" className="sect white about" aria-labelledby="about-h">
       <div className="wrap">
+        <div className="sechead">
         <p className="eyebrow">About the builder</p>
         <h2 id="about-h" className="about-h">Built by <mark className="hl">{ABOUT.name}</mark></h2>
         <p className="lede">
           {ABOUT.role}, applying for {ABOUT.applyingFor}. This prototype is my answer to the take-home: a way for a developer to see the cost of an OAuth app before starting, and to trust what they read.
         </p>
+        </div>
 
         <div className="about-grid">
           <div>

@@ -10,6 +10,7 @@ import { getIndex, search, type Hit } from "./rag";
  */
 const EMBED_MODEL = process.env.GEMINI_EMBED_MODEL || "gemini-embedding-001";
 let docVecs: Promise<number[][] | null> | null = null;
+let failedAt = 0; // after a failure, skip embeddings for 2 minutes so Ask stays fast
 
 const client = () => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
@@ -19,7 +20,7 @@ async function embed(texts: string[], taskType: string): Promise<number[][]> {
     const res = await client().models.embedContent({
       model: EMBED_MODEL,
       contents: texts.slice(i, i + 50),
-      config: { taskType, abortSignal: AbortSignal.timeout(15_000) },
+      config: { taskType, abortSignal: AbortSignal.timeout(6_000) },
     });
     for (const e of res.embeddings ?? []) out.push(e.values ?? []);
   }
@@ -32,7 +33,8 @@ function passageVectors() {
     docVecs = embed(ix.chunks.map((c) => `${c.app} - ${c.section}: ${c.text}`.slice(0, 1500)), "RETRIEVAL_DOCUMENT")
       .then((v) => (v.length === ix.chunks.length && v.every((x) => x.length) ? v : null))
       .catch(() => {
-        docVecs = null; // try again on the next request
+        docVecs = null;
+        failedAt = Date.now();
         return null;
       });
   }
@@ -48,7 +50,7 @@ const cos = (a: number[], b: number[]) => {
 export async function searchHybrid(query: string, opts: { k?: number; slug?: string } = {}): Promise<{ hits: Hit[]; mode: "hybrid" | "keyword" }> {
   const k = opts.k ?? 6;
   const pool = search(query, { k: 24, slug: opts.slug });
-  if (pool.length < 2 || !process.env.GEMINI_API_KEY) return { hits: pool.slice(0, k), mode: "keyword" };
+  if (pool.length < 2 || !process.env.GEMINI_API_KEY || Date.now() - failedAt < 120_000) return { hits: pool.slice(0, k), mode: "keyword" };
   try {
     const vecs = await passageVectors();
     if (!vecs) return { hits: pool.slice(0, k), mode: "keyword" };
@@ -62,6 +64,7 @@ export async function searchHybrid(query: string, opts: { k?: number; slug?: str
     bySim.forEach((h, r) => score.set(h.id, (score.get(h.id) ?? 0) + 1 / (60 + r)));
     return { hits: [...pool].sort((a, b) => score.get(b.id)! - score.get(a.id)!).slice(0, k), mode: "hybrid" };
   } catch {
+    failedAt = Date.now();
     return { hits: pool.slice(0, k), mode: "keyword" };
   }
 }

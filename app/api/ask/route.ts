@@ -31,13 +31,25 @@ ${passages}
 
 QUESTION: ${question}`;
   try {
-    const answer = (await generate(prompt, { temperature: 0.1, timeoutMs: 15_000 })).trim();
+    const answer = (await generate(prompt, { temperature: 0.1, timeoutMs: 8_000, deadlineMs: 24_000, models: ["gemini-3.5-flash-lite", "gemini-3.6-flash"] })).trim();
     const { cited, invalid } = checkCitations(answer, new Set(hits.map((h) => h.id)));
     if (!cited.length || invalid.length)
       return Response.json({ mode: "passages", answer: null, passages: hits.map(passageView), message: "The written answer did not cite the guides correctly, so it is not shown. Here are the passages it was working from." });
     return Response.json({ mode: "answer", retrieval, answer, cited, passages: hits.filter((h) => cited.includes(h.id)).map(passageView) });
   } catch (e: any) {
     console.error("ask: model call failed:", e?.message);
-    return Response.json({ mode: "passages", answer: null, passages: hits.map(passageView), message: "The model call failed, showing the retrieved passages instead.", detail: String(e?.message ?? e).slice(0, 300) });
+    // The model is busy or unreachable: answer from the guides' own words, assembled by code. Nothing is invented.
+    const top = hits.slice(0, 3);
+    const answer = top.map((h) => `${h.text.length > 280 ? h.text.slice(0, 280).trimEnd() + "…" : h.text} [${h.id}]`).join("\n\n");
+    return Response.json({
+      mode: "answer",
+      retrieval,
+      extractive: true,
+      answer,
+      cited: top.map((h) => h.id),
+      passages: top.map(passageView),
+      message: "The AI model is busy right now, so this is the guides' own wording, quoted by code instead of written by the model. Try again in a minute for a written answer.",
+      detail: String(e?.message ?? e).slice(0, 300),
+    });
   }
 }

@@ -28,7 +28,7 @@ export function Ask({ slug, examples }: { slug?: string; examples: string[] }) {
   return (
     <section className="ask" aria-label="Ask the guides">
       <h2>{slug ? "Ask this guide" : "Ask all the guides"}</h2>
-      <p className="muted">Answers come only from the guides below, with the passage each one rests on. If the guides do not cover it, it says so.</p>
+      <p className="muted">Answers come only from the guides, with the passage each one rests on. If the guides do not cover it, it says so.</p>
       <form
         onSubmit={(e) => {
           e.preventDefault();

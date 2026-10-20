@@ -59,6 +59,7 @@ export default function Live() {
   return (
     <main>
       <PageHead
+        center
         eyebrow="Live agent"
         title={<>Research any app, <mark className="hl">get a shareable guide</mark></>}
         lede="Type an app name or website. The agent searches, reads the provider's pages, and writes a guide. Quotes are checked by code against the pages it actually read; anything it cannot back up is downgraded."
