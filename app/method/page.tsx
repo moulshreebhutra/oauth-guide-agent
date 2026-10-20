@@ -24,8 +24,8 @@ export default function Method() {
       <h2>What is checked by code (live agent)</h2>
       <ul>
         <li>Evidence must come from a page fetched in that run; excerpts must literally appear in the page text or the evidence is dropped.</li>
-        <li>A claim marked Sourced that loses its evidence becomes Inferred (Reported if only community pages back it). A Sourced claim must share wording with the page it cites, and any year or number of 10 or more must appear there. The model cannot mark anything Tested.</li>
-        <li>&quot;No review is mentioned&quot; is an absence, so it is never Sourced. A forum or community page is never counted as official, even on the provider&apos;s own domain. A Tier 3 or 4 needs a Sourced review step or it is lowered to Tier 2. Steps done in the provider&apos;s console are always yours.</li>
+        <li>A claim marked Sourced that loses its evidence becomes Inferred (Reported if only community pages back it). A Sourced claim must share wording with the page it cites, and any year must appear there, and every figure of 10 or more must be on a cited page (otherwise it becomes Inferred). The model cannot mark anything Tested.</li>
+        <li>&quot;No review is mentioned&quot; is an absence, so it is never Sourced. A forum or community page is never counted as official, even on the provider&apos;s own domain. A Tier 3 or 4 needs a Sourced review step or it is lowered to Tier 2. Steps done in the provider&apos;s console are always yours. An unsupported gotcha that is not about setup, auth, review or limits is dropped.</li>
         <li>Output must pass a schema and consistency checks, or nothing is shown.</li>
         <li>Fetched pages are treated as data, never instructions. Outbound fetches refuse private and loopback addresses and are size, time and step capped. Live generation is rate limited.</li>
       </ul>
