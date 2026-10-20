@@ -138,3 +138,11 @@ test("appFromInput handles more phrasings", () => {
   assert.equal(appFromInput("how do I get oauth working for acme-crm please"), "acme-crm");
   assert.equal(appFromInput("What is the capital of France?"), null);
 });
+
+import { usablePage } from "../lib/agent";
+test("usablePage drops JS shells and pages that are not about the app", () => {
+  assert.equal(usablePage("Discord Developer Portal", "Discord"), false);
+  assert.equal(usablePage("Your agents decide. We make it happen ".repeat(20), "Discord"), false);
+  assert.equal(usablePage("Discord apps can be verified once they reach 75 servers. ".repeat(10), "Discord"), true);
+  assert.equal(usablePage("zoom.us marketplace apps need review. ".repeat(12), "zoom.us"), true);
+});

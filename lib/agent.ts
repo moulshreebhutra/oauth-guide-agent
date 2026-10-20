@@ -22,6 +22,8 @@ const TOTAL_BUDGET_MS = 170_000;
 const ACTION_TIMEOUT_MS = 12_000;
 const WRITE_TIMEOUT_MS = 110_000;
 const PER_PAGE_PROMPT_CHARS = 9000;
+/** A page is worth keeping only if it has real text and is about the app (JavaScript shells and marketing stubs are dropped). */
+export const usablePage = (text: string, app: string) => text.length >= 300 && new RegExp(`\\b${app.split(/[.\s]/)[0].replace(/[^a-z0-9-]/gi, "")}`, "i").test(text.slice(0, 20000));
 const OFFICIAL_HINT = /(docs?|developers?|developer|learn|support|help|api)\./i;
 
 async function ask(prompt: string, timeoutMs = ACTION_TIMEOUT_MS, json = true, maxTokens?: number): Promise<string> {
@@ -130,8 +132,10 @@ export async function* generateGuide(input: { name: string; site?: string }): As
   const cslug = input.name.toLowerCase().replace(/[^a-z0-9]/g, "");
   try {
     const p = await fetchPage(`https://composio.dev/auth/${cslug}`);
-    fetched.push({ url: p.url, title: p.title, text: p.text, official: true });
-    yield { type: "tool", name: "fetch_composio_guide", arg: cslug, result: `${p.text.length} chars`, data: { url: p.url, excerpt: excerpt(p.text) } };
+    if (usablePage(p.text, input.name)) {
+      fetched.push({ url: p.url, title: p.title, text: p.text, official: true });
+      yield { type: "tool", name: "fetch_composio_guide", arg: cslug, result: `${p.text.length} chars`, data: { url: p.url, excerpt: excerpt(p.text) } };
+    } else yield { type: "tool", name: "fetch_composio_guide", arg: cslug, result: "no Composio guide at that address" };
   } catch {
     yield { type: "tool", name: "fetch_composio_guide", arg: cslug, result: "no Composio guide at that address" };
   }
@@ -182,9 +186,9 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
         yield { type: "tool", name: "search_web", arg: act.arg, result: `${r.length} results`, data: { items: r.slice(0, 8) } };
       } else if (act.action === "fetch") {
         const p = await fetchReadable(String(act.arg));
-        if (!fetched.some((f) => f.url === p.url)) {
+        if (!fetched.some((f) => f.url === p.url) && usablePage(p.text, input.name)) {
           const host = new URL(p.url).hostname;
-          const official = (input.site ? host.endsWith(input.site.replace(/^www\./, "")) : false) || OFFICIAL_HINT.test(host) || host === "composio.dev" || host.endsWith(".composio.dev");
+          const official = (input.site ? host.endsWith(input.site.replace(/^www\./, "")) : false) || OFFICIAL_HINT.test(host) || host.includes(cslug) || host === "composio.dev" || host.endsWith(".composio.dev");
           fetched.push({ url: p.url, title: p.title, text: p.text, official });
         }
         log.push(`fetched ${p.url}`);
@@ -194,6 +198,30 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
       log.push(`${act.action} failed: ${e.message}`);
       yield { type: "warn", msg: `${act.action} failed: ${e.message}` };
     }
+  }
+
+  // The model often skips the one page that answers "is there a review, and how long": look for it on purpose.
+  if (Date.now() - T0 < RESEARCH_BUDGET_MS) {
+    try {
+      const q = `${input.name} app verification review process how long does it take developer`;
+      const r = await searchWeb(q);
+      yield { type: "tool", name: "search_web", arg: q, result: `${r.length} results`, data: { items: r.slice(0, 8) } };
+      const score = (x: { title: string; url: string }) => {
+        const host = new URL(x.url).hostname;
+        const own = host.includes(cslug) || (input.site ? host.endsWith(input.site.replace(/^www\./, "")) : false);
+        return (own ? 4 : OFFICIAL_HINT.test(host) ? 1 : 0) + (/verif|review|approv|submit|publish|listing|marketplace/i.test(x.title + x.url) ? 3 : 0);
+      };
+      const cand = r.filter((x) => !fetched.some((f) => f.url === x.url) && score(x) >= 4).sort((a, b) => score(b) - score(a)).slice(0, 2);
+      for (const c of cand) {
+        try {
+          const p = await fetchReadable(c.url);
+          if (!usablePage(p.text, input.name) || fetched.some((f) => f.url === p.url)) continue;
+          const host = new URL(p.url).hostname;
+          fetched.push({ url: p.url, title: p.title, text: p.text, official: host.includes(cslug) || OFFICIAL_HINT.test(host) });
+          yield { type: "tool", name: "fetch_page", arg: p.url, result: `${p.text.length} chars`, data: { url: p.url, excerpt: excerpt(p.text) } };
+        } catch { /* unreadable: skip */ }
+      }
+    } catch { /* search unavailable: carry on with what was read */ }
   }
 
   if (!fetched.length) {
