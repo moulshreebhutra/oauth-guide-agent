@@ -34,3 +34,16 @@ Pick 10-12 claims across guides, open the source, and mark each Confirmed / Corr
 
 | Guide | Claim | Result | Note |
 |---|---|---|---|
+
+## Live-agent audit (read-through, not hands-on) - 2026-10-20/21
+Generated guides for 23 apps outside the library were read next to their step logs and sources: TikTok, Zoom, Instagram, Snapchat, Amazon, Asana, PayPal, Google Photos, PhonePe, Figma, Twilio, Canva, Dropbox, Square, Airtable, Spotify, Etsy, Xero, Mailchimp, Box, Webflow, Intercom, Okta. None of these is a registration, so nothing here is "tested".
+
+| Fault found | Seen in | Fix |
+|---|---|---|
+| Marketplace listing raised the tier | Square | Tier 3/4 needs a Sourced review step, else Tier 2 |
+| Forum-only numbers tagged Sourced | Dropbox | Community-only numbers become Reported; forum pages never official |
+| Quota/certification page not read | Spotify, Xero | Three fixed gate searches, best provider pages read |
+| Absence ("no review mentioned") tagged Sourced | Airtable, Xero, Okta | Absence is Unknown/Inferred |
+| Source did not support the claim | Okta | Claim must share wording with its cited page |
+| Console steps marked "you or agent" | Dropbox, Box, Mailchimp, Webflow | Console steps are always "you" |
+| Unrelated search noise (partner programs) | Airtable, Intercom, Okta | Query changed to quotas and limits |

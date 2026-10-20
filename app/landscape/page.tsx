@@ -6,7 +6,7 @@ export const metadata = { title: "Where this fits · OAuth Route Map", descripti
 export default function Landscape() {
   return (
     <main>
-      <PageHead eyebrow="Where this fits" title={<>Composio and <mark className="hl">the alternatives</mark></>} lede="What we read on Composio's site and docs, and how seven other tools describe themselves. Public pages read on 2026-10-20; these are their claims, not ours." />
+      <PageHead eyebrow="Where this fits" title={<>Composio and <mark className="hl">the alternatives</mark></>} lede="What we read on Composio's site and docs, and how seven other tools describe themselves. Public pages read on 2026-10-20 and re-checked on 2026-10-21; these are their claims, not ours." />
       <div className="wrap narrow prose">
         <h2>Why Composio is in this project</h2>
         <p>Composio is who this was built for, and it also changes the developer&apos;s question. If Composio can supply the OAuth app, a developer can start without registering one, so the useful guide is the one that says which case you are in, and what happens if you register your own. We use Composio three ways: its toolkit page is a source in each guide, its managed-auth status is shown beside the difficulty, and the live agent reads its setup guide and toolkit page first. Nothing here requires a Composio account or key.</p>

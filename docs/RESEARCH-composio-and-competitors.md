@@ -1,4 +1,4 @@
-# Research notes: Composio and competitors (read 2026-10-20)
+# Research notes: Composio and competitors (read 2026-10-20, re-checked 2026-10-21)
 
 Method: public pages only (composio.dev, docs.composio.dev incl. llms.txt, authentication, core concepts, rate limits, changelog, pricing, /auth index; competitor landing pages). Pages were read through a summarising fetch tool, so treat figures as "as stated on the page", and re-check before quoting. "Not stated" = absent from the page read.
 
@@ -16,9 +16,9 @@ Method: public pages only (composio.dev, docs.composio.dev incl. llms.txt, authe
 ## Competitors (their own landing pages)
 | Tool | What | Scale | Own OAuth app? |
 |---|---|---|---|
-| Nango | Open-source integrations: auth, tools, syncs, proxy | 1,000+ APIs | not stated |
+| Nango | Open-source integrations: auth, tools, syncs, proxy | 1,000+ APIs, 10,000+ tools and templates | not stated |
 | Arcade.dev | Actions runtime: auth, policy, audit | 8,000+ tools | not stated |
-| Pipedream Connect | Managed auth, tools, triggers, proxy | 3,000+ APIs | hosted clients by default, bring your own allowed |
+| Pipedream Connect | Managed auth, tools, triggers, proxy | 3,000+ APIs, 10,000+ tools and triggers | hosted clients by default, bring your own allowed |
 | Paragon | ActionKit, Managed Sync, workflows | 130+ connectors | not described |
 | Merge Agent Handler | Tools with DLP, scoped packs, audit | thousands (unclear) | not stated |
 | Auth0 Token Vault | Stores user tokens for agents | few named providers | not stated |

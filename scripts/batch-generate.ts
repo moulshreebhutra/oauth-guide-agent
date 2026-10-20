@@ -1,7 +1,7 @@
 /* Scale-out: research many apps with the same agent the website uses, and save each guide for human review.
    Usage (needs GEMINI_API_KEY and open internet; never commit the key):
-     GEMINI_API_KEY=... npx tsx scripts/batch-generate.ts "Linear" "Zoom" "Dropbox"
-     GEMINI_API_KEY=... npx tsx scripts/batch-generate.ts --file apps.txt        (one app name or website per line)
+     ANTHROPIC_API_KEY=... TAVILY_API_KEY=... npx tsx scripts/batch-generate.ts "Linear" "Zoom" "Dropbox"
+     ANTHROPIC_API_KEY=... TAVILY_API_KEY=... npx tsx scripts/batch-generate.ts --file apps.txt        (one app name or website per line)
    Output: data/guides/_generated/<slug>.json (not shown on the site until a person reviews it and moves it to data/guides). */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { generateGuide } from "../lib/agent";

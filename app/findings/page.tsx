@@ -38,6 +38,15 @@ export default function Findings() {
         <div className="finding"><h3>Shopify&apos;s fee is not presented as fact.</h3><p>The only figure we found for Shopify&apos;s registration fee came from a community reply, so it is excluded from the claims and listed as unverified.</p></div>
         <div className="finding"><h3>GitHub&apos;s client-secret step is credited to its source.</h3><p>GitHub&apos;s page ends at &quot;Register application&quot;. The client-secret step comes from Composio&apos;s guide, and the guide says so.</p></div>
 
+        <h2>What testing the live agent taught us</h2>
+        <p>We generated guides for 23 apps outside the library and read each one against its step log and sources. This is a read-through, not a hands-on test. Faults we found, and what changed:</p>
+        <div className="finding"><h3>A marketplace listing is not a gate on your own app.</h3><p>Square came out as &quot;partner approval required&quot; because the agent read pages about the optional App Marketplace. A high tier now needs an official page that states the gate; otherwise it is capped at Tier 2 and says so.</p></div>
+        <div className="finding"><h3>Forum numbers looked official.</h3><p>Dropbox&apos;s 50 and 500 user limits appeared only in community posts but were tagged Sourced. A number that only a community page contains is now Reported, and forum pages are never treated as official, even on the provider&apos;s own domain.</p></div>
+        <div className="finding"><h3>The agent skipped the pages that answer &quot;how long&quot;.</h3><p>Spotify&apos;s quota page and Xero&apos;s certification page were in the search results but were not read. The agent now runs three fixed searches for review, access-tier and quota pages and reads the best provider matches.</p></div>
+        <div className="finding"><h3>&quot;Nothing mentioned&quot; is not a finding.</h3><p>Several guides called a path self-serve with a Sourced tag because a page did not mention a review. An absence is now Unknown or Inferred, never Sourced.</p></div>
+        <div className="finding"><h3>Sources that did not support the claim.</h3><p>Okta cited a pricing page for a free-plan claim. A Sourced claim must now share wording with its cited page, and any year it names must appear there.</p></div>
+        <div className="finding"><h3>Console steps given to the agent.</h3><p>Steps like adding a redirect URI in the provider&apos;s console were marked &quot;you or agent&quot;. They need your signed-in session, so they are now always yours.</p></div>
+
         <h2>What we could not verify</h2>
         <p>Every quote in the library is marked <code>unchecked</code> until <code>npm run verify-quotes</code> is run from an open-internet machine, because we read pages through a summarising tool. <b>No hands-on registration has been logged, so nothing is tagged &quot;tested&quot;.</b> That log is next. The gaps below are per guide, in the guides&apos; own words.</p>
         <div className="cols2">

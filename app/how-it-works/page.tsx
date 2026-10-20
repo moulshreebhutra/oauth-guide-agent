@@ -35,7 +35,7 @@ const D = {
 ${CLASSES}`,
 
   scenarios: `flowchart TD
-  Q["You name an app<br/>(in Ask or the Live agent)"]:::code --> L{"Is it one of the 10<br/>researched library apps?"}
+  Q["You name an app<br/>(in the home search box, Ask or the Live agent)"]:::code --> L{"Is it one of the 10<br/>researched library apps?"}
   L -- yes --> LG["Researched guide<br/>written from official docs,<br/>quotes checked against pages"]:::good
   L -- no --> LV["Live research<br/>pages read a moment ago,<br/>quotes checked by code"]:::ai
   LG --> M1{"Does Composio<br/>manage the OAuth app?"}
@@ -118,15 +118,18 @@ ${CLASSES}`,
   CK -- yes --> RE["Replay it instantly<br/>costs nothing"]:::good
   CK -- no --> RL{"Under 5 new guides<br/>this hour?"}
   RL -- no --> E1["Try again later"]:::stop
-  RL -- yes --> P1["Fixed probes, no AI<br/>Composio managed flag, Composio toolkit page,<br/>composio.dev/auth guide, OAuth discovery if a website was given"]:::code
+  RL -- yes --> P1["Fixed probes, no AI, Composio first<br/>1 docs.composio.dev/toolkits/app<br/>2 managed-OAuth flag<br/>3 composio.dev/auth guide<br/>4 OAuth discovery if a website was given"]:::code
   P1 --> P2{"Registered through a parent?"}
   P2 -- yes --> PG["Our parent guide becomes evidence"]:::good
   P2 -- no --> LP
-  PG --> LP["Research loop: up to 5 actions in about 20s<br/>the model picks search, fetch or done;<br/>code runs it with limits"]:::ai
-  LP --> VP["Always look for the review or verification page"]:::code
-  VP --> OK{"Any usable page read?"}
+  PG --> LP["Research loop: up to 6 actions in about 45s<br/>the model picks search or fetch;<br/>code refuses repeats, reworded searches<br/>and addresses no search returned"]:::ai
+  LP --> VP["Three fixed searches:<br/>review and verification, access tiers and audits,<br/>quotas and limits.<br/>Read the best gate pages, up to 2 each"]:::code
+  VP --> OD{"Did we read a provider page<br/>about registering the app?"}
+  OD -- no --> OD2["One more search, read the<br/>provider's own docs page"]:::code
+  OD -- yes --> OK
+  OD2 --> OK{"Any usable page read?"}
   OK -- no --> ER["Stop. No guide is invented."]:::stop
-  OK -- yes --> WR["Write the guide as JSON<br/>heavy AI router, up to 110s"]:::ai
+  OK -- yes --> WR["Write the guide as JSON<br/>heavy AI router, up to 110s<br/>whole run capped near 190s"]:::ai
   WR --> RP["Repair near-misses<br/>label case, null minutes, bad enums"]:::code
   RP --> EN["Enforce checks<br/>see the next diagram"]:::good
   EN --> OK2{"Passed?"}
@@ -137,21 +140,30 @@ ${CLASSES}`,
 ${CLASSES}`,
 
   enforce: `flowchart TD
-  D["Draft guide from the model"]:::ai --> E1{"Evidence URL was<br/>actually fetched?"}
+  D["Draft guide from the model"]:::ai --> E1{"Evidence page was<br/>actually fetched, and the<br/>quote is in its text?"}
   E1 -- no --> X1["Drop that evidence"]:::stop
-  E1 -- yes --> E2{"Quote appears in the<br/>page text, character for character?"}
-  E2 -- no --> X2["Drop that evidence"]:::stop
-  E2 -- yes --> K["Keep it, mark quote verified"]:::good
+  E1 -- yes --> K["Keep it, mark quote verified<br/>forum, community and Q and A pages<br/>are never counted as official"]:::good
   X1 --> C
-  X2 --> C
   K --> C["For every claim"]:::code
   C --> T1{"Tagged Tested?"}
   T1 -- yes --> DG1["Downgrade to Inferred<br/>Tested is for humans only"]:::human
-  T1 -- no --> T2{"Tagged Sourced but no<br/>verified quote left?"}
+  T1 -- no --> T2{"Sourced, but no quote left,<br/>or only community pages?"}
   DG1 --> T2
-  T2 -- yes --> DG2["Downgrade to Inferred"]:::human
-  T2 -- no --> CM
-  DG2 --> CM["Composio managed status<br/>is set by code, never by the model"]:::code
+  T2 -- yes --> DG2["Inferred, or Reported<br/>if only community pages say it"]:::human
+  T2 -- no --> T3{"Does the cited page really<br/>say it? Shared wording,<br/>years, numbers of 10 or more"}
+  DG2 --> T3
+  T3 -- "no" --> DG3["Inferred, or Reported if a<br/>number is only on a community page"]:::human
+  T3 -- yes --> T4{"An absence such as<br/>'no review is mentioned'?"}
+  DG3 --> T4
+  T4 -- yes --> DG4["Unknown or Inferred, never Sourced"]:::human
+  T4 -- no --> T5{"Tier 3 or 4 without a<br/>Sourced review step?"}
+  DG4 --> T5
+  T5 -- yes --> DG5["Tier lowered to 2 and said so"]:::human
+  T5 -- no --> T6{"A step done in the provider's<br/>console marked agent or either?"}
+  DG5 --> T6
+  T6 -- yes --> DG6["Changed to You"]:::human
+  T6 -- no --> CM
+  DG6 --> CM["Sources nobody cites are dropped<br/>Composio managed status<br/>is set by code, never the model"]:::code
   CM --> SC{"Passes the schema?<br/>Zod: types, enums, numbers"}
   SC -- no --> FAIL["Rejected: nothing shown"]:::stop
   SC -- yes --> OUT["Guide + a list of every automatic change"]:::good
@@ -189,11 +201,11 @@ const TECH: [string, string][] = [
   ["BM25 + synonym groups", "Keyword retrieval over passages cut from the guides. Synonym groups (approval, review, verification, listing) let a question and a guide use different words."],
   ["Gemini embeddings (optional, off by default)", "Could re-order keyword hits by meaning. Needs a working Gemini key and prebuilt vectors (npm run build:embeddings), neither of which is in place today, so Ask uses keyword order. Capped at 4 seconds if enabled."],
   ["AI router", "Claude, Groq, Gemini and OpenRouter, used only when their key is set. Claude, Groq and OpenRouter have answered live; Gemini is wired in but over quota until billing is enabled. Tiers and random choice spread load and survive any one provider failing."],
-  ["Tavily search, then fetch", "Search finds the provider's pages. Fetch reads them (private addresses blocked, size and time capped). When a site shows a bot check, the text the search engine read is used and labelled as such."],
+  ["Tavily search, then fetch", "Search finds the provider's pages. Fetch reads them (private addresses blocked, size and time capped). When a site shows a bot check, the text the search engine read is used and labelled as such. Results that are news, jobs, app-store pages or about another product are filtered out."],
   ["Composio API and public toolkit docs", "Tell us whether Composio manages the OAuth app and which auth methods the toolkit supports."],
   ["Signed share links", "A guide is packed into the URL and signed with HMAC-SHA256 using a server secret. Nothing is stored; only this server can mint a valid link."],
   ["Caches and limits", "Answers and guides are remembered for 6 hours on the server and in your browser. Ask allows 20 questions an hour and the Live agent 5 new guides an hour per visitor; repeats cost nothing."],
-  ["Tests", "70 automated tests cover the schema, quote checks, retrieval, the AI router, link signing and the text cleaning. Run with npm test."],
+  ["Tests", "80 automated tests cover the schema, quote checks, the claim-versus-page checks, retrieval, the AI router, link signing and the text cleaning. Run with npm test."],
 ];
 
 function Fig({ title, intro, bullets, code, label }: { title: string; intro?: string; bullets: string[]; code: string; label: string }) {
@@ -324,17 +336,18 @@ export default function How() {
 
         <Fig
           title="Flow 4: the Live agent writes a guide"
-          intro="This route takes 90 to 170 seconds. The page shows a loader and a collapsed list of every step."
+          intro="This route takes about one and a half to three minutes. The page shows a loader and a list of every step, with Expand all and Collapse all buttons."
           code={D.agent}
           label="The Live agent: cache, limits, fixed probes, research loop, writing, repair, checks and the retry."
           bullets={[
             "A typed question is reduced to the app it names; a sentence with no app is refused with a hint to use the Ask box.",
-            "<b>Fixed probes run first and use no AI:</b> Composio managed flag, Composio's toolkit page and setup guide, and OAuth discovery if a website was given.",
-            "In the <b>research loop</b> the model chooses a search, a page or done; code runs each action with time, size and address limits. It stops after 5 actions or about 20 seconds.",
-            "The agent <b>always looks for the review or verification page</b>, because models often skip the one page that answers how long approval takes.",
+            "<b>Fixed probes run first and use no AI, Composio first:</b> the page docs.composio.dev/toolkits/<i>app</i>, its managed-OAuth flag, Composio's setup guide, and OAuth discovery if a website was given.",
+            "In the <b>research loop</b> the model chooses a search, a page or done; code runs each action with time, size and address limits. It refuses a repeated or reworded search, a page no search or link returned, and a third search in a row. It stops after 6 actions or about 45 seconds.",
+            "The agent <b>always looks for the gate pages</b> with three fixed searches (review and verification, access tiers and audits, quotas and limits) and reads the best provider pages from each, because models often skip the one page that answers how long approval takes. If it never read a provider page about registering the app, it makes one more search for it.",
             "If no usable page was read, it stops. <b>It never invents a guide.</b>",
             "The write step uses the heavy router (Claude first most of the time), a JSON template taken from a researched guide, and a size limit so the reply is not cut off.",
             "A near-miss such as a wrong label case or a missing number is repaired. Missing setup minutes become a tier-based estimate tagged Inferred.",
+            "The prompt tells the writer to rate a tier by what stops <b>your own app</b> from working for other people. A marketplace listing is a separate, optional step and does not raise the tier.",
             "A finished guide is saved for 6 hours, and a signed share link is made.",
           ]}
         />
@@ -345,8 +358,10 @@ export default function How() {
           code={D.enforce}
           label="Enforcement of evidence, tags, Composio status and schema on a generated guide."
           bullets={[
-            "A source the agent never fetched is dropped. So is a quote that is not in the page text, character for character.",
-            "A claim that loses its quote drops from <b>Sourced</b> to <b>Inferred</b>. The model cannot mark anything <b>Tested</b>.",
+            "A source the agent never fetched is dropped. So is a quote that is not in the page text, character for character. Pages on forums, community boards and Q and A sites never count as official, even on the provider's own domain.",
+            "A claim that loses its quote drops from <b>Sourced</b> to <b>Inferred</b>. One backed only by community pages becomes <b>Reported</b>. The model cannot mark anything <b>Tested</b>.",
+            "A <b>Sourced</b> claim must match its cited page: shared wording, and any year it names must appear there. A number of 10 or more that only a community page contains makes the claim <b>Reported</b>.",
+            "An absence (\"no review is mentioned\") is never <b>Sourced</b>. A Tier 3 or 4 without a Sourced review step is lowered to Tier 2, with a note. Steps done in the provider's console are always <b>You</b>. Sources nobody cites are dropped.",
             "The Composio status is set by code. The model's own value is overwritten.",
             "The schema check fixes the shape: if it fails twice, nothing is shown, and the screen says why.",
             "Every automatic change is listed under <b>Automatic checks applied</b> on the guide, so nothing happens silently.",
@@ -379,7 +394,7 @@ export default function How() {
             <li><b>By code, every time:</b> quotes against page text, tags, Composio status, schema, link signing, rate limits, private-address blocking, citations against retrieved passages.</li>
             <li><b>By a model:</b> choosing the next page to read, writing the answer or guide, and reading the question.</li>
             <li><b>By a person, still pending:</b> registering apps by hand, so no claim is Tested yet, and a review of live-generated guides before they join the library.</li>
-            <li><b>Known limits:</b> a guide takes 90 to 170 seconds; retrieval re-ranking by meaning has not been prebuilt; Gemini needs billing enabled before it adds capacity; the server cache is per instance, while the browser copy is reliable.</li>
+            <li><b>Known limits:</b> a guide takes about one and a half to three minutes; retrieval re-ranking by meaning has not been prebuilt; Gemini needs billing enabled before it adds capacity; the server cache is per instance, while the browser copy is reliable.</li>
           </ul>
         </section>
 

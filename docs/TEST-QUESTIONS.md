@@ -32,6 +32,14 @@ After each, check the badge: "AI answer" (a model wrote it), "Researched live" (
 - What is needed to use the X (Twitter) API?
 - Atlassian / Jira OAuth 2.0 (3LO): what must I do myself?
 
+## Routing checks (home search box)
+- "outlook", "linkedin", "Slack": open the library guide
+- "microsoft teams", "Teams", "linkedin ads": go to the live agent (not the library guide)
+- A question such as "How long does Google verification take?": answered by Ask under the box
+
+## Live agent audit set (apps used so far, repeat after changes)
+Square (expect Tier 2), Xero, Spotify, Airtable, Intercom, Okta, Etsy, Box, Webflow, Dropbox, Mailchimp.
+
 ## Strange questions (must not crash, invent or leak)
 - asdfgh qwerty
 - What is the capital of France?

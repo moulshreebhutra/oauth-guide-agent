@@ -12,7 +12,7 @@ Scope: a focused slice that answers the developer's questions **before** they st
 |---|---|
 | **Home** | Look up any app by name or website (library guide, or straight to the live agent). Explains the three pieces people mix up (provider OAuth app, your integration, your users' connections). Compares all ten providers side by side: difficulty, your time, the provider's approval wait, and whether Composio can manage the OAuth app. |
 | **Guides** (`/guide/<app>`) | Per provider: difficulty tier with a written reason, hands-on time, approval wait, Composio managed-auth status, requirements, scopes, steps (marked *you* / *agent* / *either*, with why-not-agent), blockers with fixes and when to escalate, next actions, what was tested, what is uncertain, sources with quoted excerpts. Includes an Ask box scoped to the guide. |
-| **Live agent** (`/live`) | Type an app name or website. The agent probes Composio and the provider's OAuth discovery, searches, reads the provider's pages and writes a guide, streaming its progress. Code checks the result (below). The guide comes with a **share link** (signed, stateless) and a JSON copy. |
+| **Live agent** (`/live`) | Type an app name or website. The agent reads Composio's toolkit page first, then the provider's OAuth discovery, searches, reads the provider's pages (including the review and quota pages) and writes a guide, streaming its progress with an Expand all / Collapse all list of steps. Code checks the result (below). The guide comes with a **share link** (signed, stateless) and a JSON copy. |
 | **Ask** | Question answering over all the guides: BM25 retrieval with synonym groups (approval = review = verification), optionally re-ordered by Gemini embeddings when that key works (no vectors are prebuilt, so by default plain keyword order); a model writes the answer from the retrieved passages and code verifies every citation. App names and "tell me everything about X" return that guide in reading order. Questions about apps outside the guides are answered from live web research (Tavily search plus the provider's own pages) with sources, or from general model knowledge, and labelled as such. |
 | **Findings** (`/findings`) | What the research taught us, what was corrected or held back, what could not be verified. |
 | **How it works / Method** | Architecture, the evidence labels, what code checks, the plan for scaling to 100 apps. |
@@ -38,11 +38,11 @@ Scope: a focused slice that answers the developer's questions **before** they st
 ## Evidence and honesty
 Every claim carries one tag: **tested** (we did it), **sourced** (a quoted excerpt supports it), **reported** (community or third party only), **inferred** (our reasoning), **unknown**.
 - Hands-on time is *inferred* because no provider publishes it.
-- For live guides code, not the model, enforces honesty (`lib/postprocess.ts`): evidence must come from a page fetched in that run; each quote must literally appear in that page or it is removed; a *sourced* claim that loses its evidence is downgraded to *inferred*; the model can never mark anything *tested*; the guide must pass a schema and consistency checks or nothing is shown.
+- For live guides code, not the model, enforces honesty (`lib/postprocess.ts`): evidence must come from a page fetched in that run; each quote must literally appear in that page or it is removed; a *sourced* claim that loses its evidence is downgraded to *inferred*, or to *reported* if only community pages back it; a *sourced* claim must share wording with the page it cites, and any year or number of 10 or more it names must appear there (a number only a community page contains makes it *reported*); "no review is mentioned" can never be *sourced*; forum, community and Q&A pages are never counted as official; a Tier 3 or 4 without a *sourced* review step is lowered to Tier 2; steps done in the provider's console are always "you"; the model can never mark anything *tested*; the guide must pass a schema and consistency checks or nothing is shown.
 - **Not yet done, and said plainly:** no hands-on registration is logged, so nothing is tagged *tested*; library quotes are `unchecked` until `npm run verify-quotes` is run from an open network; the prediction-vs-actual check for unseen apps (`docs/TESTING.md`) has not been run.
 
 ## Agents, and how they are kept reliable
-- The live agent picks searches and pages (JSON actions), code executes them under an action and time budget, blocks private/loopback addresses on every redirect, and treats page text as data.
+- The live agent reads `docs.composio.dev/toolkits/<app>` first, then picks searches and pages (JSON actions). Code executes them under an action and time budget (6 actions, about 45 s of research, about 190 s in total), refuses repeated or reworded searches and pages that no search or link returned, runs three fixed searches for review, access-tier and quota pages and reads the best matches, makes sure a provider page about registering the app was read, blocks private/loopback addresses on every redirect, and treats page text as data.
 - Models: each call goes through a small router (`lib/llm.ts`) that tries **Claude** or **Groq** first, then **Gemini** or **OpenRouter**, then Claude again as the last resort; writing a whole guide goes to Claude first with most of the time. A provider without a key is skipped and every failure is reported by name. Verified live: Claude, Groq, OpenRouter. Gemini is wired in but currently answers 429/503 until billing is enabled on the Google project, so it is optional.
 - Web search is Tavily (`TAVILY_API_KEY`); DuckDuckGo is the keyless fallback but blocks most cloud hosts. When a page blocks the fetch, the search engine's own copy of its text is used and labelled.
 - Finished guides are cached for six hours (server memory and the browser); a repeat request returns at once and does not count against the rate limit. If every model fails, Ask returns a summary composed by code from the guides' own sentences, labelled as not written by AI.
@@ -53,7 +53,7 @@ Every claim carries one tag: **tested** (we did it), **sourced** (a quoted excer
 npm install
 cp .env.example .env.local     # fill in the keys you have; every key is optional
 npm run dev                    # http://localhost:3000
-npm test                       # offline tests (guardrails, share links, retrieval, citations)
+npm test                       # 80 offline tests (guardrails, claim-versus-page checks, share links, retrieval, citations)
 npm run validate               # schema + consistency checks on every library guide
 npm run verify-quotes          # re-matches every library quote against the live page (needs internet)
 npm run check:live -- https://oauth-guide-agent.vercel.app
@@ -73,6 +73,8 @@ Deploy: import the repo in Vercel (Next.js, no build settings), add the variable
 - Free-tier model limits are per project; heavy use will hit them, which is why Ask falls back to other providers and then to code.
 - The agent sends model providers only the app name and public page text. Free tiers of some providers may use inputs to improve their products.
 - Composio's managed-auth status for Google and Meta was read from the Gmail and Facebook toolkit pages; other toolkits under those providers were not each checked.
+- Live guides were audited by reading 23 generated guides and their step logs against the sources (see `/findings` and `docs/TESTING.md`). That is a read-through, not a hands-on registration, so nothing is tagged *tested*.
+- Short or common app names (Box, Square) rely on the Composio page and search filters to stay on the right product; ambiguous names (Amazon, photos) get one assumed reading.
 
 
 ## Extras beyond the brief
