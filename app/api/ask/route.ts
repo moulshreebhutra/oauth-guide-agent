@@ -3,6 +3,7 @@ import { checkCitations, type Hit } from "@/lib/rag";
 import { rateLimit } from "@/lib/safety";
 import { searchHybrid } from "@/lib/embed";
 import { search } from "@/lib/rag";
+import { compose } from "@/lib/compose";
 
 export const maxDuration = 60;
 
@@ -52,11 +53,12 @@ export async function POST(req: Request) {
     return Response.json({ mode: "none", answer: null, passages: [], message: "The guides do not cover that. Try naming an app, or use the live agent to research it." });
 
   const extractive = (note: string, detail?: string) => {
-    const top = hits.slice(0, 3);
+    // always available: the answer is composed by code from the retrieved passages (no model, no network)
+    const c = compose(hits);
+    const shown = hits.filter((h) => c.cited.includes(h.id));
     return Response.json({
-      mode: "answer", retrieval, extractive: true, phase,
-      answer: top.map((h) => `${h.text.length > 280 ? h.text.slice(0, 280).trimEnd() + "…" : h.text} [${h.id}]`).join("\n\n"),
-      cited: top.map((h) => h.id), passages: top.map(passageView), message: note, detail,
+      mode: "answer", retrieval, extractive: true, composed: true, phase,
+      answer: c.text, cited: c.cited, passages: (shown.length ? shown : hits.slice(0, 3)).map(passageView), message: note, detail,
     });
   };
   if (quick) return extractive("Quoted straight from the guides. A written answer is being prepared.");

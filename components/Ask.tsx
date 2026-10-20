@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Tag } from "./GuideView";
 
 type Passage = { id: string; slug: string; app: string; section: string; text: string; tag: string | null };
-type Result = { general?: boolean; mode: "answer" | "passages" | "none"; answer: string | null; passages: Passage[]; message?: string; detail?: string; error?: string; extractive?: boolean };
+type Result = { composed?: boolean; general?: boolean; mode: "answer" | "passages" | "none"; answer: string | null; passages: Passage[]; message?: string; detail?: string; error?: string; extractive?: boolean };
 
 /** Render the answer: **bold**, bullet lines, and [slug#n] citations as links to the guide. No HTML is ever injected. */
 function Answer({ text }: { text: string }) {
@@ -123,16 +123,16 @@ export function Ask({ slug, examples }: { slug?: string; examples: string[] }) {
       {res && !res.error && !(busy && res.extractive && !res.general) && (
         <div className="answer" aria-live="polite">
           <p className={`badge ${res.general ? "b-gen" : res.extractive || res.mode === "passages" ? "b-quote" : "b-ai"}`}>
-            {res.general ? "AI general knowledge · not from our guides" : res.extractive || res.mode === "passages" ? (busy ? "Instant result · quoted from the guides, not AI" : "Quoted from the guides · not written by AI") : "AI answer · written from the guides below"}
+            {res.general ? "AI general knowledge · not from our guides" : res.extractive || res.mode === "passages" ? "Summarised by code from the guides · no AI used" : "AI answer · written from the guides below"}
           </p>
           {res.answer && !res.extractive && res.mode === "answer" && <Answer text={res.answer} />}
-          {res.answer && res.extractive && res.passages.length === 0 && <Answer text={res.answer} />}
+          {res.answer && res.extractive && <Answer text={res.answer} />}
           {res.message && !(busy && res.extractive) && <p className="muted small">{res.message}</p>}
                     {!busy && res.extractive && last.current && <p><button type="button" className="btn ghost" onClick={() => go(last.current)}>Try again for an AI answer</button></p>}
           {res.detail && !busy && <details><summary className="small">Why there is no AI answer</summary><p className="muted small">{res.detail}</p></details>}
           {res.passages.length > 0 && (
             <>
-              <h3>{res.extractive ? "What the guides say" : "Passages the answer rests on"}</h3>
+              <h3>{res.extractive ? "Passages behind this summary" : "Passages the answer rests on"}</h3>
               <ul className="passages">
                 {res.passages.map((p) => (
                   <li key={p.id}>

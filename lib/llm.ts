@@ -10,6 +10,20 @@ export const safeError = (e: unknown) =>
     .replace(/\s+/g, " ")
     .slice(0, 220);
 
+async function callOpenRouter(prompt: string, ms: number, temperature: number): Promise<string> {
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${process.env.OPENROUTER_API_KEY}` },
+    body: JSON.stringify({ model: process.env.OPENROUTER_MODEL || "meta-llama/llama-3.3-70b-instruct:free", temperature, max_tokens: 700, messages: [{ role: "user", content: prompt }] }),
+    signal: AbortSignal.timeout(ms),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 120)}`);
+  const j: any = await res.json();
+  const t = j?.choices?.[0]?.message?.content;
+  if (!t) throw new Error("empty answer");
+  return String(t);
+}
+
 async function callGroq(prompt: string, ms: number, temperature: number): Promise<string> {
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -83,6 +97,7 @@ export async function generate(
       const runners = models.map((m) => attempt(m).catch((e) => { throw new Error(`${m}: ${safeError(e)}`); }));
       // independent second provider (free Groq key), raced alongside Gemini so one provider's outage cannot block the answer
       if (process.env.GROQ_API_KEY) runners.push(withBackoff((left) => callGroq(prompt, left, opts.temperature ?? 0.2)).catch((e) => { throw new Error(`groq: ${safeError(e)}`); }));
+      if (process.env.OPENROUTER_API_KEY) runners.push(withBackoff((left) => callOpenRouter(prompt, left, opts.temperature ?? 0.2)).catch((e) => { throw new Error(`openrouter: ${safeError(e)}`); }));
       return await Promise.any(runners);
     } catch (e) {
       const errs = (e as AggregateError).errors?.map((x: any) => String(x?.message ?? x)) ?? [safeError(e)];
