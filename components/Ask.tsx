@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Tag } from "./GuideView";
 
 type Passage = { id: string; slug: string; app: string; section: string; text: string; tag: string | null };
-type Result = { mode: "answer" | "passages" | "none"; answer: string | null; passages: Passage[]; message?: string; detail?: string; error?: string; extractive?: boolean };
+type Result = { general?: boolean; mode: "answer" | "passages" | "none"; answer: string | null; passages: Passage[]; message?: string; detail?: string; error?: string; extractive?: boolean };
 
 /** Render the answer: **bold**, bullet lines, and [slug#n] citations as links to the guide. No HTML is ever injected. */
 function Answer({ text }: { text: string }) {
@@ -73,7 +73,7 @@ export function Ask({ slug, examples }: { slug?: string; examples: string[] }) {
       setPhase("done");
       return;
     }
-    if (first.error || first.mode === "none") { setPhase("done"); return; }
+    if (first.error || (first.mode === "none" && !first.general)) { setPhase("done"); return; }
     // 2) the written answer upgrades it when the model replies
     setPhase("writing");
     try {
@@ -83,7 +83,7 @@ export function Ask({ slug, examples }: { slug?: string; examples: string[] }) {
       setRes(better);
     } catch (e: any) {
       if (id !== run.current) return;
-      setRes((r) => (r ? { ...r, extractive: true, message: "The AI model did not answer in time, so this is the guides' own wording. Use Try again for a written answer.", detail: e?.name === "TimeoutError" ? "No reply within 34 seconds" : String(e?.message ?? e).slice(0, 200) } : r));
+      setRes((r) => (r && !r.general ? { ...r, extractive: true, message: "The AI model did not answer in time, so this is the guides' own wording. Use Try again for a written answer.", detail: e?.name === "TimeoutError" ? "No reply within 34 seconds" : String(e?.message ?? e).slice(0, 200) } : r));
     } finally {
       if (id === run.current) setPhase("done");
     }

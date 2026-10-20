@@ -32,7 +32,7 @@ export function chunkGuide(g: Guide): Chunk[] {
   return out.map((c, i) => ({ ...c, id: `${g.slug}#${i + 1}` }));
 }
 
-const STOP = new Set("a an and are as at be by can do does for from how i if in is it its of on or so that the their there this to was what when where which who will with you your we our not no about into than then they them should would could need needs get".split(" "));
+const STOP = new Set("a an and are as at be by can do does for from how i if in is it its of on or so that the their there this to was what when where which who will with you your we our not no about into than then they them should would could need needs get me tell give show explain everything anything all please integration integrations integrate integrating guide guides info information details detail overview describe know let us my want like any some more also just".split(" "));
 export function tokenize(s: string): string[] {
   return s
     .toLowerCase()
@@ -78,7 +78,47 @@ const SYNONYMS = [
 ].map((g) => [...new Set(g.flatMap((w) => tokenize(w)))]);
 const groupOf = (t: string) => SYNONYMS.find((g) => g.includes(t)) ?? [t];
 
+const OVERVIEW = /\b(everything|overview|all about|tell me about|summary|summari[sz]e|explain|walk me through|full|complete|details?)\b/i;
+
+/** Which library app does the question name? Matches slug or any distinctive word of the app name. */
+export function appNamed(query: string, ix: Index = getIndex()): string | undefined {
+  const q = new Set(query.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/));
+  const seen = new Map<string, string>();
+  for (const c of ix.chunks) if (!seen.has(c.slug)) seen.set(c.slug, c.app);
+  for (const [slug, app] of seen) {
+    const words = [slug, ...slug.split("-"), ...app.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/)].filter((w) => w.length > 3 && !["gmail","workspace","apis","outlook"].includes(w) || ["google","gmail","outlook"].includes(w));
+    if (words.some((w) => q.has(w))) return slug;
+  }
+  return undefined;
+}
+
 export function search(query: string, opts: { k?: number; slug?: string; index?: Index } = {}): Hit[] {
+  const ix = opts.index ?? getIndex();
+  const named = opts.slug ? undefined : appNamed(query, ix);
+  if (named) {
+    const inApp = searchCore(query, { ...opts, slug: named, k: 60 }, true);
+    const bare = tokenize(query).filter((t) => !tokenize(named).includes(t) && !tokenize(ix.chunks.find((c) => c.slug === named)!.app).includes(t));
+    if (OVERVIEW.test(query) || bare.length === 0 || inApp.length < 3) {
+      // overview: the best passage from each section of that guide, in guide order
+      const all = ix.chunks.filter((c) => c.slug === named);
+      const ranked = new Map(inApp.map((h) => [h.id, h.score]));
+      const picked: Hit[] = [];
+      const bySection = new Map<string, Hit>();
+      for (const c of all) {
+        const sec = c.section.startsWith("Step ") ? "Steps" : c.section;
+        const cur = bySection.get(sec);
+        const sc = ranked.get(c.id) ?? 0;
+        if (!cur || sc > cur.score) bySection.set(sec, { ...c, score: sc });
+      }
+      for (const h of bySection.values()) picked.push(h);
+      return picked.slice(0, opts.k ?? 10);
+    }
+    return inApp.slice(0, opts.k ?? 6);
+  }
+  return searchCore(query, opts, false);
+}
+
+function searchCore(query: string, opts: { k?: number; slug?: string; index?: Index } = {}, relaxed = false): Hit[] {
   const ix = opts.index ?? getIndex();
   const q = [...new Set(tokenize(query))];
   if (!q.length) return [];
@@ -104,7 +144,7 @@ export function search(query: string, opts: { k?: number; slug?: string; index?:
       }
     }
     // require real overlap: at least half of the (non-stopword) query terms, minimum one
-    if (matched >= Math.max(1, Math.ceil(q.length / 2))) hits.push({ ...c, score });
+    if (matched >= (relaxed ? 1 : Math.max(1, Math.ceil(q.length / 2)))) hits.push({ ...c, score });
   });
   return hits.sort((a, b) => b.score - a.score).slice(0, opts.k ?? 6);
 }
