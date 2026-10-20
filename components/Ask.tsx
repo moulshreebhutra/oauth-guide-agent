@@ -115,12 +115,12 @@ export function Ask({ slug, examples }: { slug?: string; examples: string[] }) {
             ))}
           </ol>
           <div className="bar" aria-hidden><i /></div>
-          <p className="muted small">{phase === "quick" ? "Searching the guides…" : `Quoted answer shown below. The written answer usually takes 5 to 25 seconds. ${secs}s so far.`}</p>
+          <p className="muted small">{phase === "quick" ? "Searching the guides…" : `The AI is writing your answer from the guides. This usually takes 5 to 25 seconds. ${secs}s so far.`}</p>
         </div>
       )}
 
       {res?.error && <p className="err">{res.error}</p>}
-      {res && !res.error && (
+      {res && !res.error && !(busy && res.extractive && !res.general) && (
         <div className="answer" aria-live="polite">
           <p className={`badge ${res.general ? "b-gen" : res.extractive || res.mode === "passages" ? "b-quote" : "b-ai"}`}>
             {res.general ? "AI general knowledge · not from our guides" : res.extractive || res.mode === "passages" ? (busy ? "Instant result · quoted from the guides, not AI" : "Quoted from the guides · not written by AI") : "AI answer · written from the guides below"}
@@ -128,8 +128,7 @@ export function Ask({ slug, examples }: { slug?: string; examples: string[] }) {
           {res.answer && !res.extractive && res.mode === "answer" && <Answer text={res.answer} />}
           {res.answer && res.extractive && res.passages.length === 0 && <Answer text={res.answer} />}
           {res.message && !(busy && res.extractive) && <p className="muted small">{res.message}</p>}
-          {busy && res.extractive && <p className="muted small">The AI is writing a clearer answer from these passages. It replaces this result when ready.</p>}
-          {!busy && res.extractive && last.current && <p><button type="button" className="btn ghost" onClick={() => go(last.current)}>Try again for an AI answer</button></p>}
+                    {!busy && res.extractive && last.current && <p><button type="button" className="btn ghost" onClick={() => go(last.current)}>Try again for an AI answer</button></p>}
           {res.detail && !busy && <details><summary className="small">Why there is no AI answer</summary><p className="muted small">{res.detail}</p></details>}
           {res.passages.length > 0 && (
             <>
