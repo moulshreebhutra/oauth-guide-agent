@@ -103,6 +103,7 @@ export default function Live() {
         <form onSubmit={(e) => run(e)} className="liveform">
           <input value={app} onChange={(e) => setApp(e.target.value)} placeholder="e.g. Linear, or zoom.us" maxLength={120} aria-label="App name or website" />
           <button className="btn" disabled={busy || app.trim().length < 2}>{busy ? "Working…" : "Generate guide"}</button>
+          <button type="button" className="btn ghost" disabled={busy || app.trim().length < 2} onClick={() => run(null, true)} title="Skip the saved copy, research again, and replace the saved copy for everyone">Write a fresh one</button>
         </form>
         {guide && cachedAt && !busy && (
           <p className="cachenote">
