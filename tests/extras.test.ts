@@ -92,3 +92,9 @@ test("live log: sizes are replaced by what was read", () => {
   const s = friendlyTool("search_web", "q", "8 results", { items: [{ title: "t", url: "https://a.com" }] });
   assert.equal(s.detail, undefined);
 });
+
+test("live log: a Gemini billing message is not blamed on Claude's credit", () => {
+  const e = explainError("claude: The operation was aborted due to timeout | gemini: 429 You exceeded your current quota, please check your plan and billing details | claude: no time left");
+  assert.ok(!e.fix.some((f) => /no usable credit/.test(f)));
+  assert.ok(e.fix.some((f) => /did not finish writing/.test(f)));
+});

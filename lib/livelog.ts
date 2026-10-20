@@ -56,9 +56,10 @@ export function explainError(raw: string): { headline: string; fix: string[]; ra
     fix.push("Check ANTHROPIC_API_KEY in Vercel: it must be a current key from console.anthropic.com. Redeploy after changing it.");
   } else if (mentions(/claude: HTTP 400|invalid_request_error/i)) {
     fix.push("Claude rejected the request. Check ANTHROPIC_MODEL, or whether the account has credit.");
-  } else if (mentions(/claude: HTTP 40[23]|credit balance|billing/i)) {
+  } else if (mentions(/claude: HTTP 40[23]|credit balance is too low/i)) {
     fix.push("Claude says the account has no usable credit. Add credit in the Anthropic console.");
   }
+  if (mentions(/claude: (the operation was )?(aborted|timed? ?out)|claude: no reply|claude: no time left/i)) fix.push("Claude did not finish writing in time. The guide route now allows more time; try again.");
   if (mentions(/claude: empty answer/i)) fix.push("Claude returned no text, usually because the reply was cut short. This is being tuned; try again.");
   if (mentions(/openrouter: HTTP 404|openrouter: HTTP 40/i)) fix.push("OpenRouter's free model name has changed. Set OPENROUTER_MODEL to a model shown as free at openrouter.ai/models.");
   if (mentions(/time limit|no reply before|aborted|timeout|no time left/i) && !fix.length) {
