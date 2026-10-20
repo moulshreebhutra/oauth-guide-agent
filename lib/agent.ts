@@ -1,4 +1,4 @@
-import { generate, safeError } from "./llm";
+import { generate, hasModel, safeError } from "./llm";
 import { fetchPage, searchWeb, probeOAuthDiscovery, checkComposioManaged, composioToolkit } from "./tools";
 import { enforce, type Fetched } from "./postprocess";
 import type { Guide } from "./schema";
@@ -49,7 +49,7 @@ export async function* generateGuide(input: { name: string; site?: string }): As
   const T0 = Date.now();
   const slug = input.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "app";
 
-  if (!process.env.GEMINI_API_KEY && !process.env.ANTHROPIC_API_KEY && !process.env.GROQ_API_KEY && !process.env.OPENROUTER_API_KEY) {
+  if (!hasModel()) {
     yield { type: "error", msg: "Live generation is not configured on this server (GEMINI_API_KEY missing). The library guides still work." };
     return;
   }

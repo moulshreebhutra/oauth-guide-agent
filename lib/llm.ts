@@ -53,25 +53,47 @@ async function callAnthropic(prompt: string, ms: number, temperature: number): P
   return String(t);
 }
 
+/** Amazon Bedrock Converse with a Bedrock API key (bearer token). Works with any Bedrock chat model you have enabled. */
+async function callBedrock(prompt: string, ms: number, temperature: number): Promise<string> {
+  const region = process.env.BEDROCK_REGION || "us-east-1";
+  const model = process.env.BEDROCK_MODEL_ID || "us.amazon.nova-lite-v1:0";
+  const res = await fetch(`https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(model)}/converse`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${process.env.AWS_BEARER_TOKEN_BEDROCK}` },
+    body: JSON.stringify({ messages: [{ role: "user", content: [{ text: prompt }] }], inferenceConfig: { maxTokens: 900, temperature } }),
+    signal: AbortSignal.timeout(ms),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 160)}`);
+  const j: any = await res.json();
+  const t = j?.output?.message?.content?.map((c: any) => c.text ?? "").join("");
+  if (!t) throw new Error("empty answer");
+  return String(t);
+}
+
 export async function generate(
   prompt: string,
   opts: { json?: boolean; timeoutMs?: number; temperature?: number; models?: string[]; deadlineMs?: number; race?: boolean; fast?: boolean } = {},
 ): Promise<string> {
-  // Paid primary: Anthropic (steady, no free-tier quota). Free providers below are the backup if it fails.
+  // Paid primaries (Anthropic API and/or Amazon Bedrock) race each other; free providers below are the backup.
   let primaryErr = "";
-  if (process.env.ANTHROPIC_API_KEY) {
-    const budget = Math.min(opts.timeoutMs ?? 25_000, opts.deadlineMs ?? 25_000, 30_000);
+  const paid: Promise<string>[] = [];
+  const budget = Math.min(opts.timeoutMs ?? 25_000, opts.deadlineMs ?? 25_000, 30_000);
+  const twice = (name: string, f: (ms: number) => Promise<string>) => (async () => {
     const t0 = Date.now();
+    let last = "";
     for (let n = 0; n < 2; n++) {
       const left = budget - (Date.now() - t0);
       if (left < 3000) break;
-      try { return await callAnthropic(prompt, Math.min(left, 18_000), opts.temperature ?? 0.2); }
-      catch (e) {
-        primaryErr = `claude: ${safeError(e)}`;
-        if (/HTTP 40[0134]/.test(primaryErr)) break; // bad key, billing or request: retrying will not help
-        await new Promise((r) => setTimeout(r, 500));
-      }
+      try { return await f(Math.min(left, 18_000)); }
+      catch (e) { last = `${name}: ${safeError(e)}`; if (/HTTP 40[0134]/.test(last)) break; await new Promise((r) => setTimeout(r, 500)); }
     }
+    throw new Error(last || `${name}: no time left`);
+  })();
+  if (process.env.ANTHROPIC_API_KEY) paid.push(twice("claude", (ms) => callAnthropic(prompt, ms, opts.temperature ?? 0.2)));
+  if (process.env.AWS_BEARER_TOKEN_BEDROCK) paid.push(twice("bedrock", (ms) => callBedrock(prompt, ms, opts.temperature ?? 0.2)));
+  if (paid.length) {
+    try { return await Promise.any(paid); }
+    catch (e) { primaryErr = ((e as AggregateError).errors ?? []).map((x: any) => x.message).join(" | "); }
     if (!process.env.GEMINI_API_KEY && !process.env.GROQ_API_KEY && !process.env.OPENROUTER_API_KEY) throw new Error(primaryErr);
   }
   const key = process.env.GEMINI_API_KEY;
@@ -166,3 +188,6 @@ export async function generate(
   }
   throw new Error(failures.join(" | ").slice(0, 400));
 }
+
+/** True when any text model is configured. */
+export const hasModel = () => !!(process.env.ANTHROPIC_API_KEY || process.env.AWS_BEARER_TOKEN_BEDROCK || process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY || process.env.OPENROUTER_API_KEY);

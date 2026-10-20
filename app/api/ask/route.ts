@@ -1,4 +1,4 @@
-import { generate } from "@/lib/llm";
+import { generate, hasModel } from "@/lib/llm";
 import { checkCitations, type Hit } from "@/lib/rag";
 import { rateLimit } from "@/lib/safety";
 import { searchHybrid } from "@/lib/embed";
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
   if (noGuides) {
     if (quick) return Response.json({ mode: "none", general: true, answer: null, passages: [], message: "Not in our library. Researching it on the web now…", app: other ? other[0].toUpperCase() + other.slice(1) : extractApp(question) ?? null });
     const appName = other ? other[0].toUpperCase() + other.slice(1) : extractApp(question);
-    const anyModel = !!(process.env.ANTHROPIC_API_KEY || process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY || process.env.OPENROUTER_API_KEY);
+    const anyModel = hasModel();
     // 1) agentic: research the app on the web now, answer only from the pages read
     if (appName) {
       try {
@@ -95,7 +95,7 @@ export async function POST(req: Request) {
   if (quick) return extractive("Quoted straight from the guides. A written answer is being prepared.");
 
   // No model configured: return the retrieved passages themselves (still useful, nothing invented).
-  if (!process.env.GEMINI_API_KEY && !process.env.ANTHROPIC_API_KEY && !process.env.GROQ_API_KEY && !process.env.OPENROUTER_API_KEY)
+  if (!hasModel())
     return Response.json({ mode: "passages", answer: null, passages: hits.map(passageView), message: "Showing the most relevant passages. Add a Gemini key to get a written answer." });
 
   const passages = hits.map((h) => `[${h.id}] (${h.app} - ${h.section}${h.tag ? ", tagged " + h.tag : ""}) ${h.text.slice(0, 700)}`).join("\n");

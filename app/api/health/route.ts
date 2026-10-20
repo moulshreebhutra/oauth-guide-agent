@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { rateLimit } from "@/lib/safety";
 import { safeError } from "@/lib/llm";
+import { embeddingsPrebuilt } from "@/lib/embed";
 
 export const maxDuration = 30;
 
@@ -51,5 +52,5 @@ export async function GET(req: Request) {
       groq = { configured: true, ok: r.ok, status: r.status, ms: Date.now() - t0 };
     } catch (e) { groq = { configured: true, ok: false, error: safeError(e) }; }
   }
-  return Response.json({ claude, keyConfigured: true, groq, modelsVisibleToKey: listed, listError, tests });
+  return Response.json({ claude, embeddingsPrebuilt: embeddingsPrebuilt(), keyConfigured: true, groq, modelsVisibleToKey: listed, listError, tests });
 }

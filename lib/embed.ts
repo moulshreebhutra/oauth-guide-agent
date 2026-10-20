@@ -1,4 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { appNamed, getIndex, search, type Hit } from "./rag";
 
 /**
@@ -27,7 +29,21 @@ async function embed(texts: string[], taskType: string): Promise<number[][]> {
   return out;
 }
 
+/** Vectors built ahead of time by `npm run build:embeddings`. Used only if they match the current passages exactly. */
+function prebuilt(): number[][] | null {
+  try {
+    const f = JSON.parse(readFileSync(join(process.cwd(), "data", "embeddings.json"), "utf8"));
+    const ix = getIndex();
+    if (f.model === EMBED_MODEL && f.ids?.length === ix.chunks.length && f.ids.every((id: string, i: number) => id === ix.chunks[i].id) && f.vectors?.length === f.ids.length) return f.vectors;
+  } catch {}
+  return null;
+}
+
 function passageVectors() {
+  if (!docVecs) {
+    const pre = prebuilt();
+    if (pre) docVecs = Promise.resolve(pre);
+  }
   if (!docVecs) {
     const ix = getIndex();
     docVecs = embed(ix.chunks.map((c) => `${c.app} - ${c.section}: ${c.text}`.slice(0, 1500)), "RETRIEVAL_DOCUMENT")
@@ -48,6 +64,8 @@ const cos = (a: number[], b: number[]) => {
 };
 
 /** Embedding re-rank may take at most 4s; after that the keyword order is used (vectors keep warming in the background). */
+export const embeddingsPrebuilt = () => !!prebuilt();
+
 export async function searchHybrid(query: string, opts: { k?: number; slug?: string } = {}): Promise<{ hits: Hit[]; mode: "hybrid" | "keyword" }> {
   const k = opts.k ?? 6;
   const keyword = search(query, { k, slug: opts.slug });
