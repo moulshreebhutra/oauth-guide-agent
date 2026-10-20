@@ -41,3 +41,17 @@ export async function cacheDelete(key: string): Promise<void> {
   if (!enabled()) return;
   try { await del((await head(path(key))).url); } catch { /* already gone */ }
 }
+
+/** For /api/health: is the token present, and does a tiny write and read actually work? Never returns the token. */
+export async function storeSelfTest(): Promise<{ kind: string; tokenPresent: boolean; ok?: boolean; error?: string }> {
+  const tokenPresent = enabled();
+  if (!tokenPresent) return { kind: "memory", tokenPresent };
+  try {
+    await put("cache/_health.json", JSON.stringify({ at: Date.now() }), { access: "public", contentType: "application/json", addRandomSuffix: false, allowOverwrite: true });
+    const meta = await head("cache/_health.json");
+    const r = await fetch(meta.url, { cache: "no-store", signal: AbortSignal.timeout(4000) });
+    return { kind: "vercel-blob", tokenPresent, ok: r.ok };
+  } catch (e: any) {
+    return { kind: "vercel-blob", tokenPresent, ok: false, error: String(e?.message ?? e).replace(/vercel_blob_[A-Za-z0-9_]+/g, "[token]").slice(0, 200) };
+  }
+}
