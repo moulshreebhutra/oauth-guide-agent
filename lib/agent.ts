@@ -38,6 +38,33 @@ function parseJson(s: string): any {
   }
 }
 
+/** Fix near-misses a model commonly makes (case, synonyms) so a good guide is not thrown away over a label. Facts are never changed. */
+export function repairDraft(d: any): any {
+  if (!d || typeof d !== "object") return d;
+  const tagFix = (t: any) => { const x = String(t ?? "").toLowerCase(); return ["tested", "sourced", "reported", "inferred", "unknown"].includes(x) ? (x === "tested" ? "inferred" : x) : /official|stated|quote/.test(x) ? "sourced" : /community|third|forum/.test(x) ? "reported" : "unknown"; };
+  const walk = (o: any) => {
+    if (Array.isArray(o)) return o.forEach(walk);
+    if (!o || typeof o !== "object") return;
+    if ("tag" in o) o.tag = tagFix(o.tag);
+    if ("quote_check" in o) o.quote_check = "unchecked";
+    if ("who" in o) { const w = String(o.who).toLowerCase(); o.who = w.startsWith("agent") ? "agent" : /either|both|any/.test(w) ? "either" : "you"; }
+    Object.values(o).forEach(walk);
+  };
+  walk(d);
+  if (d.wait && typeof d.wait === "object") {
+    const k = String(d.wait.kind ?? "").toLowerCase();
+    const hasRange = d.wait.range && Number.isFinite(d.wait.range.min_days) && Number.isFinite(d.wait.range.max_days);
+    if (!["none", "stated", "unpublished"].includes(k)) d.wait.kind = /not published|unpublished|not stated|unknown|no duration|not found/.test(k) ? "unpublished" : /none|no review|instant|immediate|not required/.test(k) ? "none" : hasRange || /stated|published|given|days|week/.test(k) ? "stated" : "unpublished";
+    if (d.wait.range && !hasRange) d.wait.range = null;
+    d.wait.evidence ??= [];
+  }
+  if (d.difficulty && d.difficulty.tier !== undefined) d.difficulty.tier = Math.min(4, Math.max(1, Math.round(Number(d.difficulty.tier)) || 3));
+  d.generated_by = "agent";
+  d.tested_log ??= [];
+  d.uncertainties ??= [];
+  return d;
+}
+
 const exampleGuide = () => JSON.stringify(RAW_GUIDES.find((g: any) => g.slug === "github"));
 
 const RULES = `
@@ -50,6 +77,7 @@ You write OAuth-app setup guides for developers. Hard rules:
 - Difficulty tier: 1 self-serve, 2 light checks, 3 review required, 4 gated/partner approval. Explain the rationale.
 - For each step say who does it: "you", "agent" or "either". Use "you" with "why_not_agent" when it needs the user's signed-in session, secrets, legal or business decisions.
 - Say "unknown" instead of guessing. Put open questions in "uncertainties".
+- ALLOWED VALUES: tag is one of "sourced","reported","inferred","unknown". wait.kind is one of "none" (no review step), "stated" (a page gives a duration), "unpublished" (no duration found). who is one of "you","agent","either". quote_check is "unchecked". composio_managed.status is "yes","no" or "unknown". difficulty tier is the number 1, 2, 3 or 4. generated_by is "agent". wait.range is null unless a page states days or weeks.
 - SIZE: the whole JSON must stay under about 3,500 words. Keep every text field under 220 characters, at most 8 steps, at most 6 evidence entries with quotes under 200 characters, at most 5 gotchas. Output minified JSON only.
 `;
 
@@ -175,7 +203,7 @@ EXAMPLE:\n${exampleGuide()}\n\nCALIBRATION (how our researched guides judged sim
     }
     draft.slug = slug;
     draft.composio_managed = { status: managed.status, note: managed.note, tag: managed.status === "unknown" ? "unknown" : "sourced" };
-    const r = enforce(draft, fetched);
+    const r = enforce(repairDraft(draft), fetched);
     if (r.ok) {
       // the managed-auth fact comes from code, so keep the tag the code assigned
       r.guide.composio_managed = { status: managed.status, note: managed.note, tag: managed.status === "unknown" ? "unknown" : "sourced" };

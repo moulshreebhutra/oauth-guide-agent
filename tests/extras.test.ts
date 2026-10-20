@@ -98,3 +98,15 @@ test("live log: a Gemini billing message is not blamed on Claude's credit", () =
   assert.ok(!e.fix.some((f) => /no usable credit/.test(f)));
   assert.ok(e.fix.some((f) => /did not finish writing/.test(f)));
 });
+
+import { repairDraft } from "../lib/agent";
+test("repairDraft fixes labels but not facts", () => {
+  const d: any = repairDraft({ wait: { kind: "Not published", range: { min_days: "x", max_days: 3 }, statement: "s", tag: "Official" }, difficulty: { tier: "3" }, steps: [{ who: "User", tag: "community" }] });
+  assert.equal(d.wait.kind, "unpublished");
+  assert.equal(d.wait.range, null);
+  assert.equal(d.wait.tag, "sourced");
+  assert.equal(d.difficulty.tier, 3);
+  assert.equal(d.steps[0].who, "you");
+  assert.equal(d.steps[0].tag, "reported");
+  assert.equal(d.generated_by, "agent");
+});
