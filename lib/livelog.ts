@@ -17,7 +17,10 @@ export function friendlyTool(name: string, arg: string, result: string): { title
     case "search_web":
       return { title: `Searched the web for "${arg}"`, detail: result, state: "done" };
     case "fetch_page":
-      return { title: `Read ${host(arg)}`, detail: `${arg} (${result})`, state: /^[0-9]{1,2} chars$/.test(result) ? "warn" : "done" };
+    {
+      const thin = /^[0-9]{1,3} chars$/.test(result);
+      return { title: thin ? `Read ${host(arg)}, but it has almost no readable text (the page is built by JavaScript)` : `Read ${host(arg)}`, detail: `${arg} (${result})`, state: thin ? "warn" : "done" };
+    }
     case "probe_oauth_discovery":
       return { title: none ? "No public OAuth discovery document" : "Found the provider's OAuth discovery document", detail: result, state: "done" };
     default:

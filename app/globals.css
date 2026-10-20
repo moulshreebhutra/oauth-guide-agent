@@ -286,13 +286,22 @@ footer a{color:#fff}
 .spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite;flex:none}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}
-.steps{list-style:none;margin:0;padding:0;display:grid;gap:8px}
-.steps li{display:grid;grid-template-columns:22px 1fr;gap:12px;align-items:start;background:#fff;border:1px solid var(--rule);padding:12px 14px;font-size:15px}
-.steps .dot{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font:700 12px var(--display);background:#e6f4ee;color:#0a7a58}
-.steps .st-warn .dot{background:#fdf0d5;color:#9a6400}
-.steps details{margin-top:4px;font-size:13px;color:var(--muted)}.steps summary{cursor:pointer}
-.steps code,.agenterr code{display:block;white-space:pre-wrap;word-break:break-word;font:12px var(--mono);margin-top:6px}
+.agsteps{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.agsteps li{display:grid;grid-template-columns:22px 1fr;gap:12px;align-items:start;background:#fff;border:1px solid var(--rule);padding:12px 14px;font-size:15px}
+.agsteps .dot{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font:700 12px var(--display);background:#e6f4ee;color:#0a7a58}
+.agsteps .st-warn .dot{background:#fdf0d5;color:#9a6400}
+.agsteps details{margin-top:4px;font-size:13px;color:var(--muted)}.agsteps summary{cursor:pointer}
+.agsteps code,.agenterr code{display:block;white-space:pre-wrap;word-break:break-word;font:12px var(--mono);margin-top:6px}
 .agenterr{margin-top:12px;background:#fff;border:1px solid #e3b7a6;border-left:4px solid #cf4519;padding:16px 18px}
 .agenterr h3{margin:0 0 8px;font:600 18px var(--display)}
 .agenterr ul{margin:0 0 8px;padding-left:20px}.agenterr li{margin:4px 0}
 .agenterr details{font-size:13px;color:var(--muted)}
+
+.agentlog details{background:none;border:0;padding:0;margin:4px 0 0}
+.agentlog summary{font-weight:400;font-size:13px;color:var(--muted)}
+.agsteps li{position:static;padding-left:14px}
+.agsteps li::before{content:none}
+.agsteps b{font:500 15px/1.4 var(--display);color:var(--ink)}
+.agenterr code,.agsteps code{background:#f4f4f7;padding:8px 10px;color:#333}
+
+.pagehead.center h1{margin-left:auto;margin-right:auto}

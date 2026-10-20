@@ -82,7 +82,7 @@ export default function Live() {
           <div className="agentlog" aria-live="polite">
             {busy && <p className="now"><span className="spin" aria-hidden /> {now} <span className="muted">{secs}s</span></p>}
             {steps.length > 0 && (
-              <ol className="steps">
+              <ol className="agsteps">
                 {steps.map((st) => (
                   <li key={st.id} className={`st-${st.state}`}>
                     <span className="dot" aria-hidden>{st.state === "warn" ? "!" : "✓"}</span>
