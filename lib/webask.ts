@@ -1,5 +1,5 @@
 import { buildIndex, search, type Chunk } from "./rag";
-import { composioToolkit, fetchPage, searchWeb } from "./tools";
+import { composioToolkit, fetchPage, fetchReadable, searchWeb } from "./tools";
 import { playbookText } from "@/data/playbook";
 import { skillText } from "@/data/skill";
 
@@ -24,6 +24,27 @@ const AGGREGATORS = /(reddit|quora|medium|youtube|facebook|twitter|x\.com|linked
 const COMMON = new Set("how what which who why when where does do can could should would will is are the a an to for of on in with about my our your i we you it its this that and or not no yes oauth api app apps oauth2 setup set up register registration approval approve review verify verification get take long time steps step need needs tell me everything integration integrate connect connection".split(" "));
 
 /** Pull a likely app name out of a free-form question: a domain, a Capitalised word, or the whole text when it is one or two words. */
+// Well-known apps that are NOT in the library: say so instead of matching generic words to another provider.
+export const OTHER_APPS = ["zoom","stripe","linear","figma","discord","dropbox","asana","jira","atlassian","confluence","twitter","spotify","zendesk","intercom","mailchimp","airtable","trello","docusign","quickbooks","xero","twilio","gitlab","bitbucket","okta","box","clickup","monday","calendly","typeform","webflow","wordpress","paypal","uber","reddit","tiktok","youtube","snapchat","pinterest","instagram","whatsapp","telegram","openai","anthropic","github enterprise"];
+
+/** The live agent wants an app name. If someone types a whole question, find the app inside it; null when none is named. */
+export function appFromInput(input: string): string | null {
+  const s = input.trim();
+  if (s.split(/\s+/).length <= 3 || /\.[a-z]{2,}\b/i.test(s)) return s;
+  const lower = ` ${s.toLowerCase().replace(/[^a-z0-9 ]/g, " ")} `;
+  const known = OTHER_APPS.find((a) => lower.includes(` ${a} `));
+  if (known) return known[0].toUpperCase() + known.slice(1);
+  // a sentence that is not about connecting or registering an app names no app ("capital of France")
+  if (!/\b(oauth2?|auth\w*|api|apps?|integrat\w*|connect\w*|register\w*|scopes?|tokens?|review\w*|approv\w*|verif\w*|developers?|login|sign.?in|sdk|webhooks?|permissions?|credentials?|redirect\w*|composio|marketplace|install\w*)\b/i.test(s)) return null;
+  const guess = extractApp(s);
+  if (!guess) return null;
+  // trust the guess only if it is written as a name (capital letter) or follows "for / with / about / connect to"
+  const g = guess.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const named = new RegExp(`\\b${g[0].toUpperCase()}${g.slice(1)}\\b`).test(s) && /^[A-Z]/.test(s.match(new RegExp(`\\b${g}\\b`, "i"))?.[0] ?? "");
+  const cued = new RegExp(`\\b(?:for|with|about|connect(?:ing)? to|integrat\\w* with|register\\w* (?:on|with|for))\\s+${g}\\b`, "i").test(s);
+  return named || cued ? guess : null;
+}
+
 export function extractApp(question: string): string | undefined {
   const q = question.trim();
   const dom = q.match(/\b([a-z0-9-]+\.(?:com|io|app|dev|ai|co|net|org|so|ly))\b/i);
@@ -87,7 +108,7 @@ export async function researchApp(app: string, question: string, budgetMs = 20_0
     try {
       const left = budgetMs - (Date.now() - t0);
       if (left < 2000) return null;
-      const r = await Promise.race([fetchPage(u.url), new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), Math.min(limit, left)))]);
+      const r = await Promise.race([fetchReadable(u.url), new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), Math.min(limit, left)))]);
       if (r.text.length < 200) return null;
       return { url: r.url, title: r.title || u.title, text: r.text, links: r.links };
     } catch { return null; }

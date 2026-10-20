@@ -1,5 +1,5 @@
 import { generate, hasModel, safeError, safeErrorLong } from "./llm";
-import { fetchPage, searchWeb, probeOAuthDiscovery, checkComposioManaged, composioToolkit } from "./tools";
+import { fetchPage, fetchReadable, searchWeb, probeOAuthDiscovery, checkComposioManaged, composioToolkit } from "./tools";
 import { enforce, type Fetched } from "./postprocess";
 import type { Guide } from "./schema";
 import { search } from "./rag";
@@ -181,7 +181,7 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
         log.push(`search "${act.arg}" -> ${r.map((x) => x.url).join(" | ")}`);
         yield { type: "tool", name: "search_web", arg: act.arg, result: `${r.length} results`, data: { items: r.slice(0, 8) } };
       } else if (act.action === "fetch") {
-        const p = await fetchPage(String(act.arg));
+        const p = await fetchReadable(String(act.arg));
         if (!fetched.some((f) => f.url === p.url)) {
           const host = new URL(p.url).hostname;
           const official = (input.site ? host.endsWith(input.site.replace(/^www\./, "")) : false) || OFFICIAL_HINT.test(host) || host === "composio.dev" || host.endsWith(".composio.dev");

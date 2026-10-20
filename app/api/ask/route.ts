@@ -5,14 +5,12 @@ import { rateLimit } from "@/lib/safety";
 import { searchHybrid } from "@/lib/embed";
 import { search } from "@/lib/rag";
 import { compose } from "@/lib/compose";
-import { extractApp, researchApp, webPrompt } from "@/lib/webask";
+import { extractApp, researchApp, webPrompt, OTHER_APPS } from "@/lib/webask";
 
 export const maxDuration = 60;
 
 const passageView = (h: Hit) => ({ id: h.id, slug: h.slug, app: h.app, section: h.section, text: h.text, tag: h.tag ?? null });
 
-// Well-known apps that are NOT in the library: say so instead of matching generic words to another provider.
-const OTHER_APPS = ["zoom","stripe","linear","figma","discord","dropbox","asana","jira","atlassian","confluence","twitter","spotify","zendesk","intercom","mailchimp","airtable","trello","docusign","quickbooks","xero","twilio","gitlab","bitbucket","okta","box","clickup","monday","calendly","typeform","webflow","wordpress","paypal","uber","reddit","tiktok","youtube","snapchat","pinterest","instagram","whatsapp","telegram","openai","anthropic","github enterprise"];
 
 // Successful AI answers are remembered for 6 hours, so repeat questions (and the example chips) answer instantly and never depend on Google being up.
 const CACHE = new Map<string, { at: number; body: unknown }>();

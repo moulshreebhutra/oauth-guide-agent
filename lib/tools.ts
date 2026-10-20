@@ -45,6 +45,24 @@ export async function fetchPage(url: string): Promise<{ url: string; title: stri
   throw new Error("too many redirects");
 }
 
+/** Page text the search provider already read (Tavily returns it). Used when the site itself blocks our fetch behind a bot check. */
+const SEARCH_TEXT = new Map<string, string>();
+const BLOCKED = /just a moment|verify you are (a )?human|checking your browser|captcha|access denied|enable javascript and cookies|attention required/i;
+
+/** fetchPage, but when the page comes back blocked or empty, use the text the search engine read instead (marked as such). */
+export async function fetchReadable(url: string): Promise<{ url: string; title: string; text: string; status: number; links: string[] }> {
+  const fallback = SEARCH_TEXT.get(url) ?? SEARCH_TEXT.get(url.replace(/\/$/, "")) ?? SEARCH_TEXT.get(url + "/");
+  try {
+    const p = await fetchPage(url);
+    const bad = p.status >= 400 || p.text.length < 300 || (p.text.length < 3000 && BLOCKED.test(p.text.slice(0, 1500)));
+    if (!bad || !fallback) return p;
+    return { ...p, title: `${p.title || url} (text as read by the search engine; the site blocked our own fetch)`, text: fallback };
+  } catch (e) {
+    if (fallback) return { url, title: `${url} (text as read by the search engine; the site blocked our own fetch)`, text: fallback, status: 200, links: [] };
+    throw e;
+  }
+}
+
 /**
  * Web search. DuckDuckGo's free HTML endpoint is blocked (403) from most cloud hosts, so a search key is used when present:
  * TAVILY_API_KEY (free tier, tavily.com) or BRAVE_API_KEY (Brave Search API); DuckDuckGo is the keyless last resort.
@@ -53,9 +71,11 @@ export async function searchWeb(query: string): Promise<{ title: string; url: st
   const errs: string[] = [];
   if (process.env.TAVILY_API_KEY) {
     try {
-      const res = await fetch("https://api.tavily.com/search", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${process.env.TAVILY_API_KEY}` }, body: JSON.stringify({ query, max_results: 8, search_depth: "basic" }), signal: AbortSignal.timeout(9_000) });
+      const res = await fetch("https://api.tavily.com/search", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${process.env.TAVILY_API_KEY}` }, body: JSON.stringify({ query, max_results: 8, search_depth: "basic", include_raw_content: "text" }), signal: AbortSignal.timeout(9_000) });
       if (!res.ok) throw new Error(`tavily ${res.status}`);
       const j: any = await res.json();
+      for (const r of j.results ?? []) { const t = String(r.raw_content || r.content || ""); if (r.url && t.length > 200) SEARCH_TEXT.set(String(r.url), t.slice(0, MAX_TEXT)); }
+      if (SEARCH_TEXT.size > 200) for (const k of [...SEARCH_TEXT.keys()].slice(0, 80)) SEARCH_TEXT.delete(k);
       const out = (j.results ?? []).map((r: any) => ({ title: String(r.title ?? r.url), url: String(r.url) })).filter((r: any) => /^https?:/.test(r.url));
       if (out.length) return out;
     } catch (e: any) { errs.push(String(e?.message ?? e)); }

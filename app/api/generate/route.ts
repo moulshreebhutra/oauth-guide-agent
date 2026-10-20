@@ -1,6 +1,7 @@
 import { generateGuide } from "@/lib/agent";
 import { cleanAppInput, rateLimit } from "@/lib/safety";
 import { mintShareToken } from "@/lib/share";
+import { appFromInput } from "@/lib/webask";
 
 export const maxDuration = 300; // writing a whole guide with a model takes longer than 60s; the page shows progress meanwhile
 
@@ -13,8 +14,12 @@ const keyOf = (i: { name: string; site?: string }) => `${i.name.toLowerCase().re
 export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
   const body = await req.json().catch(() => ({}));
-  const input = cleanAppInput(String(body.app ?? ""));
-  if (!input) return new Response(JSON.stringify({ error: "Enter an app name or website." }), { status: 400 });
+  const raw = cleanAppInput(String(body.app ?? ""));
+  if (!raw) return new Response(JSON.stringify({ error: "Enter an app name or website." }), { status: 400 });
+  // a whole question typed here ("How long does Discord take to verify a bot?") is reduced to the app it names
+  const named = raw.site ? raw.name : appFromInput(raw.name);
+  if (!named) return new Response(JSON.stringify({ error: "That reads as a question, but I could not tell which app it is about. Type just the app name (for example Discord) or its website. Questions go in the Ask box." }), { status: 400 });
+  const input = { ...raw, name: named };
 
   const key = keyOf(input);
   const hit = CACHE.get(key);

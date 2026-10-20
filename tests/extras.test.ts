@@ -122,3 +122,19 @@ test("repairDraft fills null setup minutes with a labelled estimate", () => {
   assert.deepEqual(e.effort.hands_on_minutes, { min: 15, max: 40 });
   assert.equal(e.effort.tag, "sourced");
 });
+
+import { appFromInput } from "../lib/webask";
+test("appFromInput pulls the app out of a typed question", () => {
+  assert.equal(appFromInput("How long does Discord take to verify a bot or app?"), "Discord");
+  assert.equal(appFromInput("Zoom"), "Zoom");
+  assert.equal(appFromInput("zoom.us"), "zoom.us");
+  assert.equal(appFromInput("what is the weather like today in town"), null);
+});
+
+test("appFromInput handles more phrasings", () => {
+  assert.equal(appFromInput("how do i connect to Foobarbaz Cloud"), "Foobarbaz");
+  assert.equal(appFromInput("how long does figma take to approve an app"), "Figma");
+  assert.equal(appFromInput("How do I register an OAuth app for Calendly?"), "Calendly");
+  assert.equal(appFromInput("how do I get oauth working for acme-crm please"), "acme-crm");
+  assert.equal(appFromInput("What is the capital of France?"), null);
+});
