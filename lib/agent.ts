@@ -1,5 +1,5 @@
 import { generate, hasModel, safeError, safeErrorLong } from "./llm";
-import { cleanText } from "./text";
+import { cleanText, keyFacts } from "./text";
 import { fetchPage, fetchReadable, searchWeb, probeOAuthDiscovery, checkComposioManaged, composioToolkit } from "./tools";
 import { enforce, type Fetched } from "./postprocess";
 import type { Guide } from "./schema";
@@ -11,12 +11,13 @@ import { loadGuide } from "./guides";
 
 export type Ev =
   | { type: "status"; msg: string }
-  | { type: "tool"; name: string; arg: string; result: string; data?: { url?: string; excerpt?: string; items?: { title: string; url: string }[] } }
+  | { type: "tool"; name: string; arg: string; result: string; data?: { url?: string; title?: string; excerpt?: string; facts?: string[]; items?: { title: string; url: string }[] } }
   | { type: "warn"; msg: string }
   | { type: "guide"; guide: Guide; notes: string[] }
   | { type: "error"; msg: string };
 
 const excerpt = (t: string, n = 700) => cleanText(t).slice(0, n);
+const pageData = (url: string, title: string, text: string) => ({ url, title: cleanText(title).slice(0, 120), excerpt: excerpt(text, 400), facts: keyFacts(text) });
 const MAX_ACTIONS = 5;
 const RESEARCH_BUDGET_MS = 20_000; // stop researching early so the whole run fits a 60s function limit
 const TOTAL_BUDGET_MS = 170_000;
@@ -120,7 +121,7 @@ export async function* generateGuide(input: { name: string; site?: string }): As
   const toolkit = await composioToolkit(input.name);
   if (toolkit) {
     fetched.push({ url: toolkit.url, title: toolkit.title, text: toolkit.text, official: true });
-    yield { type: "tool", name: "composio_toolkit_page", arg: input.name, result: `${toolkit.status === "yes" ? "managed OAuth available" : toolkit.status === "no" ? "managed OAuth not available" : "status not stated"}; auth: ${toolkit.methods.join(", ") || "n/a"}`, data: { url: toolkit.url, excerpt: excerpt(toolkit.text) } };
+    yield { type: "tool", name: "composio_toolkit_page", arg: input.name, result: `${toolkit.status === "yes" ? "managed OAuth available" : toolkit.status === "no" ? "managed OAuth not available" : "status not stated"}; auth: ${toolkit.methods.join(", ") || "n/a"}`, data: pageData(toolkit.url, toolkit.title, toolkit.text) };
   }
 
   if (input.site) {
@@ -135,7 +136,7 @@ export async function* generateGuide(input: { name: string; site?: string }): As
     const p = await fetchPage(`https://composio.dev/auth/${cslug}`);
     if (usablePage(p.text, input.name)) {
       fetched.push({ url: p.url, title: p.title, text: p.text, official: true });
-      yield { type: "tool", name: "fetch_composio_guide", arg: cslug, result: `${p.text.length} chars`, data: { url: p.url, excerpt: excerpt(p.text) } };
+      yield { type: "tool", name: "fetch_composio_guide", arg: cslug, result: `${p.text.length} chars`, data: pageData(p.url, p.title, p.text) };
     } else yield { type: "tool", name: "fetch_composio_guide", arg: cslug, result: "no Composio guide at that address" };
   } catch {
     yield { type: "tool", name: "fetch_composio_guide", arg: cslug, result: "no Composio guide at that address" };
@@ -147,7 +148,7 @@ export async function* generateGuide(input: { name: string; site?: string }): As
   const famGuide = fam ? loadGuide(fam.slug) : undefined;
   if (fam && famGuide) {
     fetched.push({ url: `https://oauth-guide-agent.vercel.app/guide/${fam.slug}`, title: `Our researched ${fam.parent} guide (${input.name} is registered through ${fam.parent})`, text: guideMarkdown(famGuide), official: false });
-    yield { type: "tool", name: "parent_platform_guide", arg: fam.parent, result: `${input.name} is registered through ${fam.parent}; using our ${fam.parent} guide as evidence`, data: { url: `https://oauth-guide-agent.vercel.app/guide/${fam.slug}`, excerpt: excerpt(guideMarkdown(famGuide)) } };
+    yield { type: "tool", name: "parent_platform_guide", arg: fam.parent, result: `${input.name} is registered through ${fam.parent}; using our ${fam.parent} guide as evidence`, data: pageData(`https://oauth-guide-agent.vercel.app/guide/${fam.slug}`, `Our researched ${fam.parent} guide`, guideMarkdown(famGuide)) };
   }
 
   // RAG step: pull how our researched guides judged difficulty/review for similar apps, so tiers stay consistent.
@@ -193,7 +194,7 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
           fetched.push({ url: p.url, title: p.title, text: p.text, official });
         }
         log.push(`fetched ${p.url}`);
-        yield { type: "tool", name: "fetch_page", arg: p.url, result: `${p.text.length} chars`, data: { url: p.url, excerpt: excerpt(p.text) } };
+        yield { type: "tool", name: "fetch_page", arg: p.url, result: `${p.text.length} chars`, data: pageData(p.url, p.title, p.text) };
       } else break;
     } catch (e: any) {
       log.push(`${act.action} failed: ${e.message}`);
@@ -219,7 +220,7 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
           if (!usablePage(p.text, input.name) || fetched.some((f) => f.url === p.url)) continue;
           const host = new URL(p.url).hostname;
           fetched.push({ url: p.url, title: p.title, text: p.text, official: host.includes(cslug) || OFFICIAL_HINT.test(host) });
-          yield { type: "tool", name: "fetch_page", arg: p.url, result: `${p.text.length} chars`, data: { url: p.url, excerpt: excerpt(p.text) } };
+          yield { type: "tool", name: "fetch_page", arg: p.url, result: `${p.text.length} chars`, data: pageData(p.url, p.title, p.text) };
         } catch { /* unreadable: skip */ }
       }
     } catch { /* search unavailable: carry on with what was read */ }

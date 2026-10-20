@@ -31,3 +31,20 @@ export function prettyTitle(title: string, url: string): string {
     return `${u.hostname.replace(/^www\./, "")}${tail ? ": " + tail : ""}`;
   } catch { return title || url; }
 }
+
+const KEY = /review|approv|verif|scope|permission|redirect|token|business|requir|access|submit|publish|\b\d+\s*(days?|weeks?|hours?|minutes?)\b|\bfees?\b|free|paid|rate limit|oauth|client (id|secret)|managed|partner|production|development|app (creation|registration)|register/i;
+const NOISE = /([A-Z]+_){2,}[A-Z]+|Copy page|Skip to (main )?content|Documentation Index|Fetch the complete|All Toolkits|Latest version|cookie|sign in to|log in to/;
+
+/** The few sentences of a page that matter for OAuth setup, as plain text. Used for the agent's "what it found" previews. */
+export function keyFacts(text: string, n = 3): string[] {
+  const sentences: string[] = [];
+  for (const line of text.split(/\n+/)) {
+    const c = cleanText(line);
+    if (c.length < 40) continue;
+    for (const s of c.split(/(?<=[.!?])\s+(?=[A-Z0-9"'])/)) { const t = s.trim(); if (t.length >= 45 && t.length <= 400 && !NOISE.test(t)) sentences.push(t); }
+  }
+  const cut = (t: string) => t.length <= 240 ? t : t.slice(0, 240).replace(/\s+\S*$/, "") + "...";
+  const scored = sentences.map((t, i) => ({ t, i, sc: (t.match(new RegExp(KEY.source, "gi")) ?? []).length })).filter((x) => x.sc > 0);
+  const top = (scored.length ? scored.sort((a, b) => b.sc - a.sc || a.i - b.i).slice(0, n).sort((a, b) => a.i - b.i) : sentences.slice(0, 2).map((t, i) => ({ t, i, sc: 0 })));
+  return [...new Set(top.map((x) => cut(x.t)))];
+}

@@ -231,7 +231,7 @@ footer a{color:#fff}
 @keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
 .answer details{margin:12px 0}
 .answer-text p{margin:0 0 10px}.answer-text .bul{padding-left:18px;position:relative}.answer-text .bul::before{content:"";position:absolute;left:4px;top:.7em;width:6px;height:6px;background:var(--ink)}
-.cite{margin:0 2px}.cite a{font:12px var(--mono);padding:0 5px;background:var(--paper);border:1px solid var(--rule);text-decoration:none;margin-right:2px}.cite a:hover{border-color:var(--ink)}
+.cite{margin:0 2px}
 .badge{display:inline-block;font:11px/1.5 var(--mono);text-transform:uppercase;padding:2px 8px;margin:0 0 14px;border:1px solid var(--rule)}
 .b-ai{background:var(--blue);border-color:var(--blue);color:#fff}
 .b-quote{background:var(--paper);color:var(--muted)}
@@ -334,3 +334,39 @@ code.ic{font:.88em var(--mono);background:var(--card);border:1px solid var(--rul
 a.cite{font:.82em var(--mono);text-decoration:underline;margin:0 1px}
 .claims strong,.steps strong{font-weight:600}
 blockquote em,.guide-body em{font-style:italic}
+
+/* ---- agent run: one loader card + a collapsed list of steps ---- */
+.runcard{position:relative;display:flex;align-items:center;gap:14px;background:var(--dk-card);border:1px solid var(--dk-rule);padding:16px 18px;overflow:hidden}
+.runtext{display:grid;gap:2px;min-width:0}.runtext b{font:500 16px/1.35 var(--display);color:#fff}.runtext span{font:12px var(--mono);color:var(--dk-muted)}
+.runbar{position:absolute;left:0;bottom:0;height:2px;width:35%;background:var(--blue-2);animation:slide 1.4s ease-in-out infinite}
+.agrun{margin:12px 0 0;background:var(--dk-card);border:1px solid var(--dk-rule)}
+.agrun>summary{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 18px;cursor:pointer;list-style:none;font:500 14px var(--display);color:#fff}
+.agrun>summary::-webkit-details-marker{display:none}
+.agrun>summary::before{content:"";width:7px;height:7px;border-right:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg);margin-right:10px;transition:transform .15s;flex:none}
+.agrun[open]>summary::before{transform:rotate(45deg)}
+.agrun>summary span{flex:1}.agrun>summary em{font:12px var(--mono);font-style:normal;color:var(--dk-muted)}
+.agrun .agsteps{margin:0;padding:0 14px 14px;gap:6px}
+.agsteps li{display:block;padding:0;border:1px solid var(--rule)}
+.agsteps .stone>summary,.agsteps .stone.plain{display:grid;grid-template-columns:22px 1fr;gap:12px;align-items:start;padding:11px 14px;cursor:pointer;list-style:none;font-size:15px;color:var(--ink)}
+.agsteps .stone.plain{cursor:default}
+.agsteps .stone>summary::-webkit-details-marker{display:none}
+.agsteps .stone>summary:hover{background:#f4f4ff}
+.agsteps .stxt{display:grid;gap:2px}.agsteps .stxt small{font:12px var(--mono);color:var(--muted)}
+.agsteps .stbody{padding:2px 14px 14px 48px;display:grid;gap:10px;border-top:1px dashed var(--rule);margin-top:0;padding-top:12px}
+.agsteps .stbody h4{font:500 12px var(--mono);color:var(--muted);margin:0 0 6px;text-transform:none;letter-spacing:0}
+.agsteps .facts-list{margin:0;padding-left:18px;display:grid;gap:6px;font-size:14px;line-height:1.5;color:#222}
+.agsteps .stone[open]>summary{background:#f4f4ff}
+
+/* ---- links and references: coloured, underlined, and clearly different from body text ---- */
+.guide-body a,.answer-text a,.passages a,.agsteps a,.cachenote a{color:var(--blue);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+.guide-body a:hover,.answer-text a:hover,.passages a:hover,.agsteps a:hover{color:var(--blue-2);text-decoration-thickness:2px}
+.guide-body a[target=_blank]::after,.answer-text a[target=_blank]::after,.passages a[target=_blank]::after{content:"\2197";font-size:.8em;margin-left:2px;text-decoration:none;display:inline-block}
+.cites a,a.cite,.cite a,.guide-body .cites a,.answer-text .cite a{display:inline-block;font:500 11px/1.7 var(--mono);color:var(--blue);background:#eef0ff;border:1px solid #c7caff;padding:0 6px;margin:0 2px;text-decoration:none;vertical-align:baseline}
+.cites a:hover,a.cite:hover,.cite a:hover{background:var(--blue);border-color:var(--blue);color:#fff;text-decoration:none}
+.cites a::after,a.cite::after{content:none!important}
+.evidence li:target{background:#fffbe6;outline:2px solid #f2d94e;outline-offset:6px}
+.evidence a{font-weight:500}
+.agsteps .facts-list li{border:0;padding:0;background:none;display:list-item}
+.band code.ic{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.28)}
+.band .lede a{color:#aab0ff;text-decoration:underline;text-underline-offset:3px}.band .lede a:hover{color:#fff}
+.band .lede a.cite{color:#fff;background:rgba(42,49,255,.55);border-color:rgba(170,176,255,.6)}

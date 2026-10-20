@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { GuideView } from "@/components/GuideView";
+import { Md } from "@/components/Md";
 import { PageHead } from "@/components/PageHead";
 import type { Guide } from "@/lib/schema";
 import { explainError, friendlyTool, type Step } from "@/lib/livelog";
 
+const hostOf = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return u.slice(0, 40); } };
 type Err = { headline: string; fix: string[]; raw: string };
 
 export default function Live() {
@@ -106,23 +108,56 @@ export default function Live() {
         )}
         {(busy || steps.length > 0 || err) && (
           <div className="agentlog" aria-live="polite">
-            {busy && <p className="now"><span className="spin" aria-hidden /> {now} <span className="muted">{secs}s</span></p>}
+            {busy && (
+              <div className="runcard">
+                <span className="spin" aria-hidden />
+                <div className="runtext">
+                  <b>{now || "Starting…"}</b>
+                  <span>{steps.length} step{steps.length === 1 ? "" : "s"} done · {secs}s</span>
+                </div>
+                <i className="runbar" aria-hidden />
+              </div>
+            )}
             {steps.length > 0 && (
-              <ol className="agsteps">
-                {steps.map((st) => (
-                  <li key={st.id} className={`st-${st.state}`}>
-                    <span className="dot" aria-hidden>{st.state === "warn" ? "!" : "✓"}</span>
-                    <div><b>{st.title}</b>{(st.detail || st.data) && (
-                      <details><summary>{st.data?.items ? `see the ${st.data.items.length} results` : st.data?.excerpt ? "see what it read" : "detail"}</summary>
-                        {st.detail && <p className="dtext">{st.detail}</p>}
-                        {st.data?.items && <ul className="dlinks">{st.data.items.map((it) => <li key={it.url}><a href={it.url} target="_blank" rel="noreferrer">{it.title.slice(0, 90)}</a><span>{new URL(it.url).hostname}</span></li>)}</ul>}
-                        {st.data?.excerpt && <p className="dtext excerpt">{st.data.excerpt}{st.data.excerpt.length >= 700 ? "…" : ""}</p>}
-                        {st.data?.url && <a className="dopen" href={st.data.url} target="_blank" rel="noreferrer">Open the page</a>}
-                      </details>
-                    )}</div>
-                  </li>
-                ))}
-              </ol>
+              <details className="agrun">
+                <summary>
+                  <span>{busy ? "What the agent has done so far" : "How this guide was researched"}</span>
+                  <em>{steps.length} step{steps.length === 1 ? "" : "s"}{steps.some((x) => x.state === "warn") ? ` · ${steps.filter((x) => x.state === "warn").length} with a problem` : ""}</em>
+                </summary>
+                <ol className="agsteps">
+                  {steps.map((st) => {
+                    const sub0 = st.data?.items ? `${st.data.items.length} results` : st.data?.url ? hostOf(st.data.url) : "";
+                    const sub = sub0 && !st.title.includes(sub0) ? sub0 : "";
+                    const body = st.detail || st.data;
+                    const row = (
+                      <>
+                        <span className="dot" aria-hidden>{st.state === "warn" ? "!" : "✓"}</span>
+                        <span className="stxt"><b>{st.title}</b>{sub && <small>{sub}</small>}</span>
+                      </>
+                    );
+                    return (
+                      <li key={st.id} className={`st-${st.state}`}>
+                        {body ? (
+                          <details className="stone">
+                            <summary>{row}</summary>
+                            <div className="stbody">
+                              {st.detail && <p className="dtext"><Md t={st.detail} /></p>}
+                              {st.data?.facts && st.data.facts.length > 0 && (
+                                <div><h4>What it found</h4><ul className="facts-list">{st.data.facts.map((f, i) => <li key={i}><Md t={f} /></li>)}</ul></div>
+                              )}
+                              {!st.data?.facts?.length && st.data?.excerpt && <p className="dtext"><Md t={st.data.excerpt} />{st.data.excerpt.length >= 400 ? "…" : ""}</p>}
+                              {st.data?.items && (
+                                <ul className="dlinks">{st.data.items.map((it) => <li key={it.url}><a href={it.url} target="_blank" rel="noreferrer">{it.title.slice(0, 90)}</a><span>{hostOf(it.url)}</span></li>)}</ul>
+                              )}
+                              {st.data?.url && <a className="dopen" href={st.data.url} target="_blank" rel="noreferrer">{st.data.title ? `Open: ${st.data.title.slice(0, 60)}` : "Open the page"}</a>}
+                            </div>
+                          </details>
+                        ) : <div className="stone plain">{row}</div>}
+                      </li>
+                    );
+                  })}
+                </ol>
+              </details>
             )}
             {err && (
               <div className="agenterr" role="alert">

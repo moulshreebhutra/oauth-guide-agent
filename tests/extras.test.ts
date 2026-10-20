@@ -154,3 +154,12 @@ test("text helpers clean markdown, entities and url titles", () => {
   assert.equal(prettyTitle("https://developers.facebook.com/documentation/instagram-platform/app-review", "https://developers.facebook.com/documentation/instagram-platform/app-review"), "developers.facebook.com: instagram platform / app review");
   assert.equal(prettyTitle("Real title", "https://x.com"), "Real title");
 });
+
+import { keyFacts } from "../lib/text";
+test("keyFacts picks the OAuth-relevant sentences and skips navigation noise", () => {
+  const page = "Skip to content\nAll Toolkits Instagram INSTAGRAM_CREATE_POST INSTAGRAM_DELETE_COMMENT INSTAGRAM_GET_USER Tools (40)\n# Instagram Platform overview\nThe Instagram Platform is a collection of APIs that lets your app reach professional accounts.\nYour app must complete [App Review](https://x.com/r) before it can request permissions with Advanced Access from any app user.\nBusiness Verification is required before publishing, and review time is not stated on this page.";
+  const f = keyFacts(page, 2);
+  assert.equal(f.length, 2);
+  assert.ok(f.every((x) => !/INSTAGRAM_|Skip to/.test(x)));
+  assert.ok(f.some((x) => /App Review/.test(x) && !/\]\(/.test(x)));
+});

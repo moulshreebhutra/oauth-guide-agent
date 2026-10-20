@@ -1,5 +1,5 @@
 /** Turns the agent's raw events into plain sentences, and raw provider errors into a readable explanation. */
-export type ToolData = { url?: string; excerpt?: string; items?: { title: string; url: string }[] };
+export type ToolData = { url?: string; title?: string; excerpt?: string; facts?: string[]; items?: { title: string; url: string }[] };
 export type Step = { id: number; state: "done" | "warn" | "error"; title: string; detail?: string; data?: ToolData };
 
 const host = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return u.slice(0, 40); } };
@@ -27,7 +27,7 @@ function friendlyToolBase(name: string, arg: string, result: string): { title: s
     case "fetch_page":
     {
       const thin = /^[0-9]{1,3} chars$/.test(result);
-      return { title: thin ? `Read ${host(arg)}, but it has almost no readable text (the page is built by JavaScript)` : `Read ${host(arg)}`, detail: `${arg} (${result})`, state: thin ? "warn" : "done" };
+      return { title: thin ? `Read ${host(arg)}, but found almost no readable text (the site builds its pages with scripts)` : `Read ${host(arg)}`, detail: `${arg} (${result})`, state: thin ? "warn" : "done" };
     }
     case "probe_oauth_discovery":
       return { title: none ? "No public OAuth discovery document" : "Found the provider's OAuth discovery document", detail: result, state: "done" };
