@@ -81,7 +81,7 @@ export default function How() {
 
       <h2>What is not built yet</h2>
       <ul>
-        <li>Keyword retrieval cannot match synonyms such as &quot;approval&quot; and &quot;review&quot;; embeddings would, and are the next step.</li>
+        <li>Retrieval is hybrid: keywords (with synonym groups such as approval, review and verification) decide what is eligible, then Gemini embeddings re-order it by meaning. The embedding step has not been run against the live model yet; if it fails the keyword order is used.</li>
         <li>Share links carry the whole guide inside the URL (signed, nothing stored). Very long guides may not fit; those get no link and can still be copied as JSON.</li>
         <li>Hands-on registrations are still to be logged, so no claim is tagged Tested.</li>
       </ul>

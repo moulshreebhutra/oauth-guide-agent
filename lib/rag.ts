@@ -67,6 +67,17 @@ export function getIndex(): Index {
 
 export type Hit = Chunk & { score: number };
 
+// Words people use interchangeably when asking about approval. Each group is matched as one query term.
+const SYNONYMS = [
+  ["review", "approval", "approve", "verification", "verify", "audit", "vetting", "listing", "marketplace"],
+  ["wait", "duration", "timeline", "turnaround", "weeks", "days"],
+  ["agent", "automate", "automation", "automatically"],
+  ["company", "companies", "customer", "customers", "outside", "external", "tenant", "workspace", "workspaces", "merchant", "merchants"],
+  ["secret", "credential", "credentials", "key", "token"],
+  ["easy", "easiest", "hard", "hardest", "difficult", "difficulty", "tier"],
+].map((g) => [...new Set(g.flatMap((w) => tokenize(w)))]);
+const groupOf = (t: string) => SYNONYMS.find((g) => g.includes(t)) ?? [t];
+
 export function search(query: string, opts: { k?: number; slug?: string; index?: Index } = {}): Hit[] {
   const ix = opts.index ?? getIndex();
   const q = [...new Set(tokenize(query))];
@@ -79,12 +90,18 @@ export function search(query: string, opts: { k?: number; slug?: string; index?:
     let score = 0;
     let matched = 0;
     for (const t of q) {
-      const f = ix.tf[i].get(t);
-      if (!f) continue;
-      matched++;
-      const n = ix.df.get(t) ?? 0;
-      const idf = Math.log(1 + (N - n + 0.5) / (n + 0.5));
-      score += idf * ((f * (k1 + 1)) / (f + k1 * (1 - b + (b * ix.len[i]) / ix.avg)));
+      let best = 0;
+      for (const m of groupOf(t)) {
+        const f = ix.tf[i].get(m);
+        if (!f) continue;
+        const n = ix.df.get(m) ?? 0;
+        const idf = Math.log(1 + (N - n + 0.5) / (n + 0.5));
+        best = Math.max(best, idf * ((f * (k1 + 1)) / (f + k1 * (1 - b + (b * ix.len[i]) / ix.avg))));
+      }
+      if (best > 0) {
+        matched++;
+        score += best;
+      }
     }
     // require real overlap: at least half of the (non-stopword) query terms, minimum one
     if (matched >= Math.max(1, Math.ceil(q.length / 2))) hits.push({ ...c, score });

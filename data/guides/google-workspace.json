@@ -28,7 +28,10 @@
   "evidence": [
    "e1"
   ],
-  "display": "Several weeks (stated by Google)"
+  "display": "Several weeks (stated by Google)",
+  "headline": "Several weeks",
+  "kind": "stated",
+  "note": "As Google states it, for sensitive or restricted scopes. Testing mode needs no review but allows 100 test users."
  },
  "composio_managed": {
   "status": "unknown",

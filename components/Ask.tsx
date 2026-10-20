@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Tag } from "./GuideView";
 
 type Passage = { id: string; slug: string; app: string; section: string; text: string; tag: string | null };
-type Result = { mode: "answer" | "passages" | "none"; answer: string | null; passages: Passage[]; message?: string; error?: string };
+type Result = { mode: "answer" | "passages" | "none"; answer: string | null; passages: Passage[]; message?: string; detail?: string; error?: string };
 
 export function Ask({ slug, examples }: { slug?: string; examples: string[] }) {
   const [q, setQ] = useState("");
@@ -50,6 +50,7 @@ export function Ask({ slug, examples }: { slug?: string; examples: string[] }) {
         <div className="answer" aria-live="polite">
           {res.answer && <p className="answer-text">{res.answer}</p>}
           {res.message && <p className="muted">{res.message}</p>}
+          {res.detail && <p className="muted small"><b>Reason from Gemini:</b> {res.detail}</p>}
           {res.passages.length > 0 && (
             <>
               <h3>{res.mode === "answer" ? "Passages cited" : "Most relevant passages"}</h3>

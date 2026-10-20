@@ -1,10 +1,9 @@
-import fs from "node:fs";
-import path from "node:path";
-import { GoogleGenAI } from "@google/genai";
+import { generate, safeError } from "./llm";
 import { fetchPage, searchWeb, probeOAuthDiscovery, checkComposioManaged } from "./tools";
 import { enforce, type Fetched } from "./postprocess";
 import type { Guide } from "./schema";
 import { search } from "./rag";
+import { RAW_GUIDES } from "@/data/guides";
 
 export type Ev =
   | { type: "status"; msg: string }
@@ -13,25 +12,16 @@ export type Ev =
   | { type: "guide"; guide: Guide; notes: string[] }
   | { type: "error"; msg: string };
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 const MAX_ACTIONS = 5;
-const RESEARCH_BUDGET_MS = 30_000; // stop researching early so the whole run fits a 60s function limit
+const RESEARCH_BUDGET_MS = 22_000; // stop researching early so the whole run fits a 60s function limit
+const TOTAL_BUDGET_MS = 52_000;
+const ACTION_TIMEOUT_MS = 12_000;
+const WRITE_TIMEOUT_MS = 30_000;
 const PER_PAGE_PROMPT_CHARS = 9000;
 const OFFICIAL_HINT = /(docs?|developers?|developer|learn|support|help|api)\./i;
 
-function ai() {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY is not set on the server");
-  return new GoogleGenAI({ apiKey: key });
-}
-
-async function ask(prompt: string, json = true): Promise<string> {
-  const res = await ai().models.generateContent({
-    model: MODEL,
-    contents: prompt,
-    config: { temperature: 0.2, ...(json ? { responseMimeType: "application/json" } : {}) },
-  });
-  return res.text ?? "";
+async function ask(prompt: string, timeoutMs = ACTION_TIMEOUT_MS, json = true): Promise<string> {
+  return generate(prompt, { json, timeoutMs });
 }
 
 function parseJson(s: string): any {
@@ -39,7 +29,7 @@ function parseJson(s: string): any {
   return JSON.parse(t);
 }
 
-const exampleGuide = () => fs.readFileSync(path.join(process.cwd(), "data/guides/github.json"), "utf8");
+const exampleGuide = () => JSON.stringify(RAW_GUIDES.find((g: any) => g.slug === "github"));
 
 const RULES = `
 You write OAuth-app setup guides for developers. Hard rules:
@@ -56,6 +46,7 @@ You write OAuth-app setup guides for developers. Hard rules:
 export async function* generateGuide(input: { name: string; site?: string }): AsyncGenerator<Ev> {
   const fetched: Fetched[] = [];
   const log: string[] = [];
+  const T0 = Date.now();
   const slug = input.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "app";
 
   if (!process.env.GEMINI_API_KEY) {
@@ -74,6 +65,16 @@ export async function* generateGuide(input: { name: string; site?: string }): As
     yield { type: "tool", name: "probe_oauth_discovery", arg: input.site, result: disc.length ? `found ${disc.length} discovery document(s)` : "none published" };
   }
 
+  // Composio publishes setup guides at a predictable URL; read it if it exists (cheap, no model call).
+  const cslug = input.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  try {
+    const p = await fetchPage(`https://composio.dev/auth/${cslug}`);
+    fetched.push({ url: p.url, title: p.title, text: p.text, official: true });
+    yield { type: "tool", name: "fetch_composio_guide", arg: cslug, result: `${p.text.length} chars` };
+  } catch {
+    yield { type: "tool", name: "fetch_composio_guide", arg: cslug, result: "no Composio guide at that address" };
+  }
+
   // RAG step: pull how our researched guides judged difficulty/review for similar apps, so tiers stay consistent.
   const refs = search("difficulty tier review approval verification wait", { k: 60 })
     .filter((h) => h.section === "Difficulty" || h.section === "Approval wait")
@@ -88,6 +89,7 @@ export async function* generateGuide(input: { name: string; site?: string }): As
       yield { type: "warn", msg: "Research time budget reached; writing the guide from what was read." };
       break;
     }
+    yield { type: "status", msg: `Deciding the next step (${i + 1} of ${MAX_ACTIONS})…` };
     const have = fetched.map((f) => `- ${f.url} (${f.title.slice(0, 60)})`).join("\n") || "(nothing yet)";
     const prompt = `${RULES}
 Task: find how a developer registers an OAuth app for "${input.name}"${input.site ? ` (website ${input.site})` : ""}, whether review/approval is needed, how long it takes, and what the requirements are.
@@ -98,8 +100,8 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
     let act: { action: string; arg: string };
     try {
       act = parseJson(await ask(prompt));
-    } catch {
-      yield { type: "warn", msg: "Model returned an unreadable action; moving on." };
+    } catch (e: any) {
+      yield { type: "warn", msg: `The model did not answer in time or returned something unreadable (${safeError(e).slice(0, 160)}); moving on.` };
       break;
     }
     if (act.action === "done") break;
@@ -140,9 +142,10 @@ EXAMPLE:\n${exampleGuide()}\n\nCALIBRATION (how our researched guides judged sim
   for (let attempt = 0; attempt < 2; attempt++) {
     let draft: any;
     try {
-      draft = parseJson(await ask(attempt ? `${base}\n\nYour previous attempt failed validation: ${lastErr}\nReturn a corrected full JSON object.` : base));
+      if (attempt && Date.now() - T0 > TOTAL_BUDGET_MS - WRITE_TIMEOUT_MS) break;
+      draft = parseJson(await ask(attempt ? `${base}\n\nYour previous attempt failed validation: ${lastErr}\nReturn a corrected full JSON object.` : base, WRITE_TIMEOUT_MS));
     } catch (e: any) {
-      lastErr = "unparseable JSON";
+      lastErr = e instanceof SyntaxError ? "the model returned unparseable JSON" : safeError(e);
       continue;
     }
     draft.slug = slug;

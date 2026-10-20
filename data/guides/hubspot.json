@@ -32,7 +32,10 @@
   "evidence": [
    "e1"
   ],
-  "display": "10 business days to 60 days (Marketplace listing only)"
+  "display": "10 business days to 60 days (Marketplace listing only)",
+  "headline": "10 business days to 60 days",
+  "kind": "stated",
+  "note": "Only for a Marketplace listing."
  },
  "composio_managed": {
   "status": "unknown",

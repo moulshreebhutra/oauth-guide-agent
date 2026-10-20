@@ -83,6 +83,9 @@ export const Guide = z.object({
     // null range = no stated wait
     range: z.object({ min_days: z.number(), max_days: z.number() }).nullable(),
     display: z.string().optional(), // short label when a source gives a duration in words ("several weeks")
+    headline: z.string().optional(), // big plain-language wait shown on the library cards
+    note: z.string().optional(), // one sentence: what the wait applies to
+    kind: z.enum(["none", "stated", "unpublished"]).optional(), // none = no review step; stated = provider gives a duration; unpublished = we looked, none given
     statement: z.string(),
     tag: Tag,
     evidence: z.array(z.string()).default([]),

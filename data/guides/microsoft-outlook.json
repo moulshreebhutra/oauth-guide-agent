@@ -29,7 +29,10 @@
    "e1",
    "e8"
   ],
-  "statement": "Microsoft says developers who already meet the publisher-verification requirements can be verified in minutes. How long it takes to get the Partner account itself verified is not stated."
+  "statement": "Microsoft says developers who already meet the publisher-verification requirements can be verified in minutes. How long it takes to get the Partner account itself verified is not stated.",
+  "headline": "Minutes, once set up",
+  "kind": "stated",
+  "note": "Publisher verification takes minutes once you have a verified Partner account. How long that account takes is not stated."
  },
  "composio_managed": {
   "status": "unknown",

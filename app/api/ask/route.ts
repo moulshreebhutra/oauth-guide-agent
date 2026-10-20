@@ -1,9 +1,9 @@
-import { GoogleGenAI } from "@google/genai";
-import { search, checkCitations, type Hit } from "@/lib/rag";
+import { generate } from "@/lib/llm";
+import { checkCitations, type Hit } from "@/lib/rag";
 import { rateLimit } from "@/lib/safety";
+import { searchHybrid } from "@/lib/embed";
 
 export const maxDuration = 30;
-const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 
 const passageView = (h: Hit) => ({ id: h.id, slug: h.slug, app: h.app, section: h.section, text: h.text, tag: h.tag ?? null });
 
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const slug = typeof body.slug === "string" && /^[a-z0-9-]+$/.test(body.slug) ? body.slug : undefined;
   if (question.length < 3) return Response.json({ error: "Ask a question of at least a few words." }, { status: 400 });
 
-  const hits = search(question, { k: 6, slug });
+  const { hits, mode: retrieval } = await searchHybrid(question, { k: 6, slug });
   if (!hits.length)
     return Response.json({ mode: "none", answer: null, passages: [], message: "The guides do not cover that. Try naming an app, or use the live agent to research it." });
 
@@ -31,13 +31,13 @@ ${passages}
 
 QUESTION: ${question}`;
   try {
-    const res = await new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }).models.generateContent({ model: MODEL, contents: prompt, config: { temperature: 0.1 } });
-    const answer = (res.text ?? "").trim();
+    const answer = (await generate(prompt, { temperature: 0.1, timeoutMs: 15_000 })).trim();
     const { cited, invalid } = checkCitations(answer, new Set(hits.map((h) => h.id)));
     if (!cited.length || invalid.length)
       return Response.json({ mode: "passages", answer: null, passages: hits.map(passageView), message: "The written answer did not cite the guides correctly, so it is not shown. Here are the passages it was working from." });
-    return Response.json({ mode: "answer", answer, cited, passages: hits.filter((h) => cited.includes(h.id)).map(passageView) });
-  } catch {
-    return Response.json({ mode: "passages", answer: null, passages: hits.map(passageView), message: "The model call failed, showing the retrieved passages instead." });
+    return Response.json({ mode: "answer", retrieval, answer, cited, passages: hits.filter((h) => cited.includes(h.id)).map(passageView) });
+  } catch (e: any) {
+    console.error("ask: model call failed:", e?.message);
+    return Response.json({ mode: "passages", answer: null, passages: hits.map(passageView), message: "The model call failed, showing the retrieved passages instead.", detail: String(e?.message ?? e).slice(0, 300) });
   }
 }

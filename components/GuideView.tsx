@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Guide, Claim } from "@/lib/schema";
 import { PageHead } from "./PageHead";
+import { Logo } from "./Logo";
 
 const idOf = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
@@ -67,7 +68,7 @@ export function GuideView({ g, notes = [], back = false, banner }: { g: Guide; n
     <article className="guide">
       <PageHead
         eyebrow={<>{back && <><Link href="/" className="back">← All guides</Link><br /></>}{g.generated_by === "agent" ? "Generated live by the agent, not human-checked" : "Researched guide"}</>}
-        title={g.app}
+        title={<span className="titlerow"><Logo slug={g.slug} app={g.app} size={52} />{g.app}</span>}
         lede={g.summary}
       >
         <div className="meta">
@@ -104,7 +105,7 @@ export function GuideView({ g, notes = [], back = false, banner }: { g: Guide; n
         </div>
         <div className="fact">
           <span className="k">Approval wait</span>
-          <strong>{g.wait.display ?? (g.wait.range ? `${g.wait.range.min_days}-${g.wait.range.max_days} days` : "No stated wait")}</strong>
+          <strong>{g.wait.headline ?? g.wait.display ?? (g.wait.range ? `${g.wait.range.min_days}-${g.wait.range.max_days} days` : "No stated wait")}</strong>
           <p>
             <Tag t={g.wait.tag} /> {g.wait.statement} <Cites ids={g.wait.evidence} />
           </p>

@@ -28,7 +28,10 @@
   "tag": "unknown",
   "evidence": [
    "e2"
-  ]
+  ],
+  "headline": "Not published",
+  "kind": "unpublished",
+  "note": "Public apps need Shopify review, but no official page gives a duration."
  },
  "composio_managed": {
   "status": "unknown",

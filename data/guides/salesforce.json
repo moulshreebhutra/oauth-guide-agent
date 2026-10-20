@@ -31,7 +31,10 @@
   "evidence": [
    "e2"
   ],
-  "display": "~10 min to start; listing review 4-6 wks (our sum)"
+  "display": "~10 min to start; listing review 4-6 wks (our sum)",
+  "headline": "About 10 minutes",
+  "kind": "stated",
+  "note": "To create the app. A security review (about 4-6 weeks by our sum) applies only if you distribute a package."
  },
  "composio_managed": {
   "status": "unknown",

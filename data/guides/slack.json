@@ -34,7 +34,10 @@
    "e3",
    "e4"
   ],
-  "statement": "Slack states maximums, not typical times: up to 10 business days for the preliminary review plus up to 10 weeks for the functional review of a new submission (6 weeks for resubmitted published apps). Our sum is about 12 weeks. Slack says turnaround varies with volume. Unlisted distribution and single-workspace apps have no review."
+  "statement": "Slack states maximums, not typical times: up to 10 business days for the preliminary review plus up to 10 weeks for the functional review of a new submission (6 weeks for resubmitted published apps). Our sum is about 12 weeks. Slack says turnaround varies with volume. Unlisted distribution and single-workspace apps have no review.",
+  "headline": "Up to ~12 weeks",
+  "kind": "stated",
+  "note": "Only for a Marketplace listing. Slack states maximums, not typical times."
  },
  "composio_managed": {
   "status": "yes",

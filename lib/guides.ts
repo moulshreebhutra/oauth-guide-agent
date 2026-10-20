@@ -1,13 +1,6 @@
-import fs from "node:fs";
-import path from "node:path";
 import { Guide } from "./schema";
+import { RAW_GUIDES } from "@/data/guides";
 
-export function loadGuides(): Guide[] {
-  const dir = path.join(process.cwd(), "data/guides");
-  return fs
-    .readdirSync(dir)
-    .filter((f) => f.endsWith(".json"))
-    .map((f) => Guide.parse(JSON.parse(fs.readFileSync(path.join(dir, f), "utf8"))))
-    .sort((a, b) => a.difficulty.tier - b.difficulty.tier || a.app.localeCompare(b.app));
-}
-export const loadGuide = (slug: string) => loadGuides().find((g) => g.slug === slug);
+const ALL = RAW_GUIDES.map((g) => Guide.parse(g)).sort((a, b) => a.difficulty.tier - b.difficulty.tier || a.app.localeCompare(b.app));
+export const loadGuides = (): Guide[] => ALL;
+export const loadGuide = (slug: string) => ALL.find((g) => g.slug === slug);

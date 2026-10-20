@@ -8,19 +8,21 @@ import { PageHead } from "@/components/PageHead";
 export default function Home() {
   const rows: Row[] = loadGuides().map((g) => {
     const w = g.wait;
-    const kind: Row["waitKind"] = w.display ? (w.range && w.range.max_days > 0 ? "range" : w.range ? "range" : "words") : w.range ? "range" : w.tag === "unknown" ? "unknown" : "none-stated";
-    const text = w.display ?? (w.range && w.range.max_days > 0 ? `${w.range.min_days}-${w.range.max_days} days` : w.tag === "unknown" ? "Not published" : "No review step described");
+    const kind: Row["waitKind"] = w.kind ?? (w.range ? "stated" : w.tag === "unknown" ? "unpublished" : "none");
     return {
       slug: g.slug,
-      app: g.app,
+      app: g.app.replace(/\s*\(.*\)/, ""),
       tier: g.difficulty.tier,
       label: TIER_LABELS[g.difficulty.tier],
-      minMin: g.effort.hands_on_minutes.min,
-      minMax: g.effort.hands_on_minutes.max,
-      waitKind: w.display && !w.range ? "words" : kind,
+      time: `${g.effort.hands_on_minutes.min}-${g.effort.hands_on_minutes.max} min`,
+      waitHeadline: w.headline ?? w.display ?? (w.range ? `${w.range.min_days}-${w.range.max_days} days` : "Not published"),
+      waitNote: w.note ?? w.statement,
+      waitKind: kind,
+      waitDraw: kind === "none" ? "none" : kind === "unpublished" ? "unknown" : w.range && w.range.max_days > 0 ? "range" : w.range || /minute/i.test(w.headline ?? "") ? "instant" : "words",
       waitMin: w.range?.min_days,
       waitMax: w.range?.max_days,
-      waitText: text,
+      minMin: g.effort.hands_on_minutes.min,
+      minMax: g.effort.hands_on_minutes.max,
     };
   });
   return (

@@ -28,7 +28,10 @@
   "evidence": [
    "e1",
    "e2"
-  ]
+  ],
+  "headline": "No review",
+  "kind": "none",
+  "note": "Register the app and use it right away. Organization owners may need to approve it for their repos."
  },
  "composio_managed": {
   "status": "unknown",

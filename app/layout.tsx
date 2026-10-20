@@ -3,6 +3,8 @@ import Link from "next/link";
 import "@fontsource-variable/geist";
 import "@fontsource-variable/jetbrains-mono";
 import "./globals.css";
+import { About } from "@/components/About";
+import { ABOUT } from "@/lib/about";
 
 export const metadata: Metadata = {
   title: "OAuth Route Map",
@@ -24,14 +26,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/">Library</Link>
               <Link href="/how-it-works">How it works</Link>
               <Link href="/method">Method</Link>
+              <Link href="/#about">About</Link>
               <Link href="/live" className="cta">Live agent</Link>
             </span>
           </div>
         </nav>
         <div id="main">{children}</div>
+        <About />
         <footer>
           <div className="wrap">
-            <span>A take-home prototype for Composio. This site never asks for credentials or secrets.</span>
+            <span>Built by <Link href="/#about">{ABOUT.name}</Link> as a take-home prototype for Composio. This site never asks for credentials or secrets.</span>
             <span>Guides last verified 2026-10-20. <Link href="/method">What was and was not tested</Link></span>
           </div>
         </footer>

@@ -31,6 +31,7 @@ export default function Live() {
       const reader = res.body.getReader();
       const dec = new TextDecoder();
       let buf = "";
+      let got = false;
       for (;;) {
         const { value, done } = await reader.read();
         if (done) break;
@@ -40,12 +41,14 @@ export default function Live() {
         for (const p of parts) {
           if (!p.startsWith("data: ")) continue;
           const ev = JSON.parse(p.slice(6));
-          if (ev.type === "guide") setGuide({ g: ev.guide, notes: ev.notes });
+          if (ev.type === "guide") { got = true; setGuide({ g: ev.guide, notes: ev.notes }); }
           else if (ev.type === "share") setShare(ev.path);
+          else if (ev.type === "error") { got = true; setLines((l) => [...l, { kind: "error", text: ev.msg }]); }
           else if (ev.type === "tool") setLines((l) => [...l, { kind: "tool", text: `${ev.name}(${ev.arg}) → ${ev.result}` }]);
           else setLines((l) => [...l, { kind: ev.type, text: ev.msg }]);
         }
       }
+      if (!got) setLines((l) => [...l, { kind: "error", text: "The connection closed before a guide arrived. The server time limit may have been reached. Try again, or add the provider's developer-docs URL." }]);
     } catch (err: any) {
       setLines((l) => [...l, { kind: "error", text: err.message }]);
     } finally {

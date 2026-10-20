@@ -28,7 +28,10 @@
   "evidence": [
    "e1"
   ],
-  "display": "No fixed timeline (stated)"
+  "display": "No fixed timeline (stated)",
+  "headline": "No fixed timeline",
+  "kind": "unpublished",
+  "note": "Posting access needs approval, and LinkedIn gives no duration."
  },
  "composio_managed": {
   "status": "unknown",

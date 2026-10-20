@@ -27,7 +27,10 @@
   "tag": "unknown",
   "evidence": [
    "e1"
-  ]
+  ],
+  "headline": "Not published",
+  "kind": "unpublished",
+  "note": "App Review is needed to go live beyond your own testers; no duration is stated."
  },
  "composio_managed": {
   "status": "unknown",

@@ -31,7 +31,10 @@
   "evidence": [
    "e5"
   ],
-  "statement": "Only applies if you list on the Notion Marketplace. 5-10 business days is Notion's stated time to hear back; our calendar-day range (7-14) is a conversion."
+  "statement": "Only applies if you list on the Notion Marketplace. 5-10 business days is Notion's stated time to hear back; our calendar-day range (7-14) is a conversion.",
+  "headline": "5-10 business days",
+  "kind": "stated",
+  "note": "Only for a Marketplace listing. Whether a plain public connection needs review is still an open question."
  },
  "composio_managed": {
   "status": "unknown",
