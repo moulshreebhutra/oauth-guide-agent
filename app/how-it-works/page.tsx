@@ -133,7 +133,7 @@ ${CLASSES}`,
   WR --> RP["Repair near-misses<br/>label case, null minutes, bad enums"]:::code
   RP --> EN["Enforce checks<br/>see the next diagram"]:::good
   EN --> OK2{"Passed?"}
-  OK2 -- yes --> SH["Show guide<br/>save 1 week, signed share link"]:::good
+  OK2 -- yes --> SH["Show guide<br/>save 24 hours, signed share link"]:::good
   OK2 -- no --> RT{"First try?"}
   RT -- yes --> WR
   RT -- no --> ER2["Show why nothing was shown,<br/>never an unchecked guide"]:::stop
@@ -204,7 +204,7 @@ const TECH: [string, string][] = [
   ["Tavily search, then fetch", "Search finds the provider's pages. Fetch reads them (private addresses blocked, size and time capped). When a site shows a bot check, the text the search engine read is used and labelled as such. Results that are news, jobs, app-store pages or about another product are filtered out, repeats of one page are merged, and when picking review and quota pages it skips customer-account checks, product reviews, release notes and audit-log marketing pages."],
   ["Composio API and public toolkit docs", "Tell us whether Composio manages the OAuth app and which auth methods the toolkit supports."],
   ["Signed share links", "A guide is packed into the URL and signed with HMAC-SHA256 using a server secret. Nothing is stored; only this server can mint a valid link."],
-  ["Caches and limits", "Pressing Generate guide always writes a fresh guide and replaces the saved one. Searches from the home box and share links reuse a saved guide for up to 1 week, and Ask answers are kept 24 hours, in your browser and on the server (in Vercel Blob when connected, so every visitor shares them). Ask allows 20 questions an hour and the Live agent 5 new guides an hour per visitor; repeats cost nothing."],
+  ["Caches and limits", "Generate guide and the home box reuse a saved guide for up to 24 hours, as do Ask answers; the Write a fresh one button regenerates it and replaces the saved copy, in your browser and on the server (in Vercel Blob when connected, so every visitor shares them). Ask allows 20 questions an hour and the Live agent 5 new guides an hour per visitor; repeats cost nothing."],
   ["Tests", "83 automated tests cover the schema, quote checks, the claim-versus-page checks, retrieval, the AI router, link signing and the text cleaning. Run with npm test."],
 ];
 
@@ -348,7 +348,7 @@ export default function How() {
             "The write step uses the heavy router (Claude first most of the time), a JSON template taken from a researched guide, and a size limit so the reply is not cut off.",
             "A near-miss such as a wrong label case or a missing number is repaired. Missing setup minutes become a tier-based estimate tagged Inferred.",
             "The prompt tells the writer to rate a tier by what stops <b>your own app</b> from working for other people. A marketplace listing is a separate, optional step and does not raise the tier.",
-            "A finished guide is saved for 1 week, and a signed share link is made.",
+            "A finished guide is saved for 24 hours, and a signed share link is made.",
           ]}
         />
 

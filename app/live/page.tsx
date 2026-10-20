@@ -39,11 +39,11 @@ export default function Live() {
     setShare(null);
     setCopied(false);
     const ck = "guide:" + app.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-    // browser copy: the same app asked again within 1 week shows at once, with no server call
+    // browser copy: the same app asked again within 24 hours shows at once, with no server call
     if (!refresh) {
       try {
         const c = JSON.parse(localStorage.getItem(ck) ?? "null");
-        if (c && Date.now() - c.at < 7 * 24 * 3600_000 && c.g) {
+        if (c && Date.now() - c.at < 24 * 3600_000 && c.g) {
           setGuide({ g: c.g, notes: c.notes ?? [] }); setShare(c.share ?? null); setCachedAt(c.at); setBusy(false); return;
         }
       } catch { /* storage unavailable: carry on without it */ }
@@ -100,13 +100,13 @@ export default function Live() {
         title={<>Research any app, <mark className="hl">get a shareable guide</mark></>}
         lede="Type an app name or website. The agent searches, reads the provider's pages, and writes a guide. Quotes are checked by code against the pages it actually read; anything it cannot back up is downgraded."
       >
-        <form onSubmit={(e) => run(e, true)} className="liveform">
+        <form onSubmit={(e) => run(e)} className="liveform">
           <input value={app} onChange={(e) => setApp(e.target.value)} placeholder="e.g. Linear, or zoom.us" maxLength={120} aria-label="App name or website" />
           <button className="btn" disabled={busy || app.trim().length < 2}>{busy ? "Working…" : "Generate guide"}</button>
         </form>
         {guide && cachedAt && !busy && (
           <p className="cachenote">
-            Saved copy from {Math.max(1, Math.round((Date.now() - cachedAt) / 60_000))} minute(s) ago, kept for 1 week.{" "}
+            Saved copy from {Math.max(1, Math.round((Date.now() - cachedAt) / 60_000))} minute(s) ago, kept for 24 hours.{" "}
             <button type="button" className="linkbtn" onClick={() => run(null, true)}>Write a fresh one</button>
           </p>
         )}
