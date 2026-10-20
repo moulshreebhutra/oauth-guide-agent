@@ -205,7 +205,7 @@ const TECH: [string, string][] = [
   ["Composio API and public toolkit docs", "Tell us whether Composio manages the OAuth app and which auth methods the toolkit supports."],
   ["Signed share links", "A guide is packed into the URL and signed with HMAC-SHA256 using a server secret. Nothing is stored; only this server can mint a valid link."],
   ["Caches and limits", "Answers and guides are remembered for 6 hours on the server and in your browser. Ask allows 20 questions an hour and the Live agent 5 new guides an hour per visitor; repeats cost nothing."],
-  ["Tests", "80 automated tests cover the schema, quote checks, the claim-versus-page checks, retrieval, the AI router, link signing and the text cleaning. Run with npm test."],
+  ["Tests", "81 automated tests cover the schema, quote checks, the claim-versus-page checks, retrieval, the AI router, link signing and the text cleaning. Run with npm test."],
 ];
 
 function Fig({ title, intro, bullets, code, label }: { title: string; intro?: string; bullets: string[]; code: string; label: string }) {

@@ -80,7 +80,10 @@ export async function searchWeb(query: string, app?: string): Promise<{ title: s
   const about = (x: { title: string; url: string }) => { try { const h = new URL(x.url).hostname.replace(/^www\./, ""); return !word || h.includes(word) || DOCS_HOST.test(h) && (x.title + x.url).toLowerCase().includes(word) || (x.title + " " + x.url).toLowerCase().includes(word) && !JUNK_HOST.test(h); } catch { return false; } };
   const clean = r.filter((x) => { try { const h = new URL(x.url).hostname; return !JUNK_HOST.test(h) || (!!word && h.includes(word)); } catch { return false; } });
   const rel = clean.filter(about);
-  return rel.length ? rel : clean.length ? clean : r;
+  const pick = rel.length ? rel : clean.length ? clean : r;
+  // the same page often comes back several times under one title: keep the first
+  const seen = new Set<string>();
+  return pick.filter((x) => { try { const k = new URL(x.url).hostname + "|" + x.title.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; } catch { return true; } });
 }
 
 async function searchWebRaw(query: string): Promise<{ title: string; url: string }[]> {

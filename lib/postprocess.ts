@@ -75,6 +75,14 @@ export function enforce(draft: unknown, fetched: Fetched[], now = new Date().toI
       const onlyCommunity = nums.filter((n) => !has(true, n) && has(false, n));
       if (onlyCommunity.length) { c.tag = "reported"; notes.push(`${label}: ${onlyCommunity.join(", ")} appears only on community pages; sourced -> reported`); }
     }
+    // every figure a sourced claim states must appear in at least one cited page (HTTP codes and years aside)
+    if (c.tag === "sourced" && c.evidence.length > 0) {
+      const text = String(c.statement ?? c.detail ?? c.text ?? c.rationale ?? "").replace(/https?:\/\/\S+/g, "").replace(/\[e\d+\]/g, "");
+      const nums = (text.match(/\b\d[\d,]*(?:\.\d+)?\b/g) ?? []).map((x) => x.replace(/,/g, "")).filter((x) => Number(x) >= 10 && !/^20\d\d$/.test(x) && !/^[45]\d\d$/.test(x));
+      const hay = c.evidence.map((id: string) => byUrl.get(keptEvidence.find((e) => e.id === id)?.url ?? "")?.text ?? "").join(" ").replace(/,/g, "");
+      const missing = nums.filter((n) => !new RegExp(`(^|\\D)${n.replace(".", "\\.")}(\\D|$)`).test(hay));
+      if (missing.length) { c.tag = "inferred"; notes.push(`${label}: ${missing.join(", ")} is not in the cited pages; sourced -> inferred`); }
+    }
     if (c.tag === "sourced" && c.evidence.length === 0) {
       c.tag = "inferred";
       notes.push(`${label}: no verified evidence; downgraded sourced -> inferred`);
@@ -102,6 +110,13 @@ export function enforce(draft: unknown, fetched: Fetched[], now = new Date().toI
   if (d.effort?.tag === "sourced" && keptEvidence.length === 0) d.effort.tag = "inferred";
   for (const k of ["requirements", "scopes_and_access", "gotchas", "review_process"])
     (d[k] ?? []).forEach((c: any, i: number) => fix(c, `${k}[${i}]`));
+  // an unsupported gotcha that is not about auth, registration, review or limits is trivia (release notes, renamed products)
+  const ON_TOPIC = /redirect|scope|token|secret|client|auth|oauth|rate|limit|quota|review|approv|verif|callback|permission|consent|expire|refresh|pkce|admin|plan|tier|sign.?in|credential|key|certif|allowlist|test user|429|401|403/i;
+  if (Array.isArray(d.gotchas)) {
+    const before = d.gotchas.length;
+    d.gotchas = d.gotchas.filter((g: any) => g?.tag === "sourced" || g?.tag === "reported" || (g?.evidence ?? []).length > 0 || ON_TOPIC.test(String(g?.text ?? "")));
+    if (d.gotchas.length < before) notes.push("gotchas: dropped an unsupported item that was not about setup, auth, review or limits");
+  }
   (d.steps ?? []).forEach((c: any, i: number) => fix(c, `steps[${i}]`));
   (d.blockers ?? []).forEach((c: any, i: number) => fix(c, `blockers[${i}]`));
   // clicking through the provider's own console needs the user's signed-in session: that is never "agent"

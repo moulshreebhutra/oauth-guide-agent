@@ -274,3 +274,24 @@ test("enforce: a sourced claim whose cited page does not say it, or names a year
   assert.equal(r.guide.gotchas[0].tag, "inferred");
   assert.equal(r.guide.wait.tag, "inferred");
 });
+
+test("enforce: a figure missing from the cited pages is downgraded, off-topic unsupported gotchas are dropped, search duplicates collapse", async () => {
+  const { enforce } = await import("../lib/postprocess");
+  const { RAW_GUIDES } = await import("../data/guides");
+  const { OFF_TOPIC_TITLE } = await import("../lib/agent");
+  const page = { url: "https://developers.example.com/limits", title: "Limits", text: "Requests are limited to 5 per second per base. A 429 means wait.", official: true };
+  const d: any = JSON.parse(JSON.stringify(RAW_GUIDES.find((g: any) => g.slug === "github")));
+  d.evidence = [{ id: "e1", url: page.url, title: "L", retrieved_at: "2026-01-01", excerpt: "limited to 5 per second per base", official: true, quote_check: "unchecked" }];
+  d.gotchas = [
+    { text: "Requests are limited to 5 per second per base, and a 429 means wait.", tag: "sourced", evidence: ["e1"] },
+    { text: "Requests above 15 per second per base are banned without permission.", tag: "sourced", evidence: ["e1"] },
+    { text: "The release version notation is changing from year.month to year.week.", tag: "inferred", evidence: [] },
+  ];
+  const r: any = enforce(d, [page]);
+  assert.ok(r.ok, r.error);
+  assert.equal(r.guide.gotchas.length, 2);
+  assert.equal(r.guide.gotchas[0].tag, "sourced");
+  assert.equal(r.guide.gotchas[1].tag, "inferred");
+  assert.ok(OFF_TOPIC_TITLE.test("Airtable account email verification"));
+  assert.ok(!OFF_TOPIC_TITLE.test("Quota modes | Spotify for Developers"));
+});
