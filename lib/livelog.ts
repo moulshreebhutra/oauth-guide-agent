@@ -9,7 +9,10 @@ export function friendlyTool(name: string, arg: string, result: string, data?: T
   if (name === "fetch_page" && data?.title && /not found|404|doesn.t exist/i.test(data.title)) return { title: `That page does not exist on ${host(arg)}, so it was skipped`, state: "warn", data, detail: arg };
   // sizes like "4584 chars" say nothing: show what was actually read instead
   const sizeOnly = /\d+ (chars|results)\)?$/.test(r.detail ?? "") && r.state !== "warn";
-  return { ...r, data, detail: data && sizeOnly ? undefined : r.detail };
+  // name the page that was read, not just its host
+  let title = r.title;
+  if (name === "fetch_page" && data?.title && title === `Read ${host(arg)}`) title = `Read "${data.title.replace(/\s*[|\u2014-]\s*[^|\u2014-]*$/, "").slice(0, 70)}" on ${host(arg)}`;
+  return { ...r, title, data, detail: data && sizeOnly ? undefined : r.detail };
 }
 
 function friendlyToolBase(name: string, arg: string, result: string): { title: string; detail?: string; state: Step["state"] } {

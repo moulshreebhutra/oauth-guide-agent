@@ -108,6 +108,9 @@ You write OAuth-app setup guides for developers. Hard rules:
 - Numbers (limits, days, user caps) are "sourced" only if the number appears in an OFFICIAL page you cite. If it only appears in a community post, tag the claim "reported".
 - "No review is mentioned" is an absence, not a finding: tag it "unknown" and say which pages were read. Do not call a path "self-serve" with "sourced" just because a page omits a review.
 - Prefer the provider's own pages over blogs or aggregators for limits, quotas and review rules; if both exist, cite the provider's page. Cite every page you want kept as evidence; uncited pages are dropped.
+- Steps done by clicking in the provider's console, portal or dashboard are always "you" (they need the user's signed-in session). "either" is only for Composio configuration, code or API calls an agent can make.
+- Gotchas are things that would make setup fail or surprise the developer (limits, expiry, exact-match rules, plan requirements). Never list tool counts, marketing facts or the Composio toolkit size as a gotcha.
+- Do not say a Composio setup guide "was not fetched": the reader is already told whether one exists.
 - Never mention internal fields such as provider_domain or OFFICIAL_GUESS in the guide.
 - Say "unknown" instead of guessing. Put open questions in "uncertainties".
 - effort.hands_on_minutes.min and .max are always numbers (minutes), never null. If no page states a time, give your best estimate and tag effort "inferred".
@@ -270,6 +273,25 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
         }
       } catch { /* search unavailable: carry on with what was read */ }
     }
+  }
+
+  // Composio's guide or a support article is not the provider's own registration docs: make sure one was read.
+  const ownDocs = (f: Fetched) => f.official && !/composio\.(dev|io)/.test(f.url) && /redirect|client.?id|register|create (an? )?(app|integration|application)|new app/i.test(f.text);
+  if (!fetched.some(ownDocs) && Date.now() - t0 < RESEARCH_BUDGET_MS + 60_000) {
+    try {
+      const q = `${input.name} developer create OAuth app register redirect URI client ID`;
+      const r = await searchWeb(q, input.name);
+      for (const x of r) known.add(canonicalUrl(x.url));
+      yield { type: "tool", name: "search_web", arg: q, result: `${r.length} results`, data: { items: r.slice(0, 8) } };
+      const c = r.filter((x) => { try { const h = new URL(x.url).hostname; return !fetched.some((f) => f.url === x.url) && isOfficial(h, cslug, input.site, x.url, x.title) && !/composio/.test(h) && !/support\.|help\./.test(h); } catch { return false; } })[0];
+      if (c) {
+        const p = await fetchReadable(canonicalUrl(c.url));
+        if (usablePage(p.text, input.name) && !fetched.some((f) => f.url === p.url)) {
+          fetched.push({ url: p.url, title: p.title, text: p.text, official: isOfficial(new URL(p.url).hostname, cslug, input.site, p.url, p.title) });
+          yield { type: "tool", name: "fetch_page", arg: p.url, result: `${p.text.length} chars`, data: pageData(p.url, p.title, p.text) };
+        }
+      }
+    } catch { /* optional extra read */ }
   }
 
   if (!fetched.length) {

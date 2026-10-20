@@ -246,3 +246,15 @@ test("community pages are never treated as official, even on the provider's own 
   assert.ok(COMMUNITY_PAGE.test("/x Review time - Questions - Square Developer Forums"));
   assert.ok(!COMMUNITY_PAGE.test("/docs/oauth Move OAuth from the Sandbox to Production"));
 });
+
+test("console steps are never the agent's, and page previews drop code and cut-off sentences", async () => {
+  const { enforce } = await import("../lib/postprocess");
+  const { keyFacts } = await import("../lib/text");
+  const { RAW_GUIDES } = await import("../data/guides");
+  const d: any = JSON.parse(JSON.stringify(RAW_GUIDES.find((g: any) => g.slug === "github")));
+  d.steps[0] = { ...d.steps[0], who: "either", detail: "Open the Developer Console and add the redirect URI." };
+  const r: any = enforce(d, []);
+  assert.equal(r.guide?.steps[0].who ?? "you", "you");
+  const f = keyFacts("The app provides the Client ID and Client Secret needed to\nconst { access_token } = await tokenResponse . json () ;\nRegister the app, then copy the client secret and store it securely in your vault.");
+  assert.ok(f.every((x) => !/await|needed to$/.test(x)) && f.length === 1);
+});

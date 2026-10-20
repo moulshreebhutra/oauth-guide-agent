@@ -89,6 +89,8 @@ export function enforce(draft: unknown, fetched: Fetched[], now = new Date().toI
     (d[k] ?? []).forEach((c: any, i: number) => fix(c, `${k}[${i}]`));
   (d.steps ?? []).forEach((c: any, i: number) => fix(c, `steps[${i}]`));
   (d.blockers ?? []).forEach((c: any, i: number) => fix(c, `blockers[${i}]`));
+  // clicking through the provider's own console needs the user's signed-in session: that is never "agent"
+  for (const s of d.steps ?? []) if (s.who !== "you" && /(developer|app|api) (console|portal|dashboard)|workspace settings|\bsign in\b|\blog in\b/i.test(String(s.detail)) && !/composio/i.test(String(s.detail + s.title))) { s.who = "you"; notes.push(`steps: "${String(s.title).slice(0, 40)}" is done in the provider's console, so it is yours, not the agent's`); }
   for (const s of d.steps ?? []) if (s.who === "you" && !s.why_not_agent) s.why_not_agent = "Needs your own account session or a decision only you can make.";
 
   // internal field names must never reach the reader
