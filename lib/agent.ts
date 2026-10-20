@@ -18,9 +18,9 @@ export type Ev =
 
 const excerpt = (t: string, n = 700) => cleanText(t).slice(0, n);
 const pageData = (url: string, title: string, text: string) => ({ url, title: cleanText(title).slice(0, 120), excerpt: excerpt(text, 400), facts: keyFacts(text) });
-const MAX_ACTIONS = 5;
-const RESEARCH_BUDGET_MS = 20_000; // stop researching early so the whole run fits a 60s function limit
-const TOTAL_BUDGET_MS = 170_000;
+const MAX_ACTIONS = 6;
+const RESEARCH_BUDGET_MS = 45_000; // the model picks pages one at a time; 20s only allowed two, which missed gating steps such as TikTok's Content Posting audit
+const TOTAL_BUDGET_MS = 190_000;
 const ACTION_TIMEOUT_MS = 12_000;
 const WRITE_TIMEOUT_MS = 110_000;
 const PER_PAGE_PROMPT_CHARS = 9000;
@@ -119,7 +119,7 @@ export async function* generateGuide(input: { name: string; site?: string }): As
   const toolkit = await composioToolkit(input.name);
   if (toolkit) {
     fetched.push({ url: toolkit.url, title: toolkit.title, text: toolkit.text, official: true });
-    yield { type: "tool", name: "composio_toolkit_page", arg: input.name, result: `${toolkit.status === "yes" ? "managed OAuth available" : toolkit.status === "no" ? "managed OAuth not available" : "status not stated"}; auth: ${toolkit.methods.join(", ") || "n/a"}`, data: pageData(toolkit.url, toolkit.title, toolkit.text) };
+    yield { type: "tool", name: "composio_toolkit_page", arg: input.name, result: `${toolkit.status === "yes" ? "managed OAuth available" : toolkit.status === "no" ? "managed OAuth not available" : "status not stated"}; auth: ${toolkit.methods.join(", ") || "n/a"}`, data: { ...pageData(toolkit.url, toolkit.title, toolkit.text), excerpt: "", facts: [`Composio-managed OAuth: ${toolkit.status === "yes" ? "available" : toolkit.status === "no" ? "not available" : "not stated"}`, `Auth methods listed: ${toolkit.methods.join(", ") || "not stated"}`] } };
   } else {
     yield { type: "tool", name: "composio_toolkit_page", arg: input.name, result: "no Composio toolkit page for this app" };
   }
@@ -164,7 +164,7 @@ export async function* generateGuide(input: { name: string; site?: string }): As
   const t0 = Date.now();
   for (let i = 0; i < MAX_ACTIONS; i++) {
     if (Date.now() - t0 > RESEARCH_BUDGET_MS) {
-      yield { type: "warn", msg: "Research time budget reached; writing the guide from what was read." };
+      yield { type: "status", msg: "Research time used up. Writing the guide from the pages read…" };
       break;
     }
     yield { type: "status", msg: `Deciding the next step (${i + 1} of ${MAX_ACTIONS})…` };
@@ -174,7 +174,7 @@ Task: find how a developer registers an OAuth app for "${input.name}"${input.sit
 Pages fetched so far:\n${have}
 Recent tool log:\n${log.slice(-6).join("\n") || "(none)"}
 Choose ONE next action as JSON: {"action":"search","arg":"<query>"} | {"action":"fetch","arg":"<https url>"} | {"action":"done","arg":""}.
-Prefer the provider's official developer docs (OAuth app creation, app review/verification, distribution) and any Composio guide at composio.dev/auth/<slug>. If the product is registered through a parent platform (Instagram -> Meta, YouTube -> Google, Teams -> Microsoft), research the parent platform's pages. Look for: where the app is created, account prerequisites, scopes, dev versus live mode, review or verification and any stated duration, fees or minimums, token lifetime, rate limits. Say done once you have the official registration page AND the review/approval information, or ${MAX_ACTIONS} actions are used.`;
+Prefer the provider's official developer docs (OAuth app creation, app review/verification, distribution) and any Composio guide at composio.dev/auth/<slug>. If the product is registered through a parent platform (Instagram -> Meta, YouTube -> Google, Teams -> Microsoft), research the parent platform's pages. Look for: where the app is created, account prerequisites, scopes, dev versus live mode, review or verification and any stated duration, fees or minimums, token lifetime, rate limits. Also check whether the specific API or product the developer will use has its own approval, audit or access tier (for example TikTok Content Posting API audit, Meta Advanced Access, LinkedIn product access, Zoom scope review): search for words like audit, access level, production access, quota. Say done once you have the official registration page, the review/approval information AND any such product gate, or ${MAX_ACTIONS} actions are used.`;
     let act: { action: string; arg: string };
     try {
       act = parseJson(await ask(prompt));
@@ -204,28 +204,34 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
     }
   }
 
-  // The model often skips the one page that answers "is there a review, and how long": look for it on purpose.
-  if (Date.now() - T0 < RESEARCH_BUDGET_MS) {
-    try {
-      const q = `${input.name} app verification review process how long does it take developer`;
-      const r = await searchWeb(q);
-      yield { type: "tool", name: "search_web", arg: q, result: `${r.length} results`, data: { items: r.slice(0, 8) } };
-      const score = (x: { title: string; url: string }) => {
-        const host = new URL(x.url).hostname;
-        const own = host.includes(cslug) || (input.site ? host.endsWith(input.site.replace(/^www\./, "")) : false);
-        return (own ? 4 : OFFICIAL_HINT.test(host) ? 1 : 0) + (/verif|review|approv|submit|publish|listing|marketplace/i.test(x.title + x.url) ? 3 : 0);
-      };
-      const cand = r.filter((x) => !fetched.some((f) => f.url === x.url) && score(x) >= 4).sort((a, b) => score(b) - score(a)).slice(0, 2);
-      for (const c of cand) {
-        try {
-          const p = await fetchReadable(c.url);
-          if (!usablePage(p.text, input.name) || fetched.some((f) => f.url === p.url)) continue;
-          const host = new URL(p.url).hostname;
-          fetched.push({ url: p.url, title: p.title, text: p.text, official: host.includes(cslug) || OFFICIAL_HINT.test(host) });
-          yield { type: "tool", name: "fetch_page", arg: p.url, result: `${p.text.length} chars`, data: pageData(p.url, p.title, p.text) };
-        } catch { /* unreadable: skip */ }
-      }
-    } catch { /* search unavailable: carry on with what was read */ }
+  // The model often skips the pages that answer "is there a review, how long, and does my API have its own gate": look for them on purpose.
+  if (Date.now() - t0 < RESEARCH_BUDGET_MS + 25_000) {
+    const queries = [
+      `${input.name} developer app verification review process how long does it take`,
+      `${input.name} API access approval audit production access tier requirements developer docs`,
+    ];
+    for (const q of queries) {
+      if (Date.now() - t0 > RESEARCH_BUDGET_MS + 35_000) break;
+      try {
+        const r = await searchWeb(q);
+        yield { type: "tool", name: "search_web", arg: q, result: `${r.length} results`, data: { items: r.slice(0, 8) } };
+        const score = (x: { title: string; url: string }) => {
+          const host = new URL(x.url).hostname;
+          const own = host.includes(cslug) || (input.site ? host.endsWith(input.site.replace(/^www\./, "")) : false);
+          return (own ? 4 : OFFICIAL_HINT.test(host) ? 1 : 0) + (/verif|review|approv|submit|publish|listing|marketplace|audit|access|tier|production|guidelines/i.test(x.title + x.url) ? 3 : 0);
+        };
+        const cand = r.filter((x) => !fetched.some((f) => f.url === x.url) && score(x) >= 4).sort((a, b) => score(b) - score(a)).slice(0, 1);
+        for (const c of cand) {
+          try {
+            const p = await fetchReadable(c.url);
+            if (!usablePage(p.text, input.name) || fetched.some((f) => f.url === p.url)) continue;
+            const host = new URL(p.url).hostname;
+            fetched.push({ url: p.url, title: p.title, text: p.text, official: host.includes(cslug) || OFFICIAL_HINT.test(host) });
+            yield { type: "tool", name: "fetch_page", arg: p.url, result: `${p.text.length} chars`, data: pageData(p.url, p.title, p.text) };
+          } catch { /* unreadable: skip */ }
+        }
+      } catch { /* search unavailable: carry on with what was read */ }
+    }
   }
 
   if (!fetched.length) {

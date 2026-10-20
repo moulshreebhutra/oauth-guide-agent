@@ -63,7 +63,16 @@ export async function fetchReadable(url: string): Promise<{ url: string; title: 
  * Web search. DuckDuckGo's free HTML endpoint is blocked (403) from most cloud hosts, so a search key is used when present:
  * TAVILY_API_KEY (free tier, tavily.com); DuckDuckGo is the keyless last resort.
  */
+const JUNK_HOST = /(^|\.)(finance\.yahoo\.com|yahoo\.com|businessinsider\.com|wikipedia\.org|indeed\.com|glassdoor\.com|apple\.com|apps\.apple\.com|play\.google\.com|youtube\.com|youtu\.be|facebook\.com\/public|tiktok\.com\/@|pinterest\.com|quora\.com)$/i;
+
+/** Web search with news, jobs, video and app-store results removed: they are never the provider's own OAuth documentation. */
 export async function searchWeb(query: string): Promise<{ title: string; url: string }[]> {
+  const r = await searchWebRaw(query);
+  const kept = r.filter((x) => { try { return !JUNK_HOST.test(new URL(x.url).hostname); } catch { return false; } });
+  return kept.length ? kept : r;
+}
+
+async function searchWebRaw(query: string): Promise<{ title: string; url: string }[]> {
   const errs: string[] = [];
   if (process.env.TAVILY_API_KEY) {
     try {

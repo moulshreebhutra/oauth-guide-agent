@@ -78,7 +78,7 @@ export function GuideView({ g, notes = [], back = false, banner, embedded = fals
         <div className="meta">
           <span>Tier {g.difficulty.tier} · {g.difficulty.label}</span>
           <span>{mins.min}-{mins.max} min hands-on</span>
-          <span>Last verified {g.last_verified}</span>
+          <span>Researched {g.last_verified}</span>
         </div>
       </PageHead>
       <div className="wrap actionsbar"><GuideActions markdown={guideMarkdown(g)} brief={agentBrief(g)} slug={g.slug} /></div>

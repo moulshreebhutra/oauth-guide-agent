@@ -178,3 +178,16 @@ test("composio toolkit page: the TikTok page text as shown in a browser reads as
   const r = parseComposioToolkit("TikTok short-form video platform\nAuthentication DetailsComposio-managed OAuth not available\nOAuth2\nTools (9)");
   assert.deepEqual(r, { status: "no", methods: ["OAuth2"] });
 });
+
+test("enforce renumbers evidence after some is dropped", async () => {
+  const { enforce } = await import("../lib/postprocess");
+  const { RAW_GUIDES } = await import("../data/guides");
+  const page = { url: "https://example.com/a", title: "A", text: "Review is manual and takes a while to complete.", official: true };
+  const draft: any = JSON.parse(JSON.stringify(RAW_GUIDES.find((g: any) => g.slug === "github")));
+  draft.evidence = [
+    { id: "e1", url: "https://nope.example/x", title: "x", retrieved_at: "2026-01-01", excerpt: "never fetched", official: false, quote_check: "unchecked" },
+    { id: "e3", url: page.url, title: "A", retrieved_at: "2026-01-01", excerpt: "Review is manual", official: true, quote_check: "unchecked" },
+  ];
+  const r: any = enforce(draft, [page]);
+  if (r.ok) { assert.deepEqual(r.guide.evidence.map((e: any) => e.id), ["e1"]); }
+});

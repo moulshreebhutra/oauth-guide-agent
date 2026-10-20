@@ -76,6 +76,17 @@ export function enforce(draft: unknown, fetched: Fetched[], now = new Date().toI
   ];
   if (d.composio_managed?.tag === "sourced") d.composio_managed.tag = "unknown";
 
+  // dropped evidence leaves gaps (e1, e2, e4, e6): renumber so the citations read e1, e2, e3, e4
+  const renum = new Map(d.evidence.map((e: Evidence, i: number) => [e.id, `e${i + 1}`]));
+  const walk = (o: any) => {
+    if (Array.isArray(o)) return o.forEach(walk);
+    if (!o || typeof o !== "object") return;
+    if (Array.isArray(o.evidence) && o.evidence.every((x: unknown) => typeof x === "string")) o.evidence = o.evidence.map((id: string) => renum.get(id) ?? id);
+    for (const k of Object.keys(o)) if (k !== "evidence") walk(o[k]);
+  };
+  walk(d);
+  d.evidence = d.evidence.map((e: Evidence) => ({ ...e, id: renum.get(e.id) ?? e.id }));
+
   const parsed = Guide.safeParse(d);
   if (!parsed.success) return { ok: false as const, error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "), notes };
   const problems = lintGuide(parsed.data);

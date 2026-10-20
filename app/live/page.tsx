@@ -77,7 +77,7 @@ export default function Live() {
           }
           else if (ev.type === "error") { got = true; setErr(explainError(String(ev.msg))); }
           else if (ev.type === "tool") add(friendlyTool(ev.name, String(ev.arg), String(ev.result), ev.data));
-          else if (ev.type === "warn") add({ state: "warn", title: /did not answer|unreadable/i.test(ev.msg) ? "An AI model did not answer; trying another" : String(ev.msg).slice(0, 140), detail: String(ev.msg) });
+          else if (ev.type === "warn") add({ state: "warn", title: /did not answer|unreadable/i.test(ev.msg) ? "An AI model did not answer; trying another" : String(ev.msg).slice(0, 140), detail: String(ev.msg).length > 140 || /did not answer|unreadable/i.test(ev.msg) ? String(ev.msg) : undefined });
           else setNow(String(ev.msg));
         }
       }

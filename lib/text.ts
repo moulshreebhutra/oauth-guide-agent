@@ -41,7 +41,7 @@ export function keyFacts(text: string, n = 3): string[] {
   for (const line of text.split(/\n+/)) {
     const c = cleanText(line);
     if (c.length < 40) continue;
-    for (const s of c.split(/(?<=[.!?])\s+(?=[A-Z0-9"'])/)) { const t = s.trim(); if (t.length >= 45 && t.length <= 400 && !NOISE.test(t)) sentences.push(t); }
+    for (const s of c.split(/(?<=[.!?])\s+(?=[A-Z0-9"'])/)) { const t = s.trim(); if (t.length >= 45 && t.length <= 400 && !NOISE.test(t) && !/^(I|We|My|Our|I'm|I've|We've|Hi|Hello|Thanks|Thank you)\b/.test(t)) sentences.push(t); }
   }
   const cut = (t: string) => t.length <= 240 ? t : t.slice(0, 240).replace(/\s+\S*$/, "") + "...";
   const scored = sentences.map((t, i) => ({ t, i, sc: (t.match(new RegExp(KEY.source, "gi")) ?? []).length })).filter((x) => x.sc > 0);
