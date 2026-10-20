@@ -230,7 +230,7 @@
   "evidence": [
     {
       "id": "e1",
-      "url": "https://learn.microsoft.com/en-ca/entra/identity-platform/publisher-verification-overview",
+      "url": "https://learn.microsoft.com/en-us/entra/identity-platform/publisher-verification-overview",
       "title": "Microsoft Learn - Publisher verification",
       "retrieved_at": "2026-10-20",
       "excerpt": "No charges are associated with completing the prerequisites for publisher verification.",

@@ -35,7 +35,7 @@ export function Lookup({ options }: { options: Opt[] }) {
       }}
     >
       <label htmlFor="lookup-in" className="sr">Look up an app by name or website</label>
-      <input id="lookup-in" value={q} onChange={(e) => setQ(e.target.value)} placeholder="An app (Slack, linear.app) or a question (How long does Google verification take?)" maxLength={120} list="lookup-apps" autoComplete="off" />
+      <input id="lookup-in" value={q} onChange={(e) => setQ(e.target.value)} placeholder="App name, website or a question" maxLength={120} list="lookup-apps" autoComplete="off" />
       <datalist id="lookup-apps">{options.map((o) => <option key={o.slug} value={o.app.replace(/\s*\(.*\)/, "")} />)}</datalist>
       <button className="btn" disabled={q.trim().length < 2}>{asking ? "Ask" : match ? "Open guide" : "Research it live"}</button>
       <p className="fine">{q.trim().length < 2 ? "In the library: GitHub, Notion, HubSpot, Salesforce, Microsoft, Shopify, Slack, Google, LinkedIn, Meta. Anything else is researched live." : asking ? "Looks like a question. It is answered from the guides, or researched live for other apps." : match ? `${match.app.replace(/\s*\(.*\)/, "")} is in the library.` : "Not in the library. The agent will research it and write a guide in about two minutes."}</p>
