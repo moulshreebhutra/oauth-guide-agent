@@ -48,3 +48,12 @@ test("apps under a researched platform map to its guide, and the prompt uses it"
   const p = webPrompt("Do I need review?", { family: FAMILY.instagram, app: "Instagram", passages: [{ id: "meta#3", slug: "meta", app: "Meta", section: "Requirements", text: "App Review is needed.", url: "https://x.test/guide/meta", tag: "sourced" } as any], pages: [], composio: null, steps: [] });
   assert.ok(p.includes("OUR LIBRARY") && p.includes("registered and reviewed through Meta") && p.includes("METHOD") && p.includes("Likely, from general knowledge"));
 });
+
+import { explainError, friendlyTool } from "../lib/livelog";
+test("live log: friendly steps and readable errors", () => {
+  assert.match(friendlyTool("fetch_page", "https://developers.facebook.com/docs/x", "42 chars").title, /facebook\.com/);
+  assert.equal(friendlyTool("fetch_page", "https://a.com/x", "42 chars").state, "warn");
+  const e = explainError("claude: HTTP 400 invalid_request_error | search failed 403 | gemini: 429 RESOURCE_EXHAUSTED");
+  assert.ok(e.fix.some((f) => /TAVILY/.test(f)) && e.fix.some((f) => /Claude/.test(f)));
+  assert.ok(!/^\s*\{/.test(e.headline));
+});

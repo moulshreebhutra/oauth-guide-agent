@@ -3,14 +3,20 @@ import { useEffect, useState } from "react";
 import { GuideView } from "@/components/GuideView";
 import { PageHead } from "@/components/PageHead";
 import type { Guide } from "@/lib/schema";
+import { explainError, friendlyTool, type Step } from "@/lib/livelog";
 
-type Line = { kind: "status" | "tool" | "warn" | "error"; text: string };
+type Err = { headline: string; fix: string[]; raw: string };
 
 export default function Live() {
   const [app, setApp] = useState("");
   useEffect(() => { try { const q = new URLSearchParams(location.search).get("app"); if (q) setApp(q.slice(0, 120)); } catch {} }, []);
   const [busy, setBusy] = useState(false);
-  const [lines, setLines] = useState<Line[]>([]);
+  const [steps, setSteps] = useState<Step[]>([]);
+  const [now, setNow] = useState("");
+  const [err, setErr] = useState<Err | null>(null);
+  const [secs, setSecs] = useState(0);
+  useEffect(() => { if (!busy) return; setSecs(0); const t = setInterval(() => setSecs((x) => x + 1), 1000); return () => clearInterval(t); }, [busy]);
+  const add = (st: Omit<Step, "id">) => setSteps((l) => [...l, { id: l.length, ...st }]);
   const [guide, setGuide] = useState<{ g: Guide; notes: string[] } | null>(null);
   const [share, setShare] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -18,7 +24,9 @@ export default function Live() {
   async function run(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    setLines([]);
+    setSteps([]);
+    setNow("Starting…");
+    setErr(null);
     setGuide(null);
     setShare(null);
     setCopied(false);
@@ -26,7 +34,7 @@ export default function Live() {
       const res = await fetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ app }) });
       if (!res.ok || !res.body) {
         const j = await res.json().catch(() => ({ error: "Request failed" }));
-        setLines([{ kind: "error", text: j.error }]);
+        setErr(explainError(String(j.error ?? "Request failed")));
         return;
       }
       const reader = res.body.getReader();
@@ -44,14 +52,15 @@ export default function Live() {
           const ev = JSON.parse(p.slice(6));
           if (ev.type === "guide") { got = true; setGuide({ g: ev.guide, notes: ev.notes }); }
           else if (ev.type === "share") setShare(ev.path);
-          else if (ev.type === "error") { got = true; setLines((l) => [...l, { kind: "error", text: ev.msg }]); }
-          else if (ev.type === "tool") setLines((l) => [...l, { kind: "tool", text: `${ev.name}(${ev.arg}) → ${ev.result}` }]);
-          else setLines((l) => [...l, { kind: ev.type, text: ev.msg }]);
+          else if (ev.type === "error") { got = true; setErr(explainError(String(ev.msg))); }
+          else if (ev.type === "tool") add(friendlyTool(ev.name, String(ev.arg), String(ev.result)));
+          else if (ev.type === "warn") add({ state: "warn", title: /did not answer|unreadable/i.test(ev.msg) ? "An AI model did not answer; trying another" : String(ev.msg).slice(0, 140), detail: String(ev.msg) });
+          else setNow(String(ev.msg));
         }
       }
-      if (!got) setLines((l) => [...l, { kind: "error", text: "The connection closed before a guide arrived. The server time limit may have been reached. Try again, or add the provider's developer-docs URL." }]);
-    } catch (err: any) {
-      setLines((l) => [...l, { kind: "error", text: err.message }]);
+      if (!got) setErr({ headline: "The connection closed before a guide arrived.", fix: ["The server time limit may have been reached. Try again, or paste the provider's developer-docs address."], raw: "stream ended without a guide" });
+    } catch (err2: any) {
+      setErr(explainError(String(err2.message)));
     } finally {
       setBusy(false);
     }
@@ -69,12 +78,27 @@ export default function Live() {
           <input value={app} onChange={(e) => setApp(e.target.value)} placeholder="e.g. Linear, or zoom.us" maxLength={120} aria-label="App name or website" />
           <button className="btn" disabled={busy || app.trim().length < 2}>{busy ? "Working…" : "Generate guide"}</button>
         </form>
-        {lines.length > 0 && (
-          <ul className="log" aria-live="polite">
-            {lines.map((l, i) => (
-              <li key={i} className={`log-${l.kind}`}>{l.text}</li>
-            ))}
-          </ul>
+        {(busy || steps.length > 0 || err) && (
+          <div className="agentlog" aria-live="polite">
+            {busy && <p className="now"><span className="spin" aria-hidden /> {now} <span className="muted">{secs}s</span></p>}
+            {steps.length > 0 && (
+              <ol className="steps">
+                {steps.map((st) => (
+                  <li key={st.id} className={`st-${st.state}`}>
+                    <span className="dot" aria-hidden>{st.state === "warn" ? "!" : "✓"}</span>
+                    <div><b>{st.title}</b>{st.detail && <details><summary>detail</summary><code>{st.detail}</code></details>}</div>
+                  </li>
+                ))}
+              </ol>
+            )}
+            {err && (
+              <div className="agenterr" role="alert">
+                <h3>{err.headline}</h3>
+                <ul>{err.fix.map((f) => <li key={f}>{f}</li>)}</ul>
+                <details><summary>Technical detail</summary><code>{err.raw}</code></details>
+              </div>
+            )}
+          </div>
         )}
       </PageHead>
       {guide && <GuideView g={guide.g} notes={guide.notes} />}

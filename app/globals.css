@@ -278,3 +278,21 @@ footer a{color:#fff}
 .ct-label{font:12px var(--mono);text-transform:uppercase;color:var(--muted);background:var(--paper)}
 @media(max-width:800px){.ct-row{grid-template-columns:1fr}.ct-row>span{border-right:0;border-bottom:1px solid var(--rule)}.ct-head{display:none}.ct-row>span[data-label]::before{content:attr(data-label) ": ";font:11px var(--mono);text-transform:uppercase;color:var(--muted)}}
 @media print{.topnav,.notice,footer,.about,.actionsbar,.ask,.skip{display:none!important}.band{background:#fff!important;color:#000!important;padding:24px 0!important}.band .lede,.band .eyebrow{color:#333!important}.hl{background:none!important;color:#000!important}.guide-grid{display:block}.toc{display:none}body{background:#fff}}
+
+/* ---------- live agent log ---------- */
+.agentlog{max-width:760px;margin:28px auto 0;text-align:left;color:var(--ink)}
+.now{display:flex;align-items:center;gap:10px;font:500 15px var(--display);margin:0 0 14px;color:#fff}
+.band .agentlog .muted{color:#b9b9c8}
+.spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite;flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.spin{animation:none}}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.steps li{display:grid;grid-template-columns:22px 1fr;gap:12px;align-items:start;background:#fff;border:1px solid var(--rule);padding:12px 14px;font-size:15px}
+.steps .dot{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font:700 12px var(--display);background:#e6f4ee;color:#0a7a58}
+.steps .st-warn .dot{background:#fdf0d5;color:#9a6400}
+.steps details{margin-top:4px;font-size:13px;color:var(--muted)}.steps summary{cursor:pointer}
+.steps code,.agenterr code{display:block;white-space:pre-wrap;word-break:break-word;font:12px var(--mono);margin-top:6px}
+.agenterr{margin-top:12px;background:#fff;border:1px solid #e3b7a6;border-left:4px solid #cf4519;padding:16px 18px}
+.agenterr h3{margin:0 0 8px;font:600 18px var(--display)}
+.agenterr ul{margin:0 0 8px;padding-left:20px}.agenterr li{margin:4px 0}
+.agenterr details{font-size:13px;color:var(--muted)}
