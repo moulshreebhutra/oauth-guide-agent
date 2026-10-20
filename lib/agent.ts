@@ -26,11 +26,13 @@ const WRITE_TIMEOUT_MS = 110_000;
 const PER_PAGE_PROMPT_CHARS = 9000;
 /** A page is worth keeping only if it has real text and is about the app (JavaScript shells and marketing stubs are dropped). */
 export const usablePage = (text: string, app: string) => text.length >= 300 && new RegExp(`\\b${app.split(/[.\s]/)[0].replace(/[^a-z0-9-]/gi, "")}`, "i").test(text.slice(0, 20000));
+const GATE_WORDS = /verif|review|approv|submit|publish|listing|marketplace|audit|access|tier|production|guidelines|certif|quota|limit|pricing|partner|security|extension|mode|checkpoint/i;
 const OFFICIAL_HINT = /(docs?|developers?|developer|learn|support|help|api)\./i;
 const COMMUNITY = /^(forum|forums|community|discuss|devforum|answers|stackoverflow)\b|(^|\.)(stackoverflow|reddit)\.com$/i;
 /** Owned by the provider (or Composio): not a forum, community board or third-party site. */
-const isOfficial = (host: string, cslug: string, site?: string) =>
-  !COMMUNITY.test(host) && ((site ? host.endsWith(site.replace(/^www\./, "")) : false) || OFFICIAL_HINT.test(host) || host.includes(cslug) || host === "composio.dev" || host.endsWith(".composio.dev"));
+export const COMMUNITY_PAGE = /\/(forums?|community|questions?|discussions?|answers|topic|threads?|t\/)\b|\b(forums?|community|questions? -|discussions?)(?=\W|$)/i;
+const isOfficial = (host: string, cslug: string, site?: string, url = "", title = "") =>
+  !COMMUNITY.test(host) && !COMMUNITY_PAGE.test(url.replace(/^https?:\/\/[^/]+/, "") + " " + title) && ((site ? host.endsWith(site.replace(/^www\./, "")) : false) || OFFICIAL_HINT.test(host) || host.includes(cslug) || host === "composio.dev" || host.endsWith(".composio.dev"));
 
 async function ask(prompt: string, timeoutMs = ACTION_TIMEOUT_MS, json = true, maxTokens?: number): Promise<string> {
   return generate(prompt, { json, timeoutMs, maxTokens, heavy: (maxTokens ?? 0) >= 6000, accept: json ? (t) => { try { parseJson(t); return true; } catch { return false; } } : undefined });
@@ -101,6 +103,12 @@ You write OAuth-app setup guides for developers. Hard rules:
 - Difficulty tier: 1 self-serve, 2 light checks, 3 review required, 4 gated/partner approval. Explain the rationale.
 - For each step say who does it: "you", "agent" or "either". Use "you" with "why_not_agent" when it needs the user's signed-in session, secrets, legal or business decisions.
 - If the provider has several products (for example an in-app SDK versus a REST or Connect API, or a marketing API versus login), say which product the guide covers and never use a page about one product as evidence for another; list the mismatch in "uncertainties".
+- A gate is something that stops YOUR OWN app from working for other people (production review, quota extension, partner approval, certification). Marketplace/app-store listing is a separate, optional step: describe it, but do not raise the tier for it. Tier 3 or 4 needs an official page that states the gate; a single forum thread is "reported" and cannot set the tier above 2.
+- Never write "X says" for something only a forum, community post or third party said; say "a forum reply says".
+- Numbers (limits, days, user caps) are "sourced" only if the number appears in an OFFICIAL page you cite. If it only appears in a community post, tag the claim "reported".
+- "No review is mentioned" is an absence, not a finding: tag it "unknown" and say which pages were read. Do not call a path "self-serve" with "sourced" just because a page omits a review.
+- Prefer the provider's own pages over blogs or aggregators for limits, quotas and review rules; if both exist, cite the provider's page. Cite every page you want kept as evidence; uncited pages are dropped.
+- Never mention internal fields such as provider_domain or OFFICIAL_GUESS in the guide.
 - Say "unknown" instead of guessing. Put open questions in "uncertainties".
 - effort.hands_on_minutes.min and .max are always numbers (minutes), never null. If no page states a time, give your best estimate and tag effort "inferred".
 - ALLOWED VALUES: tag is one of "sourced","reported","inferred","unknown". wait.kind is one of "none" (no review step), "stated" (a page gives a duration), "unpublished" (no duration found). who is one of "you","agent","either". quote_check is "unchecked". composio_managed.status is "yes","no" or "unknown". difficulty tier is the number 1, 2, 3 or 4. generated_by is "agent". wait.range is null unless a page states days or weeks.
@@ -220,7 +228,7 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
         for (const l of p.links ?? []) known.add(canonicalUrl(l));
         if (!fetched.some((f) => f.url === p.url) && usablePage(p.text, input.name)) {
           const host = new URL(p.url).hostname;
-          const official = isOfficial(host, cslug, input.site);
+          const official = isOfficial(host, cslug, input.site, p.url, p.title);
           fetched.push({ url: p.url, title: p.title, text: p.text, official });
         }
         log.push(`fetched ${p.url}`);
@@ -237,6 +245,7 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
     const queries = [
       `${input.name} developer app verification review process how long does it take`,
       `${input.name} API access approval audit production access tier requirements developer docs`,
+      `${input.name} developer quota limits development mode certification partner program`,
     ];
     for (const q of queries) {
       if (Date.now() - t0 > RESEARCH_BUDGET_MS + 35_000) break;
@@ -247,15 +256,15 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
         const score = (x: { title: string; url: string }) => {
           const host = new URL(x.url).hostname;
           const own = host.includes(cslug) || (input.site ? host.endsWith(input.site.replace(/^www\./, "")) : false);
-          return (own ? 4 : OFFICIAL_HINT.test(host) ? 1 : 0) + (/verif|review|approv|submit|publish|listing|marketplace|audit|access|tier|production|guidelines/i.test(x.title + x.url) ? 3 : 0);
+          return (own ? 4 : OFFICIAL_HINT.test(host) ? 1 : 0) + (GATE_WORDS.test(x.title + x.url) ? 3 : 0);
         };
-        const cand = r.filter((x) => !fetched.some((f) => f.url === x.url) && score(x) >= 4).sort((a, b) => score(b) - score(a)).slice(0, 1);
+        const cand = r.filter((x) => !fetched.some((f) => f.url === x.url) && score(x) >= 4).sort((a, b) => score(b) - score(a)).slice(0, 2);
         for (const c of cand) {
           try {
             const p = await fetchReadable(canonicalUrl(c.url));
             if (!usablePage(p.text, input.name) || fetched.some((f) => f.url === p.url)) continue;
             const host = new URL(p.url).hostname;
-            fetched.push({ url: p.url, title: p.title, text: p.text, official: isOfficial(host, cslug, input.site) });
+            fetched.push({ url: p.url, title: p.title, text: p.text, official: isOfficial(host, cslug, input.site, p.url, p.title) });
             yield { type: "tool", name: "fetch_page", arg: p.url, result: `${p.text.length} chars`, data: pageData(p.url, p.title, p.text) };
           } catch { /* unreadable: skip */ }
         }

@@ -54,13 +54,31 @@ export function enforce(draft: unknown, fetched: Fetched[], now = new Date().toI
       c.tag = "reported";
       notes.push(`${label}: evidence is community or third-party only; sourced -> reported`);
     }
+    // a number that only a community page contains is reported, not sourced
+    if (c.tag === "sourced" && c.evidence.length > 0) {
+      const text = String(c.statement ?? c.detail ?? c.text ?? c.rationale ?? "").replace(/https?:\/\/\S+/g, "").replace(/\[e\d+\]/g, "");
+      const nums = (text.match(/\b\d[\d,]*(?:\.\d+)?\b/g) ?? []).map((x) => x.replace(/,/g, "")).filter((x) => Number(x) >= 10 && !/^20\d\d$/.test(x));
+      const pages = c.evidence.map((id: string) => keptEvidence.find((e) => e.id === id)).filter(Boolean) as Evidence[];
+      const has = (o: boolean, n: string) => pages.some((e) => e.official === o && (byUrl.get(e.url)?.text ?? "").replace(/,/g, "").includes(n));
+      const onlyCommunity = nums.filter((n) => !has(true, n) && has(false, n));
+      if (onlyCommunity.length) { c.tag = "reported"; notes.push(`${label}: ${onlyCommunity.join(", ")} appears only on community pages; sourced -> reported`); }
+    }
     if (c.tag === "sourced" && c.evidence.length === 0) {
       c.tag = "inferred";
       notes.push(`${label}: no verified evidence; downgraded sourced -> inferred`);
     }
   };
 
+  // "no review is mentioned" is an absence: it cannot be sourced
+  const ABSENCE = /\b(no|not|none|nothing)\b[^.]{0,50}\b(review|approval|approve|wait|fee|gate|step|duration|stated|mentioned|described|found|listed)\b|\b(does|do|did) not (state|mention|list|describe)/i;
+  const noNum = (t: string) => !/\b\d{2,}\b/.test(t);
+  for (const c of [d.difficulty, ...(d.review_process ?? [])]) {
+    const t = String(c?.statement ?? c?.detail ?? c?.text ?? c?.rationale ?? "");
+    if (c?.tag === "sourced" && ABSENCE.test(t) && noNum(t)) { c.tag = "unknown"; notes.push("an absence ('no review mentioned') cannot be sourced; tagged unknown"); }
+  }
   fix(d.difficulty, "difficulty");
+  // a high tier needs a stated gate; a reported or inferred one lowers it to 2
+  if (d.difficulty?.tier >= 3 && d.difficulty.tag !== "sourced") { d.difficulty.tier = 2; notes.push("tier lowered to 2: the gate is only reported or inferred, not stated by an official page"); d.uncertainties = [...(d.uncertainties ?? []), "A review or partner gate was mentioned but not confirmed by an official page, so the tier was kept at 2 (light checks)."]; }
   // "no duration is published" is an absence, not something a page states
   if (d.wait?.kind === "unpublished" && d.wait.tag === "sourced") { d.wait.tag = "unknown"; notes.push("wait: an unpublished duration is tagged unknown, not sourced"); }
   fix(d.wait, "wait");
@@ -73,6 +91,8 @@ export function enforce(draft: unknown, fetched: Fetched[], now = new Date().toI
   (d.blockers ?? []).forEach((c: any, i: number) => fix(c, `blockers[${i}]`));
   for (const s of d.steps ?? []) if (s.who === "you" && !s.why_not_agent) s.why_not_agent = "Needs your own account session or a decision only you can make.";
 
+  // internal field names must never reach the reader
+  d.uncertainties = (d.uncertainties ?? []).filter((u: string) => !/provider[_ ]domain|official[- ]guess|OFFICIAL_GUESS/i.test(u));
   d.tested_log = [];
   d.last_verified = now;
   d.generated_by = "agent";
@@ -83,6 +103,10 @@ export function enforce(draft: unknown, fetched: Fetched[], now = new Date().toI
   ];
   if (d.composio_managed?.tag === "sourced") d.composio_managed.tag = "unknown";
 
+  // sources nobody cites are noise; keep only evidence a claim uses
+  const cited = new Set<string>();
+  (function collect(o: any) { if (Array.isArray(o)) return o.forEach(collect); if (!o || typeof o !== "object") return; if (Array.isArray(o.evidence) && o.evidence.every((x: unknown) => typeof x === "string")) o.evidence.forEach((x: string) => cited.add(x)); for (const k of Object.keys(o)) if (k !== "evidence") collect(o[k]); })(d);
+  d.evidence = d.evidence.filter((e: Evidence) => cited.has(e.id) || /docs\.composio\.dev/.test(e.url));
   // dropped evidence leaves gaps (e1, e2, e4, e6): renumber so the citations read e1, e2, e3, e4
   const renum = new Map(d.evidence.map((e: Evidence, i: number) => [e.id, `e${i + 1}`]));
   const walk = (o: any) => {

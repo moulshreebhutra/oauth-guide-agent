@@ -218,3 +218,31 @@ test("composio toolkit text drops markdown bold markers so quotes read cleanly",
   const { parseComposioToolkit } = await import("../lib/tools");
   assert.equal(parseComposioToolkit("- **Composio-managed OAuth available?** Yes".replace(/\*\*/g, "")).status, "yes");
 });
+
+test("enforce: community-only numbers, absence claims, weak high tiers, uncited sources and internal field names", async () => {
+  const { enforce } = await import("../lib/postprocess");
+  const { RAW_GUIDES } = await import("../data/guides");
+  const off = { url: "https://developers.example.com/a", title: "Docs", text: "Apps start in development status. Production review is manual.", official: true };
+  const com = { url: "https://community.example.com/q/1", title: "Q", text: "once you link 50 accounts you have two weeks to apply", official: false };
+  const d: any = JSON.parse(JSON.stringify(RAW_GUIDES.find((g: any) => g.slug === "github")));
+  const ev = (id: string, p: any, x: string) => ({ id, url: p.url, title: p.title, retrieved_at: "2026-01-01", excerpt: x, official: p.official, quote_check: "unchecked" });
+  d.evidence = [ev("e1", off, "Production review is manual"), ev("e2", com, "link 50 accounts"), ev("e3", off, "Apps start in development")];
+  d.gotchas = [{ text: "Linking more than 50 accounts needs production review.", tag: "sourced", evidence: ["e1", "e2"] }];
+  d.review_process = [{ text: "No review step is described in the pages read.", tag: "sourced", evidence: ["e1"] }];
+  d.difficulty = { ...d.difficulty, tier: 4, tag: "reported", evidence: ["e2"] };
+  d.uncertainties = ["Provider domain is unknown; official-guess only.", "Real gap."];
+  const r: any = enforce(d, [off, com]);
+  assert.ok(r.ok, r.error);
+  assert.equal(r.guide.gotchas[0].tag, "reported");
+  assert.equal(r.guide.review_process[0].tag, "unknown");
+  assert.equal(r.guide.difficulty.tier, 2);
+  assert.ok(!r.guide.evidence.some((e: any) => e.excerpt.startsWith("Apps start")));
+  assert.ok(!r.guide.uncertainties.some((u: string) => /provider domain/i.test(u)) && r.guide.uncertainties.includes("Real gap."));
+});
+
+test("community pages are never treated as official, even on the provider's own host", async () => {
+  const { COMMUNITY_PAGE } = await import("../lib/agent");
+  assert.ok(COMMUNITY_PAGE.test("/forums/t/123 How is the review?"));
+  assert.ok(COMMUNITY_PAGE.test("/x Review time - Questions - Square Developer Forums"));
+  assert.ok(!COMMUNITY_PAGE.test("/docs/oauth Move OAuth from the Sandbox to Production"));
+});
