@@ -141,7 +141,7 @@ a.cmp:hover{background:#fafafa}
 .dark .chip{background:transparent;color:#fff;border-color:var(--dk-rule)}.dark .chip:hover{border-color:#fff}
 .answer{margin-top:24px;background:var(--card);color:var(--ink);border:1px solid var(--rule);padding:22px 24px;text-align:left}
 .answer h3{margin-top:18px}
-.answer-text{font-size:1.05rem;margin:0 0 10px;white-space:pre-line}
+.answer-text{font-size:1.05rem;margin:0 0 10px}
 .passages{list-style:none;padding:0;margin:0}.passages li{padding:12px 0;border-top:1px solid var(--rule)}.passages p{margin:.3em 0 0;font-size:15px;color:var(--muted)}
 .pid{font:12px var(--mono);color:var(--muted)}.err{color:var(--l3)}
 .dark .err{color:#ff8f6b}
@@ -229,3 +229,5 @@ footer a{color:#fff}
 @keyframes pulse{50%{opacity:.3}}
 @keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
 .answer details{margin:12px 0}
+.answer-text p{margin:0 0 10px}.answer-text .bul{padding-left:18px;position:relative}.answer-text .bul::before{content:"";position:absolute;left:4px;top:.7em;width:6px;height:6px;background:var(--ink)}
+.cite{margin:0 2px}.cite a{font:12px var(--mono);padding:0 5px;background:var(--paper);border:1px solid var(--rule);text-decoration:none;margin-right:2px}.cite a:hover{border-color:var(--ink)}

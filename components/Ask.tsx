@@ -6,6 +6,32 @@ import { Tag } from "./GuideView";
 type Passage = { id: string; slug: string; app: string; section: string; text: string; tag: string | null };
 type Result = { mode: "answer" | "passages" | "none"; answer: string | null; passages: Passage[]; message?: string; detail?: string; error?: string; extractive?: boolean };
 
+/** Render the answer: **bold**, bullet lines, and [slug#n] citations as links to the guide. No HTML is ever injected. */
+function Answer({ text }: { text: string }) {
+  const parts = (line: string) =>
+    line.split(/(\*\*[^*]+\*\*|\[[^\]]*#\d+[^\]]*\])/g).map((t, i) => {
+      if (/^\*\*[^*]+\*\*$/.test(t)) return <strong key={i}>{t.slice(2, -2)}</strong>;
+      if (/^\[[^\]]*#\d+[^\]]*\]$/.test(t))
+        return (
+          <span key={i} className="cite">
+            {t.slice(1, -1).split(/[,;\s]+/).filter(Boolean).map((id) => {
+              const slug = id.split("#")[0];
+              return <Link key={id} href={`/guide/${slug}`} title={`Open the ${slug} guide`}>{id}</Link>;
+            })}
+          </span>
+        );
+      return t.replace(/\*\*/g, "");
+    });
+  return (
+    <div className="answer-text">
+      {text.split(/\n+/).filter(Boolean).map((l, i) => {
+        const m = l.match(/^\s*[-*•]\s+(.*)$/);
+        return m ? <p key={i} className="bul">{parts(m[1])}</p> : <p key={i}>{parts(l)}</p>;
+      })}
+    </div>
+  );
+}
+
 const STEPS = ["Finding the passages", "Asking the AI model", "Checking its citations"];
 
 async function post(body: object, ms: number): Promise<Result> {
@@ -96,7 +122,7 @@ export function Ask({ slug, examples }: { slug?: string; examples: string[] }) {
       {res?.error && <p className="err">{res.error}</p>}
       {res && !res.error && (
         <div className="answer" aria-live="polite">
-          {res.answer && <p className="answer-text">{res.answer}</p>}
+          {res.answer && <Answer text={res.answer} />}
           {res.message && <p className="muted">{res.message}</p>}
           {!busy && res.extractive && last.current && <p><button type="button" className="btn ghost" onClick={() => go(last.current)}>Try again for a written answer</button></p>}
           {res.detail && !busy && <details><summary className="small">Technical detail</summary><p className="muted small">{res.detail}</p></details>}
