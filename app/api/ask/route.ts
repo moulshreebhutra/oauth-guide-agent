@@ -11,6 +11,12 @@ const passageView = (h: Hit) => ({ id: h.id, slug: h.slug, app: h.app, section: 
 // Well-known apps that are NOT in the library: say so instead of matching generic words to another provider.
 const OTHER_APPS = ["zoom","stripe","linear","figma","discord","dropbox","asana","jira","atlassian","confluence","twitter","spotify","zendesk","intercom","mailchimp","airtable","trello","docusign","quickbooks","xero","twilio","gitlab","bitbucket","okta","box","clickup","monday","calendly","typeform","webflow","wordpress","paypal","uber","reddit","tiktok","youtube","snapchat","pinterest","instagram","whatsapp","telegram","openai","anthropic","github enterprise"];
 
+// Successful AI answers are remembered for 6 hours, so repeat questions (and the example chips) answer instantly and never depend on Google being up.
+const CACHE = new Map<string, { at: number; body: unknown }>();
+const cacheKey = (q: string, slug?: string) => `${slug ?? "*"}|${q.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim()}`;
+const cacheGet = (k: string) => { const v = CACHE.get(k); return v && Date.now() - v.at < 6 * 3600_000 ? v.body : undefined; };
+const cachePut = (k: string, body: unknown) => { if (CACHE.size > 300) CACHE.delete(CACHE.keys().next().value!); CACHE.set(k, { at: Date.now(), body }); };
+
 export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
   if (!rateLimit("ask:" + ip, 20)) return Response.json({ error: "Too many questions this hour. Try again later." }, { status: 429 });
@@ -22,6 +28,9 @@ export async function POST(req: Request) {
   const lower = ` ${question.toLowerCase().replace(/[^a-z0-9 ]/g, " ")} `;
   const other = OTHER_APPS.find((a) => lower.includes(` ${a} `));
 
+  const ck = cacheKey(question, slug);
+  if (body.phase !== "quick") { const hit = cacheGet(ck); if (hit) return Response.json(hit); }
+
   const phase = body.phase === "quick" ? "quick" : "write";
   const quick = phase === "quick";
   // quick: keyword search only, no network call, answers in milliseconds. write: hybrid retrieval + the model.
@@ -32,7 +41,7 @@ export async function POST(req: Request) {
     if (!process.env.GEMINI_API_KEY) return Response.json({ mode: "none", answer: null, passages: [], message: "The guides do not cover that. Try naming an app, or use the live agent to research it." });
     try {
       const text = (await generate(`You help developers with OAuth app setup. Answer briefly (max 150 words, plain text, no markdown asterisks, short lines starting with "- " for lists). Be accurate; if you are not sure of a fact such as a duration or limit, say you are not sure instead of guessing. Do not claim to have checked any documentation.\nQUESTION: ${question}`, { temperature: 0.2, timeoutMs: 40_000, deadlineMs: 44_000, race: true, fast: true, models: ["gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.8-flash"] })).trim();
-      return Response.json({ mode: "answer", general: true, answer: text, passages: [], message: GENERAL_NOTE });
+      { const out = { mode: "answer", general: true, answer: text, passages: [], message: GENERAL_NOTE }; cachePut(ck, out); return Response.json(out); }
     } catch (e: any) {
       return Response.json({ mode: "none", answer: null, passages: [], message: "The guides do not cover that, and the AI model could not answer in time. Try again, or use the live agent.", detail: String(e?.message ?? e).slice(0, 300) });
     }
@@ -68,7 +77,9 @@ QUESTION: ${question}`;
     const { cited, invalid } = checkCitations(answer, new Set(hits.map((h) => h.id)));
     if (!cited.length || invalid.length)
       return extractive("The written answer did not cite the guides correctly, so it is not shown. This is the guides' own wording instead.");
-    return Response.json({ mode: "answer", retrieval, answer, cited, passages: hits.filter((h) => cited.includes(h.id)).map(passageView) });
+    const out = { mode: "answer", retrieval, answer, cited, passages: hits.filter((h) => cited.includes(h.id)).map(passageView) };
+    cachePut(ck, out);
+    return Response.json(out);
   } catch (e: any) {
     console.error("ask: model call failed:", e?.message);
     // The model is busy or unreachable: answer from the guides' own words, assembled by code. Nothing is invented.

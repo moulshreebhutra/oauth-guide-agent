@@ -35,5 +35,13 @@ export async function GET(req: Request) {
       }
     }),
   );
-  return Response.json({ keyConfigured: true, modelsVisibleToKey: listed, listError, tests });
+  let groq: unknown = { configured: false };
+  if (process.env.GROQ_API_KEY) {
+    const t0 = Date.now();
+    try {
+      const r = await fetch("https://api.groq.com/openai/v1/chat/completions", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${process.env.GROQ_API_KEY}` }, body: JSON.stringify({ model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile", max_tokens: 5, messages: [{ role: "user", content: "Say ok" }] }), signal: AbortSignal.timeout(15_000) });
+      groq = { configured: true, ok: r.ok, status: r.status, ms: Date.now() - t0 };
+    } catch (e) { groq = { configured: true, ok: false, error: safeError(e) }; }
+  }
+  return Response.json({ keyConfigured: true, groq, modelsVisibleToKey: listed, listError, tests });
 }

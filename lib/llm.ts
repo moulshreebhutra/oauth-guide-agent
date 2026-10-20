@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 
 /** One place that calls Gemini: tries the configured model, then free-tier fallbacks, and reports WHY it failed. */
-const FALLBACKS = ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-flash-latest", "gemini-flash-lite-latest"];
+const FALLBACKS = ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
 
 export const safeError = (e: unknown) =>
   String((e as any)?.message ?? e)
@@ -9,6 +9,20 @@ export const safeError = (e: unknown) =>
     .replace(/AIza[0-9A-Za-z_-]{20,}/g, "[key]")
     .replace(/\s+/g, " ")
     .slice(0, 220);
+
+async function callGroq(prompt: string, ms: number, temperature: number): Promise<string> {
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+    body: JSON.stringify({ model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile", temperature, max_tokens: 700, messages: [{ role: "user", content: prompt }] }),
+    signal: AbortSignal.timeout(ms),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 120)}`);
+  const j: any = await res.json();
+  const t = j?.choices?.[0]?.message?.content;
+  if (!t) throw new Error("empty answer");
+  return String(t);
+}
 
 export async function generate(
   prompt: string,
@@ -48,23 +62,31 @@ export async function generate(
     const ms = Math.min(opts.timeoutMs ?? 15_000, opts.deadlineMs ?? Infinity);
     try {
       const t0 = Date.now();
-      const attempt = async (m: string) => {
-        try {
-          return await call(m, ms);
-        } catch (e) {
-          // overloaded or slow: one quick retry on the same model while time remains
+      const transient = /429|408|500|502|503|504|UNAVAILABLE|RESOURCE_EXHAUSTED|DEADLINE|overloaded|demand|time limit|fetch failed|ECONN|ETIMEDOUT/i;
+      // Google's guidance: retry transient errors (429, 5xx) with exponential backoff plus jitter, never retry 400/403/404.
+      const withBackoff = async (fn: (ms: number) => Promise<string>) => {
+        let delay = 1000;
+        for (let n = 0; ; n++) {
           const left = ms - (Date.now() - t0);
-          if (left > 6000 && /503|UNAVAILABLE|overloaded|demand|aborted|timeout/i.test(safeError(e))) {
-            await new Promise((r) => setTimeout(r, 1200));
-            return await call(m, left - 1500);
+          try {
+            return await fn(Math.min(Math.max(3000, left), 16_000)); // short attempts leave room for backoff retries
+          } catch (e) {
+            const m = safeError(e);
+            const hardStop = /API key not valid|API_KEY_INVALID|PERMISSION_DENIED|UNAUTHENTICATED|NOT_FOUND|not found|INVALID_ARGUMENT/i.test(m);
+            if (hardStop || !transient.test(m) || n >= 3 || ms - (Date.now() - t0) < delay + 6000) throw e;
+            await new Promise((r) => setTimeout(r, delay + Math.random() * 400));
+            delay *= 2;
           }
-          throw e;
         }
       };
-      return await Promise.any(models.map((m) => attempt(m).catch((e) => { throw new Error(`${m}: ${safeError(e)}`); })));
+      const attempt = (m: string) => withBackoff((left) => call(m, left));
+      const runners = models.map((m) => attempt(m).catch((e) => { throw new Error(`${m}: ${safeError(e)}`); }));
+      // independent second provider (free Groq key), raced alongside Gemini so one provider's outage cannot block the answer
+      if (process.env.GROQ_API_KEY) runners.push(withBackoff((left) => callGroq(prompt, left, opts.temperature ?? 0.2)).catch((e) => { throw new Error(`groq: ${safeError(e)}`); }));
+      return await Promise.any(runners);
     } catch (e) {
       const errs = (e as AggregateError).errors?.map((x: any) => String(x?.message ?? x)) ?? [safeError(e)];
-      throw new Error(errs.join(" | ").slice(0, 400));
+      throw new Error(errs.join(" | ").slice(0, 700));
     }
   }
   for (const model of models) {
