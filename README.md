@@ -53,7 +53,7 @@ Every claim carries one tag: **tested** (we did it), **sourced** (a quoted excer
 npm install
 cp .env.example .env.local     # fill in the keys you have; every key is optional
 npm run dev                    # http://localhost:3000
-npm test                       # 81 offline tests (guardrails, claim-versus-page checks, share links, retrieval, citations)
+npm test                       # 82 offline tests (guardrails, claim-versus-page checks, share links, retrieval, citations)
 npm run validate               # schema + consistency checks on every library guide
 npm run verify-quotes          # re-matches every library quote against the live page (needs internet)
 npm run check:live -- https://oauth-guide-agent.vercel.app

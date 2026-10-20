@@ -100,8 +100,6 @@ export function enforce(draft: unknown, fetched: Fetched[], now = new Date().toI
   if (d.wait?.tag === "sourced" && (d.wait.kind === "none" || lead.test(String(d.wait.statement))) ) { d.wait.tag = "inferred"; notes.push("wait: 'no review' is an absence, not a finding; tagged inferred"); }
   if (d.difficulty?.tier === 1 && d.difficulty.tag === "sourced" && /\bno (review|approval)\b|without (a )?review/i.test(String(d.difficulty.rationale))) { d.difficulty.tag = "inferred"; notes.push("difficulty: 'no review' tier rests on an absence; tagged inferred"); }
   fix(d.difficulty, "difficulty");
-  // a high tier needs a stated gate; a reported or inferred one lowers it to 2
-  if (d.difficulty?.tier >= 3 && !(d.review_process ?? []).some((c: any) => c.tag === "sourced")) { d.difficulty.tier = 2; notes.push("tier lowered to 2: the gate is only reported or inferred, not stated by an official page"); d.uncertainties = [...(d.uncertainties ?? []), "A review or partner gate was mentioned but not confirmed by an official page, so the tier was kept at 2 (light checks)."]; }
   // "no duration is published" is an absence, not something a page states
   if (d.wait?.kind === "unpublished" && d.wait.tag === "sourced") { d.wait.tag = "unknown"; notes.push("wait: an unpublished duration is tagged unknown, not sourced"); }
   fix(d.wait, "wait");
@@ -117,6 +115,8 @@ export function enforce(draft: unknown, fetched: Fetched[], now = new Date().toI
     d.gotchas = d.gotchas.filter((g: any) => g?.tag === "sourced" || g?.tag === "reported" || (g?.evidence ?? []).length > 0 || ON_TOPIC.test(String(g?.text ?? "")));
     if (d.gotchas.length < before) notes.push("gotchas: dropped an unsupported item that was not about setup, auth, review or limits");
   }
+  // a high tier needs a stated gate (checked after the claims above were downgraded); a reported or inferred one lowers it to 2
+  if (d.difficulty?.tier >= 3 && !(d.review_process ?? []).some((c: any) => c.tag === "sourced")) { d.difficulty.tier = 2; notes.push("tier lowered to 2: the gate is only reported or inferred, not stated by an official page"); d.uncertainties = [...(d.uncertainties ?? []), "A review or partner gate was mentioned but not confirmed by an official page, so the tier was kept at 2 (light checks)."]; }
   (d.steps ?? []).forEach((c: any, i: number) => fix(c, `steps[${i}]`));
   (d.blockers ?? []).forEach((c: any, i: number) => fix(c, `blockers[${i}]`));
   // clicking through the provider's own console needs the user's signed-in session: that is never "agent"

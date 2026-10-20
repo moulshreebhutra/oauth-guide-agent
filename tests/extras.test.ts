@@ -296,3 +296,17 @@ test("enforce: a figure missing from the cited pages is downgraded, off-topic un
   assert.ok(!OFF_TOPIC_TITLE.test("Quota modes | Spotify for Developers"));
   assert.ok(OFF_TOPIC_TITLE.test("Intercom's workspace review process | Intercom Help"));
 });
+
+test("enforce: a gate backed only by a forum post cannot hold Tier 4 (the cap runs after the community downgrade)", async () => {
+  const { enforce } = await import("../lib/postprocess");
+  const { RAW_GUIDES } = await import("../data/guides");
+  const page = { url: "https://www.reddit.com/r/dev/comments/abc/policy", title: "Policy post", text: "We are aiming for a 7 day turnaround on most tickets for approval.", official: false };
+  const d: any = JSON.parse(JSON.stringify(RAW_GUIDES.find((g: any) => g.slug === "github")));
+  d.evidence = [{ id: "e1", url: page.url, title: "P", retrieved_at: "2026-01-01", excerpt: "aiming for a 7 day turnaround on most tickets", official: false, quote_check: "unchecked" }];
+  d.difficulty = { ...d.difficulty, tier: 4, tag: "sourced", evidence: ["e1"] };
+  d.review_process = [{ text: "New API access needs approval, with a 7 day turnaround target on most tickets.", tag: "sourced", evidence: ["e1"] }];
+  const r: any = enforce(d, [page]);
+  assert.ok(r.ok, r.error);
+  assert.equal(r.guide.review_process[0].tag, "reported");
+  assert.equal(r.guide.difficulty.tier, 2);
+});

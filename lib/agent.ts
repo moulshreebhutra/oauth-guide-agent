@@ -27,7 +27,7 @@ const PER_PAGE_PROMPT_CHARS = 9000;
 /** A page is worth keeping only if it has real text and is about the app (JavaScript shells and marketing stubs are dropped). */
 export const usablePage = (text: string, app: string) => text.length >= 300 && new RegExp(`\\b${app.split(/[.\s]/)[0].replace(/[^a-z0-9-]/gi, "")}`, "i").test(text.slice(0, 20000));
 /** pages that match gate words by accident: customer-account checks, product reviews, audit-log marketing, release notes */
-export const OFF_TOPIC_TITLE = /e-?mail verification|account verification|workspace review|pros\s*(&|and)\s*cons|\breview\s*20\d\d|\bvs\.?\b|audit log|admin controls|release notes|changes are coming|what'?s new/i;
+export const OFF_TOPIC_TITLE = /e-?mail verification|account verification|workspace review|pros\s*(&|and)\s*cons|\breview\s*20\d\d|\bvs\.?\b|audit log|admin controls|identity verification|release notes|changes are coming|what'?s new/i;
 const GATE_WORDS = /verif|review|approv|submit|publish|listing|marketplace|audit|access|tier|production|guidelines|certif|quota|limit|pricing|security|extension|mode|checkpoint/i;
 const OFFICIAL_HINT = /(docs?|developers?|developer|learn|support|help|api)\./i;
 const COMMUNITY = /^(forum|forums|community|discuss|devforum|answers|stackoverflow)\b|(^|\.)(stackoverflow|reddit)\.com$/i;
@@ -118,6 +118,7 @@ You write OAuth-app setup guides for developers. Hard rules:
 - Gotchas and requirements are about registering the app, authorizing, reviewing, limits and expiry. Leave out unrelated API endpoint trivia, other processes you are only ruling out, and login reminders.
 - When two pages give different figures for the same limit or rule (for example an older and a newer policy), do not state both as facts: use the more recent page, say the other differs, and put the conflict in "uncertainties".
 - A figure given only as an example ("e.g., more than 15 calls per second") is an example, not a hard limit; say "for example".
+- Tier 1 means registering is self-serve with no gate, plan requirement or verification found. Use Tier 2 only for real checks (a paid plan, a verification step, admin approval, a consent screen review). Do not describe another product of the provider (for example a separate developer platform) as part of this guide.
 - Carry the qualifier of the quote: if a limit or rule is stated for "private apps", "paid plans", "organizations" or one product, say so; never present it as a general rule.
 - The approval wait describes the review THIS developer would face. Do not mix two different reviews (for example an app review and a customer-account or email-sender review) in one wait or one sourced item, and never write "treat as unknown" inside a sourced item; split it or tag it unknown.
 - Ignore pages about the provider's own customer onboarding (account, workspace or sender approval), product reviews, release notes and unrelated features. If you read the provider's console documentation (for example "Create an app integration"), cite it for the console steps instead of leaving them inferred.
@@ -273,7 +274,7 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
           const own = host.includes(cslug) || (input.site ? host.endsWith(input.site.replace(/^www\./, "")) : false);
           return (own ? 4 : OFFICIAL_HINT.test(host) ? 1 : 0) + (GATE_WORDS.test(x.title + x.url) ? 3 : 0);
         };
-        const cand = r.filter((x) => !fetched.some((f) => f.url === x.url) && score(x) >= 4).sort((a, b) => score(b) - score(a)).slice(0, 2);
+        const cand = r.filter((x) => !fetched.some((f) => f.url === x.url) && score(x) >= 4 && GATE_WORDS.test(x.title + x.url)).sort((a, b) => score(b) - score(a)).slice(0, 2);
         for (const c of cand) {
           try {
             const p = await fetchReadable(canonicalUrl(c.url));
