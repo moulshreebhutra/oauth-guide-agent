@@ -112,3 +112,13 @@ test("repairDraft fixes labels but not facts", () => {
 });
 
 test("skill: brackets are for passage ids only", () => { assert.match(skillText("x"), /Square brackets are ONLY for passage ids/); });
+
+test("repairDraft fills null setup minutes with a labelled estimate", () => {
+  const d: any = repairDraft({ difficulty: { tier: 4 }, effort: { hands_on_minutes: { min: null, max: null }, basis: "none", tag: "sourced" } });
+  assert.deepEqual(d.effort.hands_on_minutes, { min: 60, max: 180 });
+  assert.equal(d.effort.tag, "inferred");
+  assert.match(d.effort.basis, /estimate/i);
+  const e: any = repairDraft({ difficulty: { tier: 2 }, effort: { hands_on_minutes: { min: 40, max: 15 }, basis: "b", tag: "sourced" } });
+  assert.deepEqual(e.effort.hands_on_minutes, { min: 15, max: 40 });
+  assert.equal(e.effort.tag, "sourced");
+});

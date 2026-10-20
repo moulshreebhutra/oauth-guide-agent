@@ -59,6 +59,22 @@ export function repairDraft(d: any): any {
     d.wait.evidence ??= [];
   }
   if (d.difficulty && d.difficulty.tier !== undefined) d.difficulty.tier = Math.min(4, Math.max(1, Math.round(Number(d.difficulty.tier)) || 3));
+  // A model that finds no setup time writes null for the minutes. Fill an honest estimate from the difficulty tier and label it "inferred".
+  if (d.effort && typeof d.effort === "object") {
+    const hm = (d.effort.hands_on_minutes && typeof d.effort.hands_on_minutes === "object") ? d.effort.hands_on_minutes : {};
+    const num = (v: any) => { const n = typeof v === "string" ? parseFloat(v) : v; return typeof n === "number" && Number.isFinite(n) && n >= 0 ? n : null; };
+    let min = num(hm.min), max = num(hm.max);
+    if (min === null || max === null) {
+      const tier = Math.min(4, Math.max(1, Math.round(Number(d.difficulty?.tier)) || 3));
+      const est: Record<number, [number, number]> = { 1: [10, 30], 2: [20, 45], 3: [30, 90], 4: [60, 180] };
+      [min, max] = [min ?? est[tier][0], max ?? est[tier][1]];
+      d.effort.tag = "inferred";
+      d.effort.basis = `Our estimate from the difficulty tier. No page read states how long setup takes. ${String(d.effort.basis ?? "")}`.trim().slice(0, 300);
+    }
+    if (min > max) [min, max] = [max, min];
+    d.effort.hands_on_minutes = { min, max };
+    d.effort.basis ??= "Our estimate; no page states setup time.";
+  }
   d.generated_by = "agent";
   d.tested_log ??= [];
   d.uncertainties ??= [];
@@ -77,6 +93,7 @@ You write OAuth-app setup guides for developers. Hard rules:
 - Difficulty tier: 1 self-serve, 2 light checks, 3 review required, 4 gated/partner approval. Explain the rationale.
 - For each step say who does it: "you", "agent" or "either". Use "you" with "why_not_agent" when it needs the user's signed-in session, secrets, legal or business decisions.
 - Say "unknown" instead of guessing. Put open questions in "uncertainties".
+- effort.hands_on_minutes.min and .max are always numbers (minutes), never null. If no page states a time, give your best estimate and tag effort "inferred".
 - ALLOWED VALUES: tag is one of "sourced","reported","inferred","unknown". wait.kind is one of "none" (no review step), "stated" (a page gives a duration), "unpublished" (no duration found). who is one of "you","agent","either". quote_check is "unchecked". composio_managed.status is "yes","no" or "unknown". difficulty tier is the number 1, 2, 3 or 4. generated_by is "agent". wait.range is null unless a page states days or weeks.
 - SIZE: the whole JSON must stay under about 3,500 words. Keep every text field under 220 characters, at most 8 steps, at most 6 evidence entries with quotes under 200 characters, at most 5 gotchas. Output minified JSON only.
 `;

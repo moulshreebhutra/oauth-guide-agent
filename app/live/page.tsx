@@ -21,8 +21,10 @@ export default function Live() {
   const [share, setShare] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  async function run(e: React.FormEvent) {
-    e.preventDefault();
+  const [cachedAt, setCachedAt] = useState<number | null>(null);
+
+  async function run(e: React.FormEvent | null, refresh = false) {
+    e?.preventDefault();
     setBusy(true);
     setSteps([]);
     setNow("Starting…");
@@ -30,8 +32,19 @@ export default function Live() {
     setGuide(null);
     setShare(null);
     setCopied(false);
+    const ck = "guide:" + app.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    // browser copy: the same app asked again within 6 hours shows at once, with no server call
+    if (!refresh) {
+      try {
+        const c = JSON.parse(localStorage.getItem(ck) ?? "null");
+        if (c && Date.now() - c.at < 6 * 3600_000 && c.g) {
+          setGuide({ g: c.g, notes: c.notes ?? [] }); setShare(c.share ?? null); setCachedAt(c.at); setBusy(false); return;
+        }
+      } catch { /* storage unavailable: carry on without it */ }
+    }
+    setCachedAt(null);
     try {
-      const res = await fetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ app }) });
+      const res = await fetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ app, refresh }) });
       if (!res.ok || !res.body) {
         const j = await res.json().catch(() => ({ error: "Request failed" }));
         setErr(explainError(String(j.error ?? "Request failed")));
@@ -50,8 +63,14 @@ export default function Live() {
         for (const p of parts) {
           if (!p.startsWith("data: ")) continue;
           const ev = JSON.parse(p.slice(6));
-          if (ev.type === "guide") { got = true; setGuide({ g: ev.guide, notes: ev.notes }); }
-          else if (ev.type === "share") setShare(ev.path);
+          if (ev.type === "guide") {
+            got = true; setGuide({ g: ev.guide, notes: ev.notes }); if (ev.cached) setCachedAt(ev.cachedAt ?? Date.now());
+            try { localStorage.setItem(ck, JSON.stringify({ at: ev.cachedAt ?? Date.now(), g: ev.guide, notes: ev.notes })); } catch { /* ignore */ }
+          }
+          else if (ev.type === "share") {
+            setShare(ev.path);
+            try { const c = JSON.parse(localStorage.getItem(ck) ?? "null"); if (c) localStorage.setItem(ck, JSON.stringify({ ...c, share: ev.path })); } catch { /* ignore */ }
+          }
           else if (ev.type === "error") { got = true; setErr(explainError(String(ev.msg))); }
           else if (ev.type === "tool") add(friendlyTool(ev.name, String(ev.arg), String(ev.result), ev.data));
           else if (ev.type === "warn") add({ state: "warn", title: /did not answer|unreadable/i.test(ev.msg) ? "An AI model did not answer; trying another" : String(ev.msg).slice(0, 140), detail: String(ev.msg) });
@@ -108,6 +127,12 @@ export default function Live() {
           </div>
         )}
       </PageHead>
+      {guide && cachedAt && (
+        <p className="muted" style={{ textAlign: "center" }}>
+          Saved copy from {Math.max(1, Math.round((Date.now() - cachedAt) / 60_000))} minute(s) ago, kept for 6 hours.{" "}
+          <button type="button" className="linkbtn" disabled={busy} onClick={() => run(null, true)}>Write a fresh one</button>
+        </p>
+      )}
       {guide && <GuideView g={guide.g} notes={guide.notes} />}
       {guide && (
         <p className="wrap" style={{ paddingTop: 24 }}>
