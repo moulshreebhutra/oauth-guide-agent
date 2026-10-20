@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Logo } from "./Logo";
 
 export type Row = {
+  managed: "yes" | "no" | "unknown";
   slug: string;
   app: string;
   tier: 1 | 2 | 3 | 4;
@@ -87,7 +88,7 @@ export function RouteMap({ rows }: { rows: Row[] }) {
         const sv = severity(r);
         return (
           <Link key={r.slug} href={`/guide/${r.slug}`} className="cmp cmprow">
-            <span className="c-app"><Logo slug={r.slug} app={r.app} /><b>{r.app}</b></span>
+            <span className="c-app"><Logo slug={r.slug} app={r.app} /><span><b>{r.app}</b>{r.managed !== "unknown" && <i className={`mgd mgd-${r.managed}`} title={r.managed === "yes" ? "Composio's toolkit page says Composio-managed OAuth is available, so you can start without registering your own app" : "Composio's toolkit page says managed OAuth is not available, so you register your own app first"}>{r.managed === "yes" ? "Composio-managed" : "Own app needed"}</i>}</span></span>
             <span className="c-diff" data-label="Difficulty">
               <span className="diffhead"><Meter tier={r.tier} /><strong>{r.label}</strong></span>
               <small>{TIER_BLURB[r.tier]}</small>

@@ -1,255 +1,264 @@
 {
- "app": "Meta (Facebook / Instagram / WhatsApp)",
- "slug": "meta",
- "provider_domain": "facebook.com",
- "generated_by": "human-researched",
- "summary": "You can create an app and test with your own accounts, but advanced permissions need App Review, business verification and a Data Protection Assessment, with an annual Data Use Checkup afterwards. No durations were found in official pages.",
- "difficulty": {
-  "tier": 4,
-  "label": "Gated / partner approval",
-  "rationale": "Meta says advanced permissions require business verification and a Data Protection Assessment, and permissions are assessed through App Review.",
-  "tag": "sourced",
-  "evidence": [
-   "e1"
-  ]
- },
- "effort": {
-  "hands_on_minutes": {
-   "min": 30,
-   "max": 90
+  "app": "Meta (Facebook / Instagram / WhatsApp)",
+  "slug": "meta",
+  "provider_domain": "facebook.com",
+  "generated_by": "human-researched",
+  "summary": "You can create an app and test with your own accounts, but advanced permissions need App Review, business verification and a Data Protection Assessment, with an annual Data Use Checkup afterwards. No durations were found in official pages.",
+  "difficulty": {
+    "tier": 4,
+    "label": "Gated / partner approval",
+    "rationale": "Meta says advanced permissions require business verification and a Data Protection Assessment, and permissions are assessed through App Review.",
+    "tag": "sourced",
+    "evidence": [
+      "e1"
+    ]
   },
-  "basis": "Our estimate for creating the app and business portfolio; review preparation is much larger and not estimated.",
-  "tag": "inferred"
- },
- "wait": {
-  "range": null,
-  "statement": "Neither the app-modes page nor the App Review page we read states how long review takes.",
-  "tag": "unknown",
-  "evidence": [
-   "e1"
+  "effort": {
+    "hands_on_minutes": {
+      "min": 30,
+      "max": 90
+    },
+    "basis": "Our estimate for creating the app and business portfolio; review preparation is much larger and not estimated.",
+    "tag": "inferred"
+  },
+  "wait": {
+    "range": null,
+    "statement": "Neither the app-modes page nor the App Review page we read states how long review takes.",
+    "tag": "unknown",
+    "evidence": [
+      "e1"
+    ],
+    "headline": "Not published",
+    "kind": "unpublished",
+    "note": "App Review is needed to go live beyond your own testers; no duration is stated."
+  },
+  "composio_managed": {
+    "status": "yes",
+    "note": "Composio's Facebook toolkit page lists OAuth2 and says 'Composio-managed OAuth available.' So a developer can connect users without registering their own provider app first; register your own only for your own branding, scopes or rate limits. This is the toolkit page for Facebook; Instagram and other Meta toolkits were not each checked.",
+    "tag": "sourced"
+  },
+  "requirements": [
+    {
+      "text": "An app must be linked to a developer account and a business portfolio (Composio's guide).",
+      "tag": "sourced",
+      "evidence": [
+        "e2"
+      ]
+    },
+    {
+      "text": "Advanced permissions require business verification.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "text": "For advanced permissions, complete the Data Protection Assessment.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "text": "New apps start in Development mode, where only people with a role on the app (admins, developers, testers) can grant permissions.",
+      "tag": "sourced",
+      "evidence": [
+        "e3"
+      ]
+    },
+    {
+      "text": "Live mode lets anyone use the app, but only for permissions approved through App Review.",
+      "tag": "sourced",
+      "evidence": [
+        "e4"
+      ]
+    }
   ],
-  "headline": "Not published",
-  "kind": "unpublished",
-  "note": "App Review is needed to go live beyond your own testers; no duration is stated."
- },
- "composio_managed": {
-  "status": "unknown",
-  "note": "Not checked against the Composio API yet.",
-  "tag": "unknown"
- },
- "requirements": [
-  {
-   "text": "An app must be linked to a developer account and a business portfolio (Composio's guide).",
-   "tag": "sourced",
-   "evidence": [
-    "e2"
-   ]
-  },
-  {
-   "text": "Advanced permissions require business verification.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "text": "For advanced permissions, complete the Data Protection Assessment.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "text": "New apps start in Development mode, where only people with a role on the app (admins, developers, testers) can grant permissions.",
-   "tag": "sourced",
-   "evidence": [
-    "e3"
-   ]
-  },
-  {
-   "text": "Live mode lets anyone use the app, but only for permissions approved through App Review.",
-   "tag": "sourced",
-   "evidence": [
-    "e4"
-   ]
-  }
- ],
- "scopes_and_access": [
-  {
-   "text": "Permissions are requested through App Review; annual Data Use Checkup certifies permissions are used in line with Platform Terms.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  }
- ],
- "gotchas": [
-  {
-   "text": "Composio's Meta guide ends with 'you can finally publish the application' and never mentions App Review, business verification or live mode, so it can leave you with an app that works only for developers and testers.",
-   "tag": "inferred",
-   "evidence": [
-    "e2",
-    "e1"
-   ]
-  },
-  {
-   "text": "Composio's guide does not explain how to create the business portfolio it requires.",
-   "tag": "sourced",
-   "evidence": [
-    "e2"
-   ]
-  }
- ],
- "steps": [
-  {
-   "n": 1,
-   "title": "Create a Meta developer account and business portfolio",
-   "detail": "The app must be linked to both.",
-   "who": "you",
-   "why_not_agent": "Account and business identity creation.",
-   "tag": "sourced",
-   "evidence": [
-    "e2"
-   ]
-  },
-  {
-   "n": 2,
-   "title": "Create the app and pick use cases",
-   "detail": "Create App > details > use cases > select your business.",
-   "who": "you",
-   "why_not_agent": "Needs your signed-in Meta account.",
-   "tag": "sourced",
-   "evidence": [
-    "e2"
-   ]
-  },
-  {
-   "n": 3,
-   "title": "Copy App ID and App Secret; add the redirect URI",
-   "detail": "App Settings > Basic for credentials; App Settings > Advanced for the redirect allow list.",
-   "who": "you",
-   "why_not_agent": "Secret goes to your secret store.",
-   "tag": "sourced",
-   "evidence": [
-    "e2"
-   ]
-  },
-  {
-   "n": 4,
-   "title": "Create the Composio auth config",
-   "detail": "Own credentials; base URL https://graph.facebook.com; no Bearer Token support.",
-   "who": "either",
-   "tag": "sourced",
-   "evidence": [
-    "e2"
-   ]
-  },
-  {
-   "n": 5,
-   "title": "For permissions beyond your own testers: App Review path",
-   "detail": "Business verification, Data Protection Assessment, and App Review submission.",
-   "who": "you",
-   "why_not_agent": "Business documents and review communication are yours.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  }
- ],
- "blockers": [
-  {
-   "symptom": "Only you and listed testers can authorize",
-   "likely_cause": "Permissions not approved for public use yet.",
-   "fix": "Complete App Review and the required verification for advanced permissions.",
-   "escalate_when": "Rejected in review; Meta offers live chat support after rejection.",
-   "tag": "inferred",
-   "evidence": [
-    "e1"
-   ]
-  }
- ],
- "review_process": [
-  {
-   "text": "App Review assesses permission requests; live chat support is available if rejected.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "text": "Meta calls App Review an important part of app development. The pages we read give no review duration.",
-   "tag": "sourced",
-   "evidence": [
-    "e5"
-   ]
-  }
- ],
- "next_actions": [
-  "Create the business portfolio first; it blocks app creation.",
-  "Read the permission-specific review requirements before building features that need them."
- ],
- "agent_vs_you": {
-  "agent_can": [
-   "Map the permissions you need to review requirements and draft submission notes."
+  "scopes_and_access": [
+    {
+      "text": "Permissions are requested through App Review; annual Data Use Checkup certifies permissions are used in line with Platform Terms.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    }
   ],
-  "you_must": [
-   "Provide business verification documents and own the review process."
+  "gotchas": [
+    {
+      "text": "Composio's Meta guide ends with 'you can finally publish the application' and never mentions App Review, business verification or live mode, so it can leave you with an app that works only for developers and testers.",
+      "tag": "inferred",
+      "evidence": [
+        "e2",
+        "e1"
+      ]
+    },
+    {
+      "text": "Composio's guide does not explain how to create the business portfolio it requires.",
+      "tag": "sourced",
+      "evidence": [
+        "e2"
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "title": "Create a Meta developer account and business portfolio",
+      "detail": "The app must be linked to both.",
+      "who": "you",
+      "why_not_agent": "Account and business identity creation.",
+      "tag": "sourced",
+      "evidence": [
+        "e2"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "Create the app and pick use cases",
+      "detail": "Create App > details > use cases > select your business.",
+      "who": "you",
+      "why_not_agent": "Needs your signed-in Meta account.",
+      "tag": "sourced",
+      "evidence": [
+        "e2"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "Copy App ID and App Secret; add the redirect URI",
+      "detail": "App Settings > Basic for credentials; App Settings > Advanced for the redirect allow list.",
+      "who": "you",
+      "why_not_agent": "Secret goes to your secret store.",
+      "tag": "sourced",
+      "evidence": [
+        "e2"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "Create the Composio auth config",
+      "detail": "Own credentials; base URL https://graph.facebook.com; no Bearer Token support.",
+      "who": "either",
+      "tag": "sourced",
+      "evidence": [
+        "e2"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "For permissions beyond your own testers: App Review path",
+      "detail": "Business verification, Data Protection Assessment, and App Review submission.",
+      "who": "you",
+      "why_not_agent": "Business documents and review communication are yours.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "symptom": "Only you and listed testers can authorize",
+      "likely_cause": "Permissions not approved for public use yet.",
+      "fix": "Complete App Review and the required verification for advanced permissions.",
+      "escalate_when": "Rejected in review; Meta offers live chat support after rejection.",
+      "tag": "inferred",
+      "evidence": [
+        "e1"
+      ]
+    }
+  ],
+  "review_process": [
+    {
+      "text": "App Review assesses permission requests; live chat support is available if rejected.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "text": "Meta calls App Review an important part of app development. The pages we read give no review duration.",
+      "tag": "sourced",
+      "evidence": [
+        "e5"
+      ]
+    }
+  ],
+  "next_actions": [
+    "Create the business portfolio first; it blocks app creation.",
+    "Read the permission-specific review requirements before building features that need them."
+  ],
+  "agent_vs_you": {
+    "agent_can": [
+      "Map the permissions you need to review requirements and draft submission notes."
+    ],
+    "you_must": [
+      "Provide business verification documents and own the review process."
+    ]
+  },
+  "evidence": [
+    {
+      "id": "e1",
+      "url": "https://developers.facebook.com/documentation/development/trust-center",
+      "title": "Meta for Developers - Trust Center",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "Advanced permissions that you request will require business verification.",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e2",
+      "url": "https://composio.dev/auth/facebook",
+      "title": "Composio - Facebook (Meta) OAuth credentials",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "With all of that, you can finally publish the application.",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e3",
+      "url": "https://developers.facebook.com/docs/development/build-and-test/app-modes",
+      "title": "Meta for Developers - App modes",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "Apps in Development mode can only request permissions from role users.",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e4",
+      "url": "https://developers.facebook.com/docs/development/build-and-test/app-modes",
+      "title": "Meta for Developers - App modes",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "Apps in Live mode can request permissions from anyone, but only permissions approved through App Review.",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e5",
+      "url": "https://developers.facebook.com/docs/resp-plat-initiatives/app-review",
+      "title": "Meta for Developers - App Review",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "App Review is an important part of the app development process.",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e6",
+      "url": "https://docs.composio.dev/toolkits/facebook",
+      "title": "Composio docs - Facebook toolkit, Authentication Details",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "Composio-managed OAuth available",
+      "official": true,
+      "quote_check": "unchecked"
+    }
+  ],
+  "tested_log": [],
+  "last_verified": "2026-10-20",
+  "uncertainties": [
+    "No Meta page we read states a duration for App Review or Business Verification; blogs claim numbers but were not used.",
+    "The App Review page we read does not list required screencasts or test instructions; Meta's content and best-practice pages were not read.",
+    "Which permissions need advanced access per use case was not enumerated.",
+    "Business Verification requirements page failed to load in this pass.",
+    "No hands-on test logged yet."
   ]
- },
- "evidence": [
-  {
-   "id": "e1",
-   "url": "https://developers.facebook.com/documentation/development/trust-center",
-   "title": "Meta for Developers - Trust Center",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "Advanced permissions that you request will require business verification.",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e2",
-   "url": "https://composio.dev/auth/facebook",
-   "title": "Composio - Facebook (Meta) OAuth credentials",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "With all of that, you can finally publish the application.",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e3",
-   "url": "https://developers.facebook.com/docs/development/build-and-test/app-modes",
-   "title": "Meta for Developers - App modes",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "Apps in Development mode can only request permissions from role users.",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e4",
-   "url": "https://developers.facebook.com/docs/development/build-and-test/app-modes",
-   "title": "Meta for Developers - App modes",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "Apps in Live mode can request permissions from anyone, but only permissions approved through App Review.",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e5",
-   "url": "https://developers.facebook.com/docs/resp-plat-initiatives/app-review",
-   "title": "Meta for Developers - App Review",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "App Review is an important part of the app development process.",
-   "official": true,
-   "quote_check": "unchecked"
-  }
- ],
- "tested_log": [],
- "last_verified": "2026-10-20",
- "uncertainties": [
-  "No Meta page we read states a duration for App Review or Business Verification; blogs claim numbers but were not used.",
-  "The App Review page we read does not list required screencasts or test instructions; Meta's content and best-practice pages were not read.",
-  "Which permissions need advanced access per use case was not enumerated.",
-  "Business Verification requirements page failed to load in this pass.",
-  "No hands-on test logged yet."
- ]
 }

@@ -1,296 +1,305 @@
 {
- "app": "Shopify",
- "slug": "shopify",
- "provider_domain": "shopify.com",
- "generated_by": "human-researched",
- "summary": "Create an app in the Shopify Dev Dashboard and release a version to get OAuth credentials; testing on your own store is quick. Distributing to other merchants (even unlisted) is reported to require Shopify review.",
- "difficulty": {
-  "tier": 3,
-  "label": "Review required",
-  "rationale": "Dev-store testing is self-serve, but a Shopify staff member says an unlisted public app still needs review and a $19 registration fee.",
-  "tag": "sourced",
-  "evidence": [
-   "e2",
-   "e6"
-  ]
- },
- "effort": {
-  "hands_on_minutes": {
-   "min": 20,
-   "max": 45
+  "app": "Shopify",
+  "slug": "shopify",
+  "provider_domain": "shopify.com",
+  "generated_by": "human-researched",
+  "summary": "Create an app in the Shopify Dev Dashboard and release a version to get OAuth credentials; testing on your own store is quick. Distributing to other merchants (even unlisted) is reported to require Shopify review.",
+  "difficulty": {
+    "tier": 3,
+    "label": "Review required",
+    "rationale": "Dev-store testing is self-serve, but a Shopify staff member says an unlisted public app still needs review and a $19 registration fee.",
+    "tag": "sourced",
+    "evidence": [
+      "e2",
+      "e6"
+    ]
   },
-  "basis": "Our estimate for Dev Dashboard setup. Composio's guide shows only a 3-minute reading time.",
-  "tag": "inferred"
- },
- "wait": {
-  "range": null,
-  "statement": "No review duration found. A Shopify staff reply on the developer community says an unlisted public app 'will still need to be reviewed'.",
-  "tag": "unknown",
-  "evidence": [
-   "e2"
+  "effort": {
+    "hands_on_minutes": {
+      "min": 20,
+      "max": 45
+    },
+    "basis": "Our estimate for Dev Dashboard setup. Composio's guide shows only a 3-minute reading time.",
+    "tag": "inferred"
+  },
+  "wait": {
+    "range": null,
+    "statement": "No review duration found. A Shopify staff reply on the developer community says an unlisted public app 'will still need to be reviewed'.",
+    "tag": "unknown",
+    "evidence": [
+      "e2"
+    ],
+    "headline": "Not published",
+    "kind": "unpublished",
+    "note": "Public apps need Shopify review, but no official page gives a duration."
+  },
+  "composio_managed": {
+    "status": "no",
+    "note": "Composio's Shopify toolkit page lists OAuth2 and S2S_OAUTH2 and says 'Composio-managed OAuth not available.' So with Shopify you register your own app before users can connect, which is why Shopify's distribution rules and review matter here.",
+    "tag": "sourced"
+  },
+  "requirements": [
+    {
+      "text": "A Shopify store (development store works for testing) and access to the Dev Dashboard.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "text": "The Composio connect step asks for the store subdomain (the part before .myshopify.com).",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "text": "Distribution method is a one-way choice: 'You can't change the method after you select it.' Decide public vs custom before you build.",
+      "tag": "sourced",
+      "evidence": [
+        "e3"
+      ]
+    },
+    {
+      "text": "Custom distribution: you generate an install link for a specific store and send it to the store owner.",
+      "tag": "sourced",
+      "evidence": [
+        "e4"
+      ]
+    },
+    {
+      "text": "A custom app can be installed on multiple stores only when they belong to the same Plus organization.",
+      "tag": "sourced",
+      "evidence": [
+        "e5"
+      ]
+    },
+    {
+      "text": "Public distribution: you submit for Shopify's review when the app is ready.",
+      "tag": "sourced",
+      "evidence": [
+        "e6"
+      ]
+    },
+    {
+      "text": "App Store checklist: authorize with OAuth immediately on install, and use session tokens rather than third-party cookies or local storage.",
+      "tag": "sourced",
+      "evidence": [
+        "e7",
+        "e8"
+      ]
+    }
   ],
-  "headline": "Not published",
-  "kind": "unpublished",
-  "note": "Public apps need Shopify review, but no official page gives a duration."
- },
- "composio_managed": {
-  "status": "unknown",
-  "note": "Not checked against the Composio API yet.",
-  "tag": "unknown"
- },
- "requirements": [
-  {
-   "text": "A Shopify store (development store works for testing) and access to the Dev Dashboard.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "text": "The Composio connect step asks for the store subdomain (the part before .myshopify.com).",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "text": "Distribution method is a one-way choice: 'You can't change the method after you select it.' Decide public vs custom before you build.",
-   "tag": "sourced",
-   "evidence": [
-    "e3"
-   ]
-  },
-  {
-   "text": "Custom distribution: you generate an install link for a specific store and send it to the store owner.",
-   "tag": "sourced",
-   "evidence": [
-    "e4"
-   ]
-  },
-  {
-   "text": "A custom app can be installed on multiple stores only when they belong to the same Plus organization.",
-   "tag": "sourced",
-   "evidence": [
-    "e5"
-   ]
-  },
-  {
-   "text": "Public distribution: you submit for Shopify's review when the app is ready.",
-   "tag": "sourced",
-   "evidence": [
-    "e6"
-   ]
-  },
-  {
-   "text": "App Store checklist: authorize with OAuth immediately on install, and use session tokens rather than third-party cookies or local storage.",
-   "tag": "sourced",
-   "evidence": [
-    "e7",
-    "e8"
-   ]
-  }
- ],
- "scopes_and_access": [
-  {
-   "text": "Composio's example scopes: read/write orders and products, optionally customers and inventory.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  }
- ],
- "gotchas": [
-  {
-   "text": "You must click Release on a version in the Dev Dashboard to finalize the app configuration.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "text": "The redirect URL must match exactly.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "text": "The Composio guide does not say what to use for the App URL.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  }
- ],
- "steps": [
-  {
-   "n": 1,
-   "title": "Open the Dev Dashboard",
-   "detail": "Shopify admin > search 'App Development' > Build apps in Dev Dashboard.",
-   "who": "you",
-   "why_not_agent": "Needs your signed-in Shopify session.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "n": 2,
-   "title": "Create the app and first version",
-   "detail": "Name, App URL, scopes, redirect URL from your Composio auth config; click Release.",
-   "who": "you",
-   "why_not_agent": "Needs your Shopify session.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "n": 3,
-   "title": "Copy client ID and secret",
-   "detail": "Settings in the left sidebar.",
-   "who": "you",
-   "why_not_agent": "Secret goes to your secret store.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "n": 4,
-   "title": "Create the Composio auth config and connect",
-   "detail": "Own credentials; connect with external user ID and store subdomain; install the app and grant permissions.",
-   "who": "either",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "n": 5,
-   "title": "To serve other merchants: plan for Shopify review",
-   "detail": "Ask Shopify (Partner support / dev community) which distribution type fits and what review applies.",
-   "who": "you",
-   "why_not_agent": "Needs your Partner account and Shopify's response.",
-   "tag": "reported",
-   "evidence": [
-    "e2"
-   ]
-  }
- ],
- "blockers": [
-  {
-   "symptom": "Other merchants cannot install your app",
-   "likely_cause": "Not yet approved for the distribution you chose.",
-   "fix": "Check distribution type and review status in your Partner/Dev Dashboard.",
-   "escalate_when": "Review status is unclear after submission.",
-   "tag": "inferred",
-   "evidence": [
-    "e2"
-   ]
-  }
- ],
- "review_process": [
-  {
-   "text": "A Shopify staff member on the community forum said an unlisted public app still needs review and the $19 registration fee, and must meet all review criteria. This is a forum post, not official documentation.",
-   "tag": "reported",
-   "evidence": [
-    "e2"
-   ]
-  }
- ],
- "next_actions": [
-  "Build and test on a development store.",
-  "Before launch, confirm distribution and review rules with Shopify's official docs."
- ],
- "agent_vs_you": {
-  "agent_can": [
-   "Draft the review-readiness checklist once official criteria are fetched."
+  "scopes_and_access": [
+    {
+      "text": "Composio's example scopes: read/write orders and products, optionally customers and inventory.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    }
   ],
-  "you_must": [
-   "Operate the Dev Dashboard and handle Shopify review."
+  "gotchas": [
+    {
+      "text": "You must click Release on a version in the Dev Dashboard to finalize the app configuration.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "text": "The redirect URL must match exactly.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "text": "The Composio guide does not say what to use for the App URL.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "title": "Open the Dev Dashboard",
+      "detail": "Shopify admin > search 'App Development' > Build apps in Dev Dashboard.",
+      "who": "you",
+      "why_not_agent": "Needs your signed-in Shopify session.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "Create the app and first version",
+      "detail": "Name, App URL, scopes, redirect URL from your Composio auth config; click Release.",
+      "who": "you",
+      "why_not_agent": "Needs your Shopify session.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "Copy client ID and secret",
+      "detail": "Settings in the left sidebar.",
+      "who": "you",
+      "why_not_agent": "Secret goes to your secret store.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "Create the Composio auth config and connect",
+      "detail": "Own credentials; connect with external user ID and store subdomain; install the app and grant permissions.",
+      "who": "either",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "To serve other merchants: plan for Shopify review",
+      "detail": "Ask Shopify (Partner support / dev community) which distribution type fits and what review applies.",
+      "who": "you",
+      "why_not_agent": "Needs your Partner account and Shopify's response.",
+      "tag": "reported",
+      "evidence": [
+        "e2"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "symptom": "Other merchants cannot install your app",
+      "likely_cause": "Not yet approved for the distribution you chose.",
+      "fix": "Check distribution type and review status in your Partner/Dev Dashboard.",
+      "escalate_when": "Review status is unclear after submission.",
+      "tag": "inferred",
+      "evidence": [
+        "e2"
+      ]
+    }
+  ],
+  "review_process": [
+    {
+      "text": "A Shopify staff member on the community forum said an unlisted public app still needs review and the $19 registration fee, and must meet all review criteria. This is a forum post, not official documentation.",
+      "tag": "reported",
+      "evidence": [
+        "e2"
+      ]
+    }
+  ],
+  "next_actions": [
+    "Build and test on a development store.",
+    "Before launch, confirm distribution and review rules with Shopify's official docs."
+  ],
+  "agent_vs_you": {
+    "agent_can": [
+      "Draft the review-readiness checklist once official criteria are fetched."
+    ],
+    "you_must": [
+      "Operate the Dev Dashboard and handle Shopify review."
+    ]
+  },
+  "evidence": [
+    {
+      "id": "e1",
+      "url": "https://composio.dev/auth/shopify",
+      "title": "Composio - Shopify OAuth2 credentials",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "keep this secure!",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e2",
+      "url": "https://community.shopify.dev/t/do-i-need-shopify-app-review-if-i-just-want-my-external-application-users-to-connect-their-shopify-stores/19060",
+      "title": "Shopify Developer Community - Do I need app review...",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "It will still need to be reviewed and you’ll still need to pay the $19 registration fee.",
+      "official": false,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e3",
+      "url": "https://shopify.dev/docs/apps/launch/distribution/select-distribution-method",
+      "title": "Shopify Dev - Select a distribution method",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "You can't change the method after you select it.",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e4",
+      "url": "https://shopify.dev/docs/apps/launch/distribution/select-distribution-method",
+      "title": "Shopify Dev - Select a distribution method",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "generate an install link and send it to the store owner",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e5",
+      "url": "https://shopify.dev/docs/apps/launch/distribution/select-distribution-method",
+      "title": "Shopify Dev - Select a distribution method",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "A custom app can be installed on multiple stores when those stores belong to the same Plus organization.",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e6",
+      "url": "https://shopify.dev/docs/apps/launch/distribution/select-distribution-method",
+      "title": "Shopify Dev - Select a distribution method",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "submit your app for review when it's ready",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e7",
+      "url": "https://shopify.dev/docs/apps/launch/app-requirements-checklist",
+      "title": "Shopify Dev - App Store requirements checklist",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "Your app should immediately authorize using OAuth before any other steps occur",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e8",
+      "url": "https://shopify.dev/docs/apps/launch/app-requirements-checklist",
+      "title": "Shopify Dev - App Store requirements checklist",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "Use session tokens for authentication and avoid third-party cookies or local storage",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e9",
+      "url": "https://docs.composio.dev/toolkits/shopify",
+      "title": "Composio docs - Shopify toolkit, Authentication Details",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "Composio-managed OAuth not available",
+      "official": true,
+      "quote_check": "unchecked"
+    }
+  ],
+  "tested_log": [],
+  "last_verified": "2026-10-20",
+  "uncertainties": [
+    "Shopify's distribution page does not say whether custom distribution needs review.",
+    "No official page we read states how long App Store review takes or any registration fee; the $19 figure is from a community reply and may have changed.",
+    "The checklist page did not mention GDPR/compliance webhooks; Shopify's separate docs on them were not read.",
+    "Composio's Shopify guide path was followed, not tested."
   ]
- },
- "evidence": [
-  {
-   "id": "e1",
-   "url": "https://composio.dev/auth/shopify",
-   "title": "Composio - Shopify OAuth2 credentials",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "keep this secure!",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e2",
-   "url": "https://community.shopify.dev/t/do-i-need-shopify-app-review-if-i-just-want-my-external-application-users-to-connect-their-shopify-stores/19060",
-   "title": "Shopify Developer Community - Do I need app review...",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "It will still need to be reviewed and you’ll still need to pay the $19 registration fee.",
-   "official": false,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e3",
-   "url": "https://shopify.dev/docs/apps/launch/distribution/select-distribution-method",
-   "title": "Shopify Dev - Select a distribution method",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "You can't change the method after you select it.",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e4",
-   "url": "https://shopify.dev/docs/apps/launch/distribution/select-distribution-method",
-   "title": "Shopify Dev - Select a distribution method",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "generate an install link and send it to the store owner",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e5",
-   "url": "https://shopify.dev/docs/apps/launch/distribution/select-distribution-method",
-   "title": "Shopify Dev - Select a distribution method",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "A custom app can be installed on multiple stores when those stores belong to the same Plus organization.",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e6",
-   "url": "https://shopify.dev/docs/apps/launch/distribution/select-distribution-method",
-   "title": "Shopify Dev - Select a distribution method",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "submit your app for review when it's ready",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e7",
-   "url": "https://shopify.dev/docs/apps/launch/app-requirements-checklist",
-   "title": "Shopify Dev - App Store requirements checklist",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "Your app should immediately authorize using OAuth before any other steps occur",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e8",
-   "url": "https://shopify.dev/docs/apps/launch/app-requirements-checklist",
-   "title": "Shopify Dev - App Store requirements checklist",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "Use session tokens for authentication and avoid third-party cookies or local storage",
-   "official": true,
-   "quote_check": "unchecked"
-  }
- ],
- "tested_log": [],
- "last_verified": "2026-10-20",
- "uncertainties": [
-  "Shopify's distribution page does not say whether custom distribution needs review.",
-  "No official page we read states how long App Store review takes or any registration fee; the $19 figure is from a community reply and may have changed.",
-  "The checklist page did not mention GDPR/compliance webhooks; Shopify's separate docs on them were not read.",
-  "Composio's Shopify guide path was followed, not tested."
- ]
 }

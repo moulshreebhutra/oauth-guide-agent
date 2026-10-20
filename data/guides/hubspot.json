@@ -1,252 +1,261 @@
 {
- "app": "HubSpot",
- "slug": "hubspot",
- "provider_domain": "hubspot.com",
- "generated_by": "human-researched",
- "summary": "Creating a public app in a HubSpot developer account gives you OAuth credentials right away. Review applies only if you list the app in the HubSpot Marketplace.",
- "difficulty": {
-  "tier": 2,
-  "label": "Light checks",
-  "rationale": "Using your own app for your own users is self-serve per Composio's guide; Marketplace listing is a separate, reviewed process with install-count requirements.",
-  "tag": "sourced",
-  "evidence": [
-   "e1",
-   "e2"
-  ]
- },
- "effort": {
-  "hands_on_minutes": {
-   "min": 15,
-   "max": 30
+  "app": "HubSpot",
+  "slug": "hubspot",
+  "provider_domain": "hubspot.com",
+  "generated_by": "human-researched",
+  "summary": "Creating a public app in a HubSpot developer account gives you OAuth credentials right away. Review applies only if you list the app in the HubSpot Marketplace.",
+  "difficulty": {
+    "tier": 2,
+    "label": "Light checks",
+    "rationale": "Using your own app for your own users is self-serve per Composio's guide; Marketplace listing is a separate, reviewed process with install-count requirements.",
+    "tag": "sourced",
+    "evidence": [
+      "e1",
+      "e2"
+    ]
   },
-  "basis": "Our estimate. Composio's guide shows only a 3-minute reading time.",
-  "tag": "inferred"
- },
- "wait": {
-  "range": {
-   "min_days": 14,
-   "max_days": 60
+  "effort": {
+    "hands_on_minutes": {
+      "min": 15,
+      "max": 30
+    },
+    "basis": "Our estimate. Composio's guide shows only a 3-minute reading time.",
+    "tag": "inferred"
   },
-  "statement": "Only for Marketplace listing: HubSpot says its team completes an initial review within 10 business days, and the review/feedback process should take no more than 60 days from when feedback is shared. Not needed for using your own public app with your own users (per Composio's guide, which mentions no review).",
-  "tag": "sourced",
-  "evidence": [
-   "e1"
+  "wait": {
+    "range": {
+      "min_days": 14,
+      "max_days": 60
+    },
+    "statement": "Only for Marketplace listing: HubSpot says its team completes an initial review within 10 business days, and the review/feedback process should take no more than 60 days from when feedback is shared. Not needed for using your own public app with your own users (per Composio's guide, which mentions no review).",
+    "tag": "sourced",
+    "evidence": [
+      "e1"
+    ],
+    "display": "10 business days to 60 days (Marketplace listing only)",
+    "headline": "10 business days to 60 days",
+    "kind": "stated",
+    "note": "Only for a Marketplace listing."
+  },
+  "composio_managed": {
+    "status": "yes",
+    "note": "Composio's Hubspot toolkit page lists OAuth2 and API key and says 'Composio-managed OAuth available.' So a developer can connect users without registering their own provider app first; register your own only for your own branding, scopes or rate limits.",
+    "tag": "sourced"
+  },
+  "requirements": [
+    {
+      "text": "A HubSpot developer account; a public app must be linked to one.",
+      "tag": "sourced",
+      "evidence": [
+        "e2"
+      ]
+    },
+    {
+      "text": "Marketplace listing needs at least three active installs from unaffiliated production accounts, OAuth as the sole authorization method, and live Terms of Service and Privacy Policy URLs.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "text": "An app meant for installation by multiple HubSpot accounts, or for the Marketplace, must use OAuth.",
+      "tag": "sourced",
+      "evidence": [
+        "e3"
+      ]
+    },
+    {
+      "text": "The redirect URL must use https in production.",
+      "tag": "sourced",
+      "evidence": [
+        "e4"
+      ]
+    }
   ],
-  "display": "10 business days to 60 days (Marketplace listing only)",
-  "headline": "10 business days to 60 days",
-  "kind": "stated",
-  "note": "Only for a Marketplace listing."
- },
- "composio_managed": {
-  "status": "unknown",
-  "note": "Not checked against the Composio API yet.",
-  "tag": "unknown"
- },
- "requirements": [
-  {
-   "text": "A HubSpot developer account; a public app must be linked to one.",
-   "tag": "sourced",
-   "evidence": [
-    "e2"
-   ]
-  },
-  {
-   "text": "Marketplace listing needs at least three active installs from unaffiliated production accounts, OAuth as the sole authorization method, and live Terms of Service and Privacy Policy URLs.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "text": "An app meant for installation by multiple HubSpot accounts, or for the Marketplace, must use OAuth.",
-   "tag": "sourced",
-   "evidence": [
-    "e3"
-   ]
-  },
-  {
-   "text": "The redirect URL must use https in production.",
-   "tag": "sourced",
-   "evidence": [
-    "e4"
-   ]
-  }
- ],
- "scopes_and_access": [
-  {
-   "text": "A listed app must use all scopes it requests during installation; unused scopes must be removed.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  }
- ],
- "gotchas": [
-  {
-   "text": "You can only submit one app at a time for Marketplace approval; other submissions made during processing are automatically rejected.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "text": "App name, description, logo and support info are shown to users during authentication.",
-   "tag": "sourced",
-   "evidence": [
-    "e2"
-   ]
-  },
-  {
-   "text": "Composio's guide uses two different dashboard addresses (platform.composio.dev and dashboard.composio.dev); use whichever your account opens.",
-   "tag": "sourced",
-   "evidence": [
-    "e2"
-   ]
-  }
- ],
- "steps": [
-  {
-   "n": 1,
-   "title": "Create a HubSpot developer account",
-   "detail": "Needed because a public app must be linked to one.",
-   "who": "you",
-   "why_not_agent": "Account creation.",
-   "tag": "sourced",
-   "evidence": [
-    "e2"
-   ]
-  },
-  {
-   "n": 2,
-   "title": "Create a public app",
-   "detail": "Apps > Create App; fill in name, description, logo, support info.",
-   "who": "you",
-   "why_not_agent": "Needs your signed-in HubSpot session.",
-   "tag": "sourced",
-   "evidence": [
-    "e2"
-   ]
-  },
-  {
-   "n": 3,
-   "title": "Copy credentials and add the redirect URL",
-   "detail": "On the Auth tab copy client ID and secret; add the redirect URL from your Composio auth config.",
-   "who": "you",
-   "why_not_agent": "Secret must go to your secret store.",
-   "tag": "sourced",
-   "evidence": [
-    "e2"
-   ]
-  },
-  {
-   "n": 4,
-   "title": "Create the Composio auth config",
-   "detail": "HubSpot > OAuth2 > own developer authentication; paste credentials; base URL https://api.hubapi.com.",
-   "who": "either",
-   "tag": "sourced",
-   "evidence": [
-    "e2"
-   ]
-  },
-  {
-   "n": 5,
-   "title": "Only if you want a Marketplace listing: submit for review",
-   "detail": "Meet install, security and policy requirements first.",
-   "who": "you",
-   "why_not_agent": "Submission and review back-and-forth are yours.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  }
- ],
- "blockers": [
-  {
-   "symptom": "Marketplace submission is rejected",
-   "likely_cause": "Failed a listing criterion, e.g. fewer than three active installs or unused scopes.",
-   "fix": "Remove unused scopes, meet install count, ensure live policy URLs, resubmit one app at a time.",
-   "escalate_when": "Rejected twice with unclear reasons.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  }
- ],
- "review_process": [
-  {
-   "text": "Listing submissions are manually reviewed by the HubSpot Ecosystem Quality team; initial review within 10 business days.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  }
- ],
- "next_actions": [
-  "Create the developer account and public app.",
-  "Decide whether you actually need a Marketplace listing (reviewed) or only your own users (self-serve)."
- ],
- "agent_vs_you": {
-  "agent_can": [
-   "Check listing requirements against your plan and draft the checklist."
+  "scopes_and_access": [
+    {
+      "text": "A listed app must use all scopes it requests during installation; unused scopes must be removed.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    }
   ],
-  "you_must": [
-   "Create the account/app and handle submission."
+  "gotchas": [
+    {
+      "text": "You can only submit one app at a time for Marketplace approval; other submissions made during processing are automatically rejected.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "text": "App name, description, logo and support info are shown to users during authentication.",
+      "tag": "sourced",
+      "evidence": [
+        "e2"
+      ]
+    },
+    {
+      "text": "Composio's guide uses two different dashboard addresses (platform.composio.dev and dashboard.composio.dev); use whichever your account opens.",
+      "tag": "sourced",
+      "evidence": [
+        "e2"
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "title": "Create a HubSpot developer account",
+      "detail": "Needed because a public app must be linked to one.",
+      "who": "you",
+      "why_not_agent": "Account creation.",
+      "tag": "sourced",
+      "evidence": [
+        "e2"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "Create a public app",
+      "detail": "Apps > Create App; fill in name, description, logo, support info.",
+      "who": "you",
+      "why_not_agent": "Needs your signed-in HubSpot session.",
+      "tag": "sourced",
+      "evidence": [
+        "e2"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "Copy credentials and add the redirect URL",
+      "detail": "On the Auth tab copy client ID and secret; add the redirect URL from your Composio auth config.",
+      "who": "you",
+      "why_not_agent": "Secret must go to your secret store.",
+      "tag": "sourced",
+      "evidence": [
+        "e2"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "Create the Composio auth config",
+      "detail": "HubSpot > OAuth2 > own developer authentication; paste credentials; base URL https://api.hubapi.com.",
+      "who": "either",
+      "tag": "sourced",
+      "evidence": [
+        "e2"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "Only if you want a Marketplace listing: submit for review",
+      "detail": "Meet install, security and policy requirements first.",
+      "who": "you",
+      "why_not_agent": "Submission and review back-and-forth are yours.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "symptom": "Marketplace submission is rejected",
+      "likely_cause": "Failed a listing criterion, e.g. fewer than three active installs or unused scopes.",
+      "fix": "Remove unused scopes, meet install count, ensure live policy URLs, resubmit one app at a time.",
+      "escalate_when": "Rejected twice with unclear reasons.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    }
+  ],
+  "review_process": [
+    {
+      "text": "Listing submissions are manually reviewed by the HubSpot Ecosystem Quality team; initial review within 10 business days.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    }
+  ],
+  "next_actions": [
+    "Create the developer account and public app.",
+    "Decide whether you actually need a Marketplace listing (reviewed) or only your own users (self-serve)."
+  ],
+  "agent_vs_you": {
+    "agent_can": [
+      "Check listing requirements against your plan and draft the checklist."
+    ],
+    "you_must": [
+      "Create the account/app and handle submission."
+    ]
+  },
+  "evidence": [
+    {
+      "id": "e1",
+      "url": "https://developers.hubspot.com/docs/apps/developer-platform/list-apps/listing-your-app/app-marketplace-listing-requirements",
+      "title": "HubSpot - App Marketplace listing requirements",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "the HubSpot Ecosystem Quality team will complete an initial review within 10 business days.",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e2",
+      "url": "https://composio.dev/auth/hubspot",
+      "title": "Composio - HubSpot OAuth2 credentials",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "That's all you need to set up on the HubSpot side.",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e3",
+      "url": "https://developers.hubspot.com/docs/apps/legacy-apps/authentication/working-with-oauth",
+      "title": "HubSpot Developers - Working with OAuth",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "Any app designed for installation by multiple HubSpot accounts or listing on the HubSpot Marketplace must use OAuth.",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e4",
+      "url": "https://developers.hubspot.com/docs/apps/legacy-apps/authentication/working-with-oauth",
+      "title": "HubSpot Developers - Working with OAuth",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "For security reasons, this URL must use https in production.",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e5",
+      "url": "https://developers.hubspot.com/docs/apps/developer-platform/build-apps/overview",
+      "title": "HubSpot Developers - Build apps overview",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "legacy [private apps] and [public apps] are still fully supported and actively maintained by HubSpot.",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e6",
+      "url": "https://docs.composio.dev/toolkits/hubspot",
+      "title": "Composio docs - Hubspot toolkit, Authentication Details",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "Composio-managed OAuth available",
+      "official": true,
+      "quote_check": "unchecked"
+    }
+  ],
+  "tested_log": [],
+  "last_verified": "2026-10-20",
+  "uncertainties": [
+    "HubSpot's OAuth page we read is under the 'legacy apps' path; HubSpot's newer developer platform pages may differ in click paths.",
+    "The page does not state the access-token lifetime or refresh-token lifetime.",
+    "Whether a public OAuth app can serve outside customers without Marketplace listing was not answered by any page read; the OAuth page only says OAuth is required for multi-account installs.",
+    "The wait range is for Marketplace listing only; we converted 10 business days to 14 calendar days.",
+    "No hands-on test logged yet."
   ]
- },
- "evidence": [
-  {
-   "id": "e1",
-   "url": "https://developers.hubspot.com/docs/apps/developer-platform/list-apps/listing-your-app/app-marketplace-listing-requirements",
-   "title": "HubSpot - App Marketplace listing requirements",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "the HubSpot Ecosystem Quality team will complete an initial review within 10 business days.",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e2",
-   "url": "https://composio.dev/auth/hubspot",
-   "title": "Composio - HubSpot OAuth2 credentials",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "That's all you need to set up on the HubSpot side.",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e3",
-   "url": "https://developers.hubspot.com/docs/apps/legacy-apps/authentication/working-with-oauth",
-   "title": "HubSpot Developers - Working with OAuth",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "Any app designed for installation by multiple HubSpot accounts or listing on the HubSpot Marketplace must use OAuth.",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e4",
-   "url": "https://developers.hubspot.com/docs/apps/legacy-apps/authentication/working-with-oauth",
-   "title": "HubSpot Developers - Working with OAuth",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "For security reasons, this URL must use https in production.",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e5",
-   "url": "https://developers.hubspot.com/docs/apps/developer-platform/build-apps/overview",
-   "title": "HubSpot Developers - Build apps overview",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "legacy [private apps] and [public apps] are still fully supported and actively maintained by HubSpot.",
-   "official": true,
-   "quote_check": "unchecked"
-  }
- ],
- "tested_log": [],
- "last_verified": "2026-10-20",
- "uncertainties": [
-  "HubSpot's OAuth page we read is under the 'legacy apps' path; HubSpot's newer developer platform pages may differ in click paths.",
-  "The page does not state the access-token lifetime or refresh-token lifetime.",
-  "Whether a public OAuth app can serve outside customers without Marketplace listing was not answered by any page read; the OAuth page only says OAuth is required for multi-account installs.",
-  "The wait range is for Marketplace listing only; we converted 10 business days to 14 calendar days.",
-  "No hands-on test logged yet."
- ]
 }

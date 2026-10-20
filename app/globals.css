@@ -236,3 +236,24 @@ footer a{color:#fff}
 .b-quote{background:var(--paper);color:var(--muted)}
 .b-gen{background:#fff7e0;border-color:var(--l2);color:var(--l2)}
 .ptop{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.ptop a{font-weight:500}
+
+/* ---------- lookup, trio, managed badge ---------- */
+.sr{position:absolute;left:-9999px}
+.lookup{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:680px;margin:36px auto 0}
+.lookup input{flex:1;min-width:240px;font:16px var(--display);padding:15px 16px;border:1px solid var(--dk-rule);background:var(--dk-card);color:#fff;border-radius:0}
+.lookup input::placeholder{color:var(--dk-muted)}
+.lookup .fine{flex-basis:100%;margin:2px 0 0}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--rule);background:var(--paper)}
+.trio>div{padding:28px;border-right:1px solid var(--rule)}.trio>div:last-child{border-right:0}
+.trio b{font:13px var(--mono);display:inline-grid;place-items:center;width:28px;height:28px;border:1px solid var(--ink);margin-bottom:16px}
+.trio p{margin:0;color:var(--muted);font-size:15px}
+.trio-note{margin:24px auto 0;max-width:820px;font-size:15px;color:var(--muted);text-align:center}.trio-note b{color:var(--ink)}
+@media(max-width:800px){.trio{grid-template-columns:1fr}.trio>div{border-right:0;border-bottom:1px solid var(--rule)}.trio>div:last-child{border-bottom:0}}
+.c-app>span{display:flex;flex-direction:column;gap:3px}
+.mgd{font:10px/1.4 var(--mono);text-transform:uppercase;font-style:normal;padding:0 6px;border:1px solid;align-self:flex-start;letter-spacing:.02em}
+.mgd-yes{color:var(--l1);border-color:var(--l1)}.mgd-no{color:var(--l3);border-color:var(--l3)}
+.finding{background:var(--card);border:1px solid var(--rule);padding:22px 24px;margin:12px 0}
+.finding h3{margin-bottom:6px}.finding p{margin:.3em 0;color:var(--muted)}
+.cols2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.titlerow-s{display:flex;align-items:center;gap:10px}
+.finding ul{margin:8px 0 0;padding-left:18px;font-size:14px;color:var(--muted)}.finding li{margin:6px 0}

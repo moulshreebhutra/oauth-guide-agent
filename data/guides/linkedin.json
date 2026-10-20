@@ -1,328 +1,337 @@
 {
- "app": "LinkedIn",
- "slug": "linkedin",
- "provider_domain": "linkedin.com",
- "generated_by": "human-researched",
- "summary": "Creating the app is quick, but API product access (Advertising, Community Management etc.) is gated by application and review at LinkedIn's discretion with no fixed timeline for restricted programs.",
- "difficulty": {
-  "tier": 4,
-  "label": "Gated / partner approval",
-  "rationale": "LinkedIn states it reviews applications and selects partners at its discretion; restricted APIs have no fixed timeline and all apps start at a Development tier.",
-  "tag": "sourced",
-  "evidence": [
-   "e1"
-  ]
- },
- "effort": {
-  "hands_on_minutes": {
-   "min": 20,
-   "max": 40
+  "app": "LinkedIn",
+  "slug": "linkedin",
+  "provider_domain": "linkedin.com",
+  "generated_by": "human-researched",
+  "summary": "Creating the app is quick, but API product access (Advertising, Community Management etc.) is gated by application and review at LinkedIn's discretion with no fixed timeline for restricted programs.",
+  "difficulty": {
+    "tier": 4,
+    "label": "Gated / partner approval",
+    "rationale": "LinkedIn states it reviews applications and selects partners at its discretion; restricted APIs have no fixed timeline and all apps start at a Development tier.",
+    "tag": "sourced",
+    "evidence": [
+      "e1"
+    ]
   },
-  "basis": "Our estimate for creating the app and requesting access; approval is the real cost.",
-  "tag": "inferred"
- },
- "wait": {
-  "range": null,
-  "statement": "LinkedIn's Marketing access page says there is no fixed timeline, and the Community Management API page states no approval duration for either tier. Treat the wait as unknown and plan for weeks.",
-  "tag": "sourced",
-  "evidence": [
-   "e1"
+  "effort": {
+    "hands_on_minutes": {
+      "min": 20,
+      "max": 40
+    },
+    "basis": "Our estimate for creating the app and requesting access; approval is the real cost.",
+    "tag": "inferred"
+  },
+  "wait": {
+    "range": null,
+    "statement": "LinkedIn's Marketing access page says there is no fixed timeline, and the Community Management API page states no approval duration for either tier. Treat the wait as unknown and plan for weeks.",
+    "tag": "sourced",
+    "evidence": [
+      "e1"
+    ],
+    "display": "No fixed timeline (stated)",
+    "headline": "No fixed timeline",
+    "kind": "unpublished",
+    "note": "Posting access needs approval, and LinkedIn gives no duration."
+  },
+  "composio_managed": {
+    "status": "yes",
+    "note": "Composio's Linkedin toolkit page lists OAuth2 and says 'Composio-managed OAuth available.' So a developer can connect users without registering their own provider app first; register your own only for your own branding, scopes or rate limits.",
+    "tag": "sourced"
+  },
+  "requirements": [
+    {
+      "text": "Create an app with app name, company page URL and logo, and accept legal terms (Composio's guide).",
+      "tag": "sourced",
+      "evidence": [
+        "e2"
+      ]
+    },
+    {
+      "text": "Access to the Advertising API is mandatory for applying to Matched Audiences, Audience Insights and Media Planning APIs.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "text": "Members need appropriate Company Page and Ad Account roles to read or act on page/account data.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "text": "Community Management API (posting/pages): you start on a Development tier with limited call volume, then must apply for Standard tier for full access.",
+      "tag": "sourced",
+      "evidence": [
+        "e6"
+      ]
+    },
+    {
+      "text": "Development tier access can only be requested with a new developer app that has no other API product.",
+      "tag": "sourced",
+      "evidence": [
+        "e7"
+      ]
+    },
+    {
+      "text": "Standard tier needs a screen-cast video for each use case in your request form.",
+      "tag": "sourced",
+      "evidence": [
+        "e8"
+      ]
+    }
   ],
-  "display": "No fixed timeline (stated)",
-  "headline": "No fixed timeline",
-  "kind": "unpublished",
-  "note": "Posting access needs approval, and LinkedIn gives no duration."
- },
- "composio_managed": {
-  "status": "unknown",
-  "note": "Not checked against the Composio API yet.",
-  "tag": "unknown"
- },
- "requirements": [
-  {
-   "text": "Create an app with app name, company page URL and logo, and accept legal terms (Composio's guide).",
-   "tag": "sourced",
-   "evidence": [
-    "e2"
-   ]
-  },
-  {
-   "text": "Access to the Advertising API is mandatory for applying to Matched Audiences, Audience Insights and Media Planning APIs.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "text": "Members need appropriate Company Page and Ad Account roles to read or act on page/account data.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "text": "Community Management API (posting/pages): you start on a Development tier with limited call volume, then must apply for Standard tier for full access.",
-   "tag": "sourced",
-   "evidence": [
-    "e6"
-   ]
-  },
-  {
-   "text": "Development tier access can only be requested with a new developer app that has no other API product.",
-   "tag": "sourced",
-   "evidence": [
-    "e7"
-   ]
-  },
-  {
-   "text": "Standard tier needs a screen-cast video for each use case in your request form.",
-   "tag": "sourced",
-   "evidence": [
-    "e8"
-   ]
-  }
- ],
- "scopes_and_access": [
-  {
-   "text": "Member permissions (3-legged OAuth) are granted automatically once API access is approved.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "text": "Community Management Development tier: 500 app calls per 24 hours and 100 per member per 24 hours; BATCH_GET not allowed; webhooks disabled. You must apply separately to upgrade to Standard.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "text": "r_member_social (reading a member's posts) is a closed permission; LinkedIn is not accepting requests for it.",
-   "tag": "sourced",
-   "evidence": [
-    "e9"
-   ]
-  }
- ],
- "gotchas": [
-  {
-   "text": "Composio's LinkedIn guide does not mention product access or review at all, so following it alone can yield an app that authenticates but lacks the API permissions you need.",
-   "tag": "inferred",
-   "evidence": [
-    "e2",
-    "e1"
-   ]
-  },
-  {
-   "text": "All applications start at the Development tier; you must apply separately for Standard.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "text": "You must complete integration and testing within twelve months of receiving Community Management API access.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "text": "Marketing Version 202511 will be sunset on November 16, 2026; use the latest versioned APIs.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "text": "Access tokens last 60 days. Refresh by sending the member through authorization again, unless you are one of the limited partners with programmatic refresh tokens.",
-   "tag": "sourced",
-   "evidence": [
-    "e3",
-    "e4",
-    "e5"
-   ]
-  }
- ],
- "steps": [
-  {
-   "n": 1,
-   "title": "Create the LinkedIn app",
-   "detail": "Developer portal > Create app; name, company page URL, logo; accept terms.",
-   "who": "you",
-   "why_not_agent": "Needs your signed-in LinkedIn account and a company page you administer.",
-   "tag": "sourced",
-   "evidence": [
-    "e2"
-   ]
-  },
-  {
-   "n": 2,
-   "title": "Copy client ID and secret; add the redirect URL",
-   "detail": "Auth tab > Application credentials, and OAuth 2.0 Settings with the redirect URL from your Composio auth config.",
-   "who": "you",
-   "why_not_agent": "Secret goes to your secret store.",
-   "tag": "sourced",
-   "evidence": [
-    "e2"
-   ]
-  },
-  {
-   "n": 3,
-   "title": "Apply for the API products you need",
-   "detail": "Use the product's apply link/Quick Start. Restricted programs need an application survey.",
-   "who": "you",
-   "why_not_agent": "Application and business justification are yours.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  },
-  {
-   "n": 4,
-   "title": "Wait for review; then create the Composio auth config",
-   "detail": "Own credentials; no Bearer Token support for LinkedIn per Composio.",
-   "who": "either",
-   "tag": "sourced",
-   "evidence": [
-    "e2"
-   ]
-  },
-  {
-   "n": 5,
-   "title": "Upgrade tier if limits block you",
-   "detail": "Apply separately for Standard through the stated process.",
-   "who": "you",
-   "why_not_agent": "Support ticket / review process is yours.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  }
- ],
- "blockers": [
-  {
-   "symptom": "Authorization works but API calls return permission errors",
-   "likely_cause": "The app has not been granted the API product, or you are on the Development tier with its limits.",
-   "fix": "Check which products are approved for the app and apply for missing ones.",
-   "escalate_when": "No response on a restricted application; use the Developer Support Portal.",
-   "tag": "inferred",
-   "evidence": [
-    "e1"
-   ]
-  }
- ],
- "review_process": [
-  {
-   "text": "LinkedIn reserves the right to review applications and select partners at its discretion, and a partner might not be upgraded even if minimum requirements are met.",
-   "tag": "sourced",
-   "evidence": [
-    "e1"
-   ]
-  }
- ],
- "next_actions": [
-  "Create the app today to start the clock on product applications.",
-  "Prepare a clear use-case description and company page before applying."
- ],
- "agent_vs_you": {
-  "agent_can": [
-   "Draft the use-case text and map your needed endpoints to the right LinkedIn products."
+  "scopes_and_access": [
+    {
+      "text": "Member permissions (3-legged OAuth) are granted automatically once API access is approved.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "text": "Community Management Development tier: 500 app calls per 24 hours and 100 per member per 24 hours; BATCH_GET not allowed; webhooks disabled. You must apply separately to upgrade to Standard.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "text": "r_member_social (reading a member's posts) is a closed permission; LinkedIn is not accepting requests for it.",
+      "tag": "sourced",
+      "evidence": [
+        "e9"
+      ]
+    }
   ],
-  "you_must": [
-   "Create and own the app and company page; apply and follow up with LinkedIn."
+  "gotchas": [
+    {
+      "text": "Composio's LinkedIn guide does not mention product access or review at all, so following it alone can yield an app that authenticates but lacks the API permissions you need.",
+      "tag": "inferred",
+      "evidence": [
+        "e2",
+        "e1"
+      ]
+    },
+    {
+      "text": "All applications start at the Development tier; you must apply separately for Standard.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "text": "You must complete integration and testing within twelve months of receiving Community Management API access.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "text": "Marketing Version 202511 will be sunset on November 16, 2026; use the latest versioned APIs.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "text": "Access tokens last 60 days. Refresh by sending the member through authorization again, unless you are one of the limited partners with programmatic refresh tokens.",
+      "tag": "sourced",
+      "evidence": [
+        "e3",
+        "e4",
+        "e5"
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "n": 1,
+      "title": "Create the LinkedIn app",
+      "detail": "Developer portal > Create app; name, company page URL, logo; accept terms.",
+      "who": "you",
+      "why_not_agent": "Needs your signed-in LinkedIn account and a company page you administer.",
+      "tag": "sourced",
+      "evidence": [
+        "e2"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "Copy client ID and secret; add the redirect URL",
+      "detail": "Auth tab > Application credentials, and OAuth 2.0 Settings with the redirect URL from your Composio auth config.",
+      "who": "you",
+      "why_not_agent": "Secret goes to your secret store.",
+      "tag": "sourced",
+      "evidence": [
+        "e2"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "Apply for the API products you need",
+      "detail": "Use the product's apply link/Quick Start. Restricted programs need an application survey.",
+      "who": "you",
+      "why_not_agent": "Application and business justification are yours.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "Wait for review; then create the Composio auth config",
+      "detail": "Own credentials; no Bearer Token support for LinkedIn per Composio.",
+      "who": "either",
+      "tag": "sourced",
+      "evidence": [
+        "e2"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "Upgrade tier if limits block you",
+      "detail": "Apply separately for Standard through the stated process.",
+      "who": "you",
+      "why_not_agent": "Support ticket / review process is yours.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "symptom": "Authorization works but API calls return permission errors",
+      "likely_cause": "The app has not been granted the API product, or you are on the Development tier with its limits.",
+      "fix": "Check which products are approved for the app and apply for missing ones.",
+      "escalate_when": "No response on a restricted application; use the Developer Support Portal.",
+      "tag": "inferred",
+      "evidence": [
+        "e1"
+      ]
+    }
+  ],
+  "review_process": [
+    {
+      "text": "LinkedIn reserves the right to review applications and select partners at its discretion, and a partner might not be upgraded even if minimum requirements are met.",
+      "tag": "sourced",
+      "evidence": [
+        "e1"
+      ]
+    }
+  ],
+  "next_actions": [
+    "Create the app today to start the clock on product applications.",
+    "Prepare a clear use-case description and company page before applying."
+  ],
+  "agent_vs_you": {
+    "agent_can": [
+      "Draft the use-case text and map your needed endpoints to the right LinkedIn products."
+    ],
+    "you_must": [
+      "Create and own the app and company page; apply and follow up with LinkedIn."
+    ]
+  },
+  "evidence": [
+    {
+      "id": "e1",
+      "url": "https://learn.microsoft.com/da-dk/linkedin/marketing/increasing-access",
+      "title": "LinkedIn Marketing - Increasing Access",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "Restricted APIs are evaluated on a case-by-case basis with no fixed timeline",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e2",
+      "url": "https://composio.dev/auth/linkedin",
+      "title": "Composio - LinkedIn OAuth2 config",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "There is no support for Bearer Token with LinkedIn.",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e3",
+      "url": "https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow",
+      "title": "LinkedIn Learn - Authorization Code Flow (3-legged OAuth)",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "Currently, all access tokens are issued with a 60-day lifespan.",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e4",
+      "url": "https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow",
+      "title": "LinkedIn Learn - Authorization Code Flow (3-legged OAuth)",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "Programmatic refresh tokens are available for a limited set of partners.",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e5",
+      "url": "https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow",
+      "title": "LinkedIn Learn - Authorization Code Flow (3-legged OAuth)",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "To refresh an access token, go through the authorization process again to fetch a new token.",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e6",
+      "url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/community-management-overview",
+      "title": "LinkedIn Learn - Community Management API overview",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "You will be initially approved with a development tier with limited access to the API call volume.",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e7",
+      "url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/community-management-overview",
+      "title": "LinkedIn Learn - Community Management API overview",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "You can only request Community Management API Development Tier access with a new developer application that does not have access to any other API product.",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e8",
+      "url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/community-management-overview",
+      "title": "LinkedIn Learn - Community Management API overview",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "ensure you provide a screen cast video that demonstrates, for each use case specified in your access request form",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e9",
+      "url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/community-management-overview",
+      "title": "LinkedIn Learn - Community Management API overview",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "r_member_social is a closed permission, and we are not accepting access requests at this time due to resource constraints.",
+      "official": true,
+      "quote_check": "unchecked"
+    },
+    {
+      "id": "e10",
+      "url": "https://docs.composio.dev/toolkits/linkedin",
+      "title": "Composio docs - Linkedin toolkit, Authentication Details",
+      "retrieved_at": "2026-10-20",
+      "excerpt": "Composio-managed OAuth available",
+      "official": true,
+      "quote_check": "unchecked"
+    }
+  ],
+  "tested_log": [],
+  "last_verified": "2026-10-20",
+  "uncertainties": [
+    "No LinkedIn page we read states a typical approval duration for Development or Standard tier.",
+    "Share on LinkedIn and Sign In with LinkedIn products (common for simple posting) were not read in this pass and may be easier than Community Management API.",
+    "Third-party blogs claim timelines; they were not used.",
+    "No hands-on test logged yet."
   ]
- },
- "evidence": [
-  {
-   "id": "e1",
-   "url": "https://learn.microsoft.com/da-dk/linkedin/marketing/increasing-access",
-   "title": "LinkedIn Marketing - Increasing Access",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "Restricted APIs are evaluated on a case-by-case basis with no fixed timeline",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e2",
-   "url": "https://composio.dev/auth/linkedin",
-   "title": "Composio - LinkedIn OAuth2 config",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "There is no support for Bearer Token with LinkedIn.",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e3",
-   "url": "https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow",
-   "title": "LinkedIn Learn - Authorization Code Flow (3-legged OAuth)",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "Currently, all access tokens are issued with a 60-day lifespan.",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e4",
-   "url": "https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow",
-   "title": "LinkedIn Learn - Authorization Code Flow (3-legged OAuth)",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "Programmatic refresh tokens are available for a limited set of partners.",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e5",
-   "url": "https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow",
-   "title": "LinkedIn Learn - Authorization Code Flow (3-legged OAuth)",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "To refresh an access token, go through the authorization process again to fetch a new token.",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e6",
-   "url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/community-management-overview",
-   "title": "LinkedIn Learn - Community Management API overview",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "You will be initially approved with a development tier with limited access to the API call volume.",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e7",
-   "url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/community-management-overview",
-   "title": "LinkedIn Learn - Community Management API overview",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "You can only request Community Management API Development Tier access with a new developer application that does not have access to any other API product.",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e8",
-   "url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/community-management-overview",
-   "title": "LinkedIn Learn - Community Management API overview",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "ensure you provide a screen cast video that demonstrates, for each use case specified in your access request form",
-   "official": true,
-   "quote_check": "unchecked"
-  },
-  {
-   "id": "e9",
-   "url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/community-management-overview",
-   "title": "LinkedIn Learn - Community Management API overview",
-   "retrieved_at": "2026-10-20",
-   "excerpt": "r_member_social is a closed permission, and we are not accepting access requests at this time due to resource constraints.",
-   "official": true,
-   "quote_check": "unchecked"
-  }
- ],
- "tested_log": [],
- "last_verified": "2026-10-20",
- "uncertainties": [
-  "No LinkedIn page we read states a typical approval duration for Development or Standard tier.",
-  "Share on LinkedIn and Sign In with LinkedIn products (common for simple posting) were not read in this pass and may be easier than Community Management API.",
-  "Third-party blogs claim timelines; they were not used.",
-  "No hands-on test logged yet."
- ]
 }

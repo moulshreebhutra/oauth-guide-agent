@@ -1,59 +1,61 @@
-# OAuth Setup Guides
+# OAuth Route Map: APM Integrations take-home
 
-A working experience that tells a developer what it really takes to register an OAuth app with a provider and get it approved: how hard it is, how much of your time it needs, how long approval can take, what an agent can do versus what only you can, and where we are unsure.
+**Live:** https://oauth-guide-agent.vercel.app · **Repo:** https://github.com/moulshreebhutra/oauth-guide-agent · Built by Moulshree Bhutra for Composio's APM, Toolkits take-home.
 
-- **Library**: 10 researched guides covering different kinds of difficulty (self-serve, light checks, review required, gated).
-- **Live agent** (`/live`): type any app name or website; an agent searches, reads the provider's pages and writes a guide, streaming its progress. Code checks the result before showing it.
-- **Ask** (home and every guide): retrieval-augmented Q&A over the guides. Passages are retrieved with a BM25 index (`lib/rag.ts`); Gemini answers only from them and must cite passage ids, which code verifies. Without a key it returns the passages themselves.
-- **Route map** (home): all ten providers side by side, with bars for hands-on time (our estimate) and the wait providers state.
-- **How it works** (`/how-it-works`): end-to-end explanation with an architecture diagram.
-- **Method** (`/method`): what each label means and what is and is not verified.
+## The problem, and the choice I made
+A developer who wants their users to connect an app may first have to register an OAuth app with the provider and get it approved. They cannot tell whether that is an hour or weeks, what blocks approval, or what an agent can do for them. Existing setup guides cover the clicking and skip the decision.
+
+Scope: a focused slice that answers the developer's questions **before** they start: how hard is it, how much of my time, how long is the wait, what are the catches, what can an agent do and where do I take over, and how sure are you. Ten researched providers chosen for different kinds of difficulty, plus a live agent for any other app.
+
+## What is in it
+| Page | What it does |
+|---|---|
+| **Home** | Look up any app by name or website (library guide, or straight to the live agent). Explains the three pieces people mix up (provider OAuth app, your integration, your users' connections). Compares all ten providers side by side: difficulty, your time, the provider's approval wait, and whether Composio can manage the OAuth app. |
+| **Guides** (`/guide/<app>`) | Per provider: difficulty tier with a written reason, hands-on time, approval wait, Composio managed-auth status, requirements, scopes, steps (marked *you* / *agent* / *either*, with why-not-agent), blockers with fixes and when to escalate, next actions, what was tested, what is uncertain, sources with quoted excerpts. Includes an Ask box scoped to the guide. |
+| **Live agent** (`/live`) | Type an app name or website. The agent probes Composio and the provider's OAuth discovery, searches, reads the provider's pages and writes a guide, streaming its progress. Code checks the result (below). The guide comes with a **share link** (signed, stateless) and a JSON copy. |
+| **Ask** | Question answering over all the guides: BM25 retrieval with synonym groups (approval = review = verification), re-ranked by Gemini embeddings; a model writes the answer from the retrieved passages and code verifies every citation. App names and "tell me everything about X" return that guide in reading order. Questions outside the guides are answered from general model knowledge and labelled as such. |
+| **Findings** (`/findings`) | What the research taught us, what was corrected or held back, what could not be verified. |
+| **How it works / Method** | Architecture, the evidence labels, what code checks, the plan for scaling to 100 apps. |
+
+## Key findings (details on `/findings`)
+- Registering is often instant; the wait attaches to a later step (Marketplace listing, package security review, scope review).
+- No official page gave an approval duration for 3 of 10 providers; where a number exists it is often a maximum (Slack) or one stage (HubSpot).
+- Composio's own toolkit pages say "Composio-managed OAuth available" for 9 of the 10 providers; **Shopify** says not available, so a developer there registers first.
+- Existing guides give steps but no setup time, difficulty or troubleshooting.
+
+## Evidence and honesty
+Every claim carries one tag: **tested** (we did it), **sourced** (a quoted excerpt supports it), **reported** (community or third party only), **inferred** (our reasoning), **unknown**.
+- Hands-on time is *inferred* because no provider publishes it.
+- For live guides code, not the model, enforces honesty (`lib/postprocess.ts`): evidence must come from a page fetched in that run; each quote must literally appear in that page or it is removed; a *sourced* claim that loses its evidence is downgraded to *inferred*; the model can never mark anything *tested*; the guide must pass a schema and consistency checks or nothing is shown.
+- **Not yet done, and said plainly:** no hands-on registration is logged, so nothing is tagged *tested*; library quotes are `unchecked` until `npm run verify-quotes` is run from an open network; the prediction-vs-actual check for unseen apps (`docs/TESTING.md`) has not been run.
+
+## Agents, and how they are kept reliable
+- The live agent picks searches and pages (JSON actions), code executes them under an action and time budget, blocks private/loopback addresses on every redirect, and treats page text as data.
+- Ask and the agent call **several free models at once and use the first good answer**: four Gemini models, plus Groq and OpenRouter when their keys are set. Busy/rate-limit errors are retried with exponential backoff and jitter. Good answers are cached for six hours. If every model fails, Ask returns a summary composed by code from the guides' own sentences, labelled as not written by AI.
+- `/api/health` shows which models your key can see and which answer right now (never the key). `npm run check:live -- <url>` runs an end-to-end check of the deployed site.
 
 ## Run it
-
 ```bash
 npm install
-cp .env.example .env.local   # then fill in GEMINI_API_KEY (and optionally COMPOSIO_API_KEY)
-npm run dev                  # http://localhost:3000
-npm test                     # guardrail tests (offline)
-npm run validate             # schema + consistency checks on every library guide
-npm run verify-quotes        # re-matches every library quote against the live page (needs internet)
+cp .env.example .env.local     # fill in the keys you have; every key is optional
+npm run dev                    # http://localhost:3000
+npm test                       # offline tests (guardrails, share links, retrieval, citations)
+npm run validate               # schema + consistency checks on every library guide
+npm run verify-quotes          # re-matches every library quote against the live page (needs internet)
+npm run check:live -- https://oauth-guide-agent.vercel.app
+GEMINI_API_KEY=... npx tsx scripts/batch-generate.ts "Linear" "Zoom"   # research more apps for review
 ```
+Environment variables (host secrets only, **never commit keys**; `.env*` is git-ignored and the app never asks users for credentials):
+`GEMINI_API_KEY` (live agent, Ask, embeddings) · `GROQ_API_KEY`, `OPENROUTER_API_KEY` (optional extra free providers) · `SHARE_SECRET` (16+ chars, enables share links) · `COMPOSIO_API_KEY` (optional, managed-auth lookup for live guides) · `GEMINI_MODEL`, `GEMINI_EMBED_MODEL`, `GROQ_MODEL`, `OPENROUTER_MODEL` (optional overrides).
+Deploy: import the repo in Vercel (Next.js, no build settings), add the variables, redeploy after any change. Pushes to `main` deploy automatically.
 
-Deploy: push the repo to GitHub, import it in Vercel (framework Next.js, no build settings needed). `next.config.ts` already ships `data/guides` with the API functions. Add the variables below under Project Settings → Environment Variables. **Never commit keys**; `.env*` is git-ignored and the app never asks users for credentials.
-
-Without `GEMINI_API_KEY` the library works and `/live` says it is not configured (it does not make anything up).
-
-## Key decisions
-
-1. **Evidence-first, not fluent-first.** Every claim carries one tag: *tested*, *sourced*, *reported*, *inferred*, *unknown*. Time estimates are tagged *inferred* because no provider publishes hands-on time.
-2. **Code, not the model, polices honesty.** For live guides: evidence must come from a page fetched in that run; each quote must literally appear in that page's text or it is removed; a *sourced* claim that loses its evidence is downgraded to *inferred*; the model cannot mark anything *tested*; output must pass a schema and consistency checks or nothing is shown (`lib/postprocess.ts`, `tests/guardrails.test.ts`).
-3. **Fetched pages are data.** Prompts fence page text; the agent has a fixed action budget and time budget; fetches block private/loopback addresses on every redirect hop; input is cleaned; `/api/generate` is rate limited (best-effort in-memory, per instance).
-4. **Agent loop kept simple.** The model chooses the next search or page (JSON action), code executes it. Chosen over SDK function-calling to keep behaviour predictable and the model swappable (`GEMINI_MODEL`).
-5. **Where Composio's existing guides stop, we start.** Composio publishes 46 setup guides at composio.dev/auth. We read ten in full: none gives setup time, difficulty or troubleshooting, and several never mention approval. We cite them as sources and add what they omit; we did not copy their text.
-6. **Tiers**: 1 self-serve · 2 light checks · 3 review required · 4 gated / partner approval, each with a written rationale.
-
-## What was verified, and what was not (be skeptical of anything not in this list)
-
-- Library guides were researched on 2026-10-20 from provider docs and Composio's guides. Quotes were collected through a page-reading tool that summarises pages, so each is marked `quote_check: "unchecked"` until `npm run verify-quotes` is run from an open network.
-- Guardrail and retrieval logic is unit-tested offline (9 tests): quote matching, SSRF blocks, input cleaning, rate limiting, downgrade-on-fabricated-quote, retrieval ranking, off-topic rejection, citation checking.
-- The production build, page rendering (desktop and 390px width) and the API's refusal paths were checked locally.
-- **Not yet verified here**: the live agent end-to-end with a real Gemini key and open internet; Composio's toolkit endpoint response shape; DuckDuckGo HTML search reliability. See `docs/TESTING.md` for the hands-on registration log template and the prediction-vs-outcome check for unseen apps.
-- **Hands-on registrations**: none logged in the first build, so "What was tested" is empty on every guide rather than claimed.
+## From 10 guides to 100
+`scripts/batch-generate.ts` runs a list of apps through the same agent and saves each guide to `data/guides/_generated` for review. Plan: seed from Composio's managed-auth directory, batch, review a sample against provider docs and `verify-quotes`, promote reviewed guides, re-check on a schedule. Unreviewed guides stay labelled as agent-generated.
 
 ## Limitations
-
 - Provider docs change; each guide shows its last-verified date.
-- Approval wait times are rarely published; where unstated, we say so.
-- Live guides are unreviewed by a person and are labelled that way.
-- Gemini free-tier content may be used by Google to improve its products (per Google's pricing page, 2026-10-20). The agent sends only the app name and public page text.
-- Free-tier rate limits are per project and shown in Google AI Studio; heavy use will hit them. Vercel Hobby function duration was not confirmed, so the route is set to 60 s and the agent stops researching at 30 s.
-- Share links for generated guides are not implemented; use "Copy guide JSON".
-
-
-## Update 2026-10-20
-
-- All 10 guides rewritten with facts from official pages (Slack review maxima and 10-workspace rule, Google test-mode limits, Microsoft secret lifetime, Notion listing review, Salesforce security-review stages, LinkedIn 60-day tokens and tiers, Meta app modes, Shopify distribution rules). Each fact cites a quoted excerpt; all quotes are still `unchecked` until `npm run verify-quotes` runs from an open-internet machine.
-- Share links: set `SHARE_SECRET` (16+ chars) in host env vars. The live agent then returns `/s/<token>`, a signed, compressed copy of the guide. Nothing is stored. No secret means no links.
-- UI restyled to follow composio.dev (Geist + JetBrains Mono, dark bands, square corners).
-- Still not done: hands-on registrations (nothing is tagged Tested), live-agent run against real Gemini, deployment.
+- Approval durations are rarely published; where unstated the guide says so.
+- Live guides are not reviewed by a person and are labelled that way. Share links carry the whole guide in the URL; very long guides get no link (copy the JSON instead).
+- Free-tier model limits are per project; heavy use will hit them, which is why Ask falls back to other providers and then to code.
+- Gemini free-tier content may be used by Google to improve its products; the agent sends only the app name and public page text.
+- Composio's managed-auth status for Google and Meta was read from the Gmail and Facebook toolkit pages; other toolkits under those providers were not each checked.

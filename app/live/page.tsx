@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GuideView } from "@/components/GuideView";
 import { PageHead } from "@/components/PageHead";
 import type { Guide } from "@/lib/schema";
@@ -8,6 +8,7 @@ type Line = { kind: "status" | "tool" | "warn" | "error"; text: string };
 
 export default function Live() {
   const [app, setApp] = useState("");
+  useEffect(() => { try { const q = new URLSearchParams(location.search).get("app"); if (q) setApp(q.slice(0, 120)); } catch {} }, []);
   const [busy, setBusy] = useState(false);
   const [lines, setLines] = useState<Line[]>([]);
   const [guide, setGuide] = useState<{ g: Guide; notes: string[] } | null>(null);
