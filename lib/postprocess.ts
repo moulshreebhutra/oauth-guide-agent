@@ -70,15 +70,15 @@ export function enforce(draft: unknown, fetched: Fetched[], now = new Date().toI
   };
 
   // "no review is mentioned" is an absence: it cannot be sourced
-  const ABSENCE = /\b(no|not|none|nothing)\b[^.]{0,50}\b(review|approval|approve|wait|fee|gate|step|duration|stated|mentioned|described|found|listed)\b|\b(does|do|did) not (state|mention|list|describe)/i;
+  const ABSENCE = /^\s*(no|none|nothing|not)\b[^.]{0,60}\b(review|approval|wait|fee|gate|step|duration|stated|mentioned|described|found|listed)\b|^[^.]{0,80}\b(does|do|did) not (state|mention|list|describe)\b|\b(was|were|is|are) not (stated|mentioned|described|found|listed)\b/i;
   const noNum = (t: string) => !/\b\d{2,}\b/.test(t);
-  for (const c of [d.difficulty, ...(d.review_process ?? [])]) {
-    const t = String(c?.statement ?? c?.detail ?? c?.text ?? c?.rationale ?? "");
+  for (const c of d.review_process ?? []) {
+    const t = String(c?.text ?? "");
     if (c?.tag === "sourced" && ABSENCE.test(t) && noNum(t)) { c.tag = "unknown"; notes.push("an absence ('no review mentioned') cannot be sourced; tagged unknown"); }
   }
   fix(d.difficulty, "difficulty");
   // a high tier needs a stated gate; a reported or inferred one lowers it to 2
-  if (d.difficulty?.tier >= 3 && d.difficulty.tag !== "sourced") { d.difficulty.tier = 2; notes.push("tier lowered to 2: the gate is only reported or inferred, not stated by an official page"); d.uncertainties = [...(d.uncertainties ?? []), "A review or partner gate was mentioned but not confirmed by an official page, so the tier was kept at 2 (light checks)."]; }
+  if (d.difficulty?.tier >= 3 && d.difficulty.tag !== "sourced" && !(d.review_process ?? []).some((c: any) => c.tag === "sourced")) { d.difficulty.tier = 2; notes.push("tier lowered to 2: the gate is only reported or inferred, not stated by an official page"); d.uncertainties = [...(d.uncertainties ?? []), "A review or partner gate was mentioned but not confirmed by an official page, so the tier was kept at 2 (light checks)."]; }
   // "no duration is published" is an absence, not something a page states
   if (d.wait?.kind === "unpublished" && d.wait.tag === "sourced") { d.wait.tag = "unknown"; notes.push("wait: an unpublished duration is tagged unknown, not sourced"); }
   fix(d.wait, "wait");
