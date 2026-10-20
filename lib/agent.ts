@@ -26,7 +26,12 @@ async function ask(prompt: string, timeoutMs = ACTION_TIMEOUT_MS, json = true): 
 
 function parseJson(s: string): any {
   const t = s.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
-  return JSON.parse(t);
+  try { return JSON.parse(t); } catch {
+    // some models add a sentence around the JSON: take the outermost object
+    const a = t.indexOf("{"), b = t.lastIndexOf("}");
+    if (a >= 0 && b > a) return JSON.parse(t.slice(a, b + 1));
+    throw new Error("the model did not return JSON");
+  }
 }
 
 const exampleGuide = () => JSON.stringify(RAW_GUIDES.find((g: any) => g.slug === "github"));
@@ -102,7 +107,7 @@ Task: find how a developer registers an OAuth app for "${input.name}"${input.sit
 Pages fetched so far:\n${have}
 Recent tool log:\n${log.slice(-6).join("\n") || "(none)"}
 Choose ONE next action as JSON: {"action":"search","arg":"<query>"} | {"action":"fetch","arg":"<https url>"} | {"action":"done","arg":""}.
-Prefer the provider's official developer docs (OAuth app creation, app review/verification, distribution) and any Composio guide at composio.dev/auth/<slug>. Say done once you have the official registration page AND the review/approval information, or ${MAX_ACTIONS} actions are used.`;
+Prefer the provider's official developer docs (OAuth app creation, app review/verification, distribution) and any Composio guide at composio.dev/auth/<slug>. If the product is registered through a parent platform (Instagram -> Meta, YouTube -> Google, Teams -> Microsoft), research the parent platform's pages. Look for: where the app is created, account prerequisites, scopes, dev versus live mode, review or verification and any stated duration, fees or minimums, token lifetime, rate limits. Say done once you have the official registration page AND the review/approval information, or ${MAX_ACTIONS} actions are used.`;
     let act: { action: string; arg: string };
     try {
       act = parseJson(await ask(prompt));

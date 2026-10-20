@@ -33,3 +33,18 @@ test("web prompt carries the method, format and gap rules", () => {
   const p = webPrompt("How long is review?", { app: "Zoom", passages: [{ id: "w1#1", slug: "web", app: "Zoom", section: "x", text: "Zoom. Apps need review.", url: "https://developers.zoom.us/x" } as any], pages: [], composio: { status: "yes", methods: ["OAUTH2"] }, steps: [] });
   for (const s of ["METHOD", "FORMAT", "Not stated in the pages we read", "[w1#1]", "AVAILABLE", "QUESTION: How long is review?"]) if (!p.includes(s)) throw new Error("missing " + s);
 });
+
+import { FAMILY } from "../lib/webask";
+import { skillText, FIELDS } from "../data/skill";
+test("skill covers method, format, links and question moves", () => {
+  const t = skillText("How long does Instagram review take and can an agent do it?");
+  for (const x of ["METHOD", "FORMAT", "LINKS", "TIMING QUESTION", "AGENT QUESTION", "Not stated in the pages we read"]) assert.ok(t.includes(x), x);
+  assert.ok(FIELDS.length >= 12);
+});
+test("apps under a researched platform map to its guide, and the prompt uses it", () => {
+  assert.equal(FAMILY.instagram.slug, "meta");
+  assert.equal(FAMILY.youtube.slug, "google-workspace");
+  assert.ok(loadGuide(FAMILY.instagram.slug));
+  const p = webPrompt("Do I need review?", { family: FAMILY.instagram, app: "Instagram", passages: [{ id: "meta#3", slug: "meta", app: "Meta", section: "Requirements", text: "App Review is needed.", url: "https://x.test/guide/meta", tag: "sourced" } as any], pages: [], composio: null, steps: [] });
+  assert.ok(p.includes("OUR LIBRARY") && p.includes("registered and reviewed through Meta") && p.includes("METHOD") && p.includes("Likely, from general knowledge"));
+});

@@ -94,9 +94,51 @@ async function callXai(prompt: string, ms: number, temperature: number): Promise
   return String(t);
 }
 
-export async function generate(
+let lastPaidErr = "";
+type GenOpts = { json?: boolean; timeoutMs?: number; temperature?: number; models?: string[]; deadlineMs?: number; race?: boolean; fast?: boolean; only?: "gemini" };
+
+/**
+ * Public entry. Providers are tried in three tiers, one provider per tier:
+ *   1) Claude or Groq (a coin flip, so load is shared)   2) Gemini or OpenRouter (coin flip)   3) Claude, as the last resort.
+ * Bedrock and Grok, if configured, join tier 1. A tier with nothing configured is skipped. Every failure is reported by name,
+ * so a wrong key, no credit or a bad model name is visible instead of hidden behind another provider's error.
+ */
+export async function generate(prompt: string, opts: GenOpts = {}): Promise<string> {
+  const started = Date.now();
+  const total = Math.min(opts.deadlineMs ?? opts.timeoutMs ?? 28_000, 50_000);
+  const temp = opts.temperature ?? 0.2;
+  const p = opts.json ? `${prompt}\n\nReturn ONLY valid JSON: no prose before or after it and no code fences.` : prompt;
+  const env = process.env;
+  const run: Record<string, (ms: number) => Promise<string>> = {
+    claude: (ms) => callAnthropic(p, ms, temp),
+    groq: (ms) => callGroq(p, ms, temp),
+    bedrock: (ms) => callBedrock(p, ms, temp),
+    grok: (ms) => callXai(p, ms, temp),
+    openrouter: (ms) => callOpenRouter(p, ms, temp),
+    gemini: (ms) => generateCore(p, { ...opts, only: "gemini", race: true, fast: true, timeoutMs: ms, deadlineMs: ms }),
+  };
+  const have: Record<string, boolean> = { claude: !!env.ANTHROPIC_API_KEY, groq: !!env.GROQ_API_KEY, bedrock: !!env.AWS_BEARER_TOKEN_BEDROCK, grok: !!env.XAI_API_KEY, openrouter: !!env.OPENROUTER_API_KEY, gemini: !!env.GEMINI_API_KEY };
+  const tiers = [["claude", "groq", "bedrock", "grok"], ["gemini", "openrouter"], ["claude"]].map((t) => t.filter((n) => have[n])).filter((t) => t.length);
+  if (!tiers.length) throw new Error("No AI model is configured on the server");
+  const errors: string[] = [];
+  const used = new Set<string>();
+  for (let i = 0; i < tiers.length; i++) {
+    // within a tier, a random configured provider that has not already failed (the last tier may repeat Claude on purpose)
+    const pool = tiers[i].filter((n) => !used.has(n) || i === tiers.length - 1);
+    if (!pool.length) continue;
+    const name = pool[Math.floor(Math.random() * pool.length)];
+    const left = total - (Date.now() - started);
+    if (left < 3000) { errors.push(`${name}: no time left`); break; }
+    const share = Math.max(3000, Math.floor(left / (tiers.length - i)));
+    try { return await run[name](Math.min(share, 20_000)); }
+    catch (e) { errors.push(`${name}: ${safeError(e)}`); used.add(name); }
+  }
+  throw new Error(errors.join(" | ").slice(0, 900));
+}
+
+async function generateCore(
   prompt: string,
-  opts: { json?: boolean; timeoutMs?: number; temperature?: number; models?: string[]; deadlineMs?: number; race?: boolean; fast?: boolean } = {},
+  opts: GenOpts = {},
 ): Promise<string> {
   // Paid primaries (Anthropic API and/or Amazon Bedrock) race each other; free providers below are the backup.
   let primaryErr = "";
@@ -116,13 +158,13 @@ export async function generate(
   if (process.env.ANTHROPIC_API_KEY) paid.push(twice("claude", (ms) => callAnthropic(prompt, ms, opts.temperature ?? 0.2)));
   if (process.env.AWS_BEARER_TOKEN_BEDROCK) paid.push(twice("bedrock", (ms) => callBedrock(prompt, ms, opts.temperature ?? 0.2)));
   if (process.env.XAI_API_KEY) paid.push(twice("grok", (ms) => callXai(prompt, ms, opts.temperature ?? 0.2)));
-  if (paid.length) {
+  if (paid.length && !opts.only) {
     try { return await Promise.any(paid); }
-    catch (e) { primaryErr = ((e as AggregateError).errors ?? []).map((x: any) => x.message).join(" | "); }
+    catch (e) { primaryErr = ((e as AggregateError).errors ?? []).map((x: any) => x.message).join(" | "); lastPaidErr = primaryErr; }
     if (!process.env.GEMINI_API_KEY && !process.env.GROQ_API_KEY && !process.env.OPENROUTER_API_KEY) throw new Error(primaryErr);
   }
   const key = process.env.GEMINI_API_KEY;
-  if (!key && (process.env.GROQ_API_KEY || process.env.OPENROUTER_API_KEY)) {
+  if (!key && !opts.only && (process.env.GROQ_API_KEY || process.env.OPENROUTER_API_KEY)) {
     const rs: Promise<string>[] = [];
     if (process.env.GROQ_API_KEY) rs.push(callGroq(prompt, 15_000, opts.temperature ?? 0.2));
     if (process.env.OPENROUTER_API_KEY) rs.push(callOpenRouter(prompt, 15_000, opts.temperature ?? 0.2));
@@ -181,8 +223,8 @@ export async function generate(
       const attempt = (m: string) => withBackoff((left) => call(m, left));
       const runners = models.map((m) => attempt(m).catch((e) => { throw new Error(`${m}: ${safeError(e)}`); }));
       // independent second provider (free Groq key), raced alongside Gemini so one provider's outage cannot block the answer
-      if (process.env.GROQ_API_KEY) runners.push(withBackoff((left) => callGroq(prompt, left, opts.temperature ?? 0.2)).catch((e) => { throw new Error(`groq: ${safeError(e)}`); }));
-      if (process.env.OPENROUTER_API_KEY) runners.push(withBackoff((left) => callOpenRouter(prompt, left, opts.temperature ?? 0.2)).catch((e) => { throw new Error(`openrouter: ${safeError(e)}`); }));
+      if (process.env.GROQ_API_KEY && !opts.only) runners.push(withBackoff((left) => callGroq(prompt, left, opts.temperature ?? 0.2)).catch((e) => { throw new Error(`groq: ${safeError(e)}`); }));
+      if (process.env.OPENROUTER_API_KEY && !opts.only) runners.push(withBackoff((left) => callOpenRouter(prompt, left, opts.temperature ?? 0.2)).catch((e) => { throw new Error(`openrouter: ${safeError(e)}`); }));
       return await Promise.any(runners);
     } catch (e) {
       const errs = (e as AggregateError).errors?.map((x: any) => String(x?.message ?? x)) ?? [safeError(e)];

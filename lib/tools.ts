@@ -23,7 +23,7 @@ export function htmlToText(html: string): { title: string; text: string } {
 }
 
 /** Fetch with SSRF checks on every redirect hop, size and time caps. */
-export async function fetchPage(url: string): Promise<{ url: string; title: string; text: string; status: number }> {
+export async function fetchPage(url: string): Promise<{ url: string; title: string; text: string; status: number; links: string[] }> {
   let current = (await assertSafeUrl(url)).toString();
   for (let hop = 0; hop < 4; hop++) {
     const ctl = new AbortController();
@@ -38,7 +38,9 @@ export async function fetchPage(url: string): Promise<{ url: string; title: stri
     const buf = await res.arrayBuffer();
     const raw = new TextDecoder().decode(buf.slice(0, MAX_BYTES));
     const { title, text } = /html/.test(ct) ? htmlToText(raw) : { title: current, text: raw };
-    return { url: current, title, text: text.slice(0, MAX_TEXT), status: res.status };
+    const links: string[] = [];
+    if (/html/.test(ct)) for (const m of raw.matchAll(/<a[^>]+href=["']([^"'#]+)["']/gi)) { try { const u = new URL(m[1].replace(/&amp;/g, "&"), current).toString(); if (!links.includes(u)) links.push(u); } catch {} if (links.length > 300) break; }
+    return { url: current, title, text: text.slice(0, MAX_TEXT), status: res.status, links };
   }
   throw new Error("too many redirects");
 }
