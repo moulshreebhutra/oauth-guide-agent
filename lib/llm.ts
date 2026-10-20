@@ -48,11 +48,11 @@ async function callGroq(prompt: string, ms: number, temperature: number): Promis
   throw new Error(last);
 }
 
-async function callAnthropic(prompt: string, ms: number, temperature: number): Promise<string> {
+async function callAnthropic(prompt: string, ms: number, _temperature?: number): Promise<string> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": process.env.ANTHROPIC_API_KEY!, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || "claude-haiku-5-5", max_tokens: 900, temperature, messages: [{ role: "user", content: prompt }] }),
+    body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || "claude-haiku-5-5", max_tokens: 900, messages: [{ role: "user", content: prompt }] }),
     signal: AbortSignal.timeout(ms),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 160)}`);
