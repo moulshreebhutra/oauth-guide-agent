@@ -41,7 +41,7 @@ async function post(body: object, ms: number): Promise<Result> {
   return r.json();
 }
 
-export function Ask({ slug, examples }: { slug?: string; examples: string[] }) {
+export function Ask({ slug, examples, initial, bare }: { slug?: string; examples: string[]; initial?: string; bare?: boolean }) {
   const [q, setQ] = useState("");
   const [phase, setPhase] = useState<"idle" | "quick" | "writing" | "done">("idle");
   const [secs, setSecs] = useState(0);
@@ -55,6 +55,9 @@ export function Ask({ slug, examples }: { slug?: string; examples: string[] }) {
     const t = setInterval(() => setSecs((s) => s + 1), 1000);
     return () => clearInterval(t);
   }, [busy]);
+
+  const started = useRef("");
+  useEffect(() => { if (initial && started.current !== initial) { started.current = initial; void go(initial); } }, [initial]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function go(question: string) {
     const id = ++run.current;
@@ -97,17 +100,17 @@ export function Ask({ slug, examples }: { slug?: string; examples: string[] }) {
 
   return (
     <section className="ask" aria-label="Ask the guides">
-      <h2>{slug ? "Ask this guide" : "Ask all the guides"}</h2>
-      <p className="muted">Questions about the ten library providers are answered from the guides, with the passage each answer rests on. For any other app it researches the web live and says so.</p>
-      <form onSubmit={(e) => { e.preventDefault(); if (q.trim().length > 2 && !busy) go(q.trim()); }} className="askform">
+      {!bare && <h2>{slug ? "Ask this guide" : "Ask all the guides"}</h2>}
+      {!bare && <p className="muted">Questions about the ten library providers are answered from the guides, with the passage each answer rests on. For any other app it researches the web live and says so.</p>}
+      {!bare && <form onSubmit={(e) => { e.preventDefault(); if (q.trim().length > 2 && !busy) go(q.trim()); }} className="askform">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={examples[0]} maxLength={300} aria-label="Your question" />
         <button className="btn" disabled={busy || q.trim().length < 3}>{busy ? "Working…" : "Ask"}</button>
-      </form>
-      <div className="examples">
+      </form>}
+      {!bare && <div className="examples">
         {examples.map((e) => (
           <button key={e} type="button" className="chip plain" disabled={busy} onClick={() => go(e)}>{e}</button>
         ))}
-      </div>
+      </div>}
 
       {busy && (
         <div className="loader" role="status" aria-live="polite">

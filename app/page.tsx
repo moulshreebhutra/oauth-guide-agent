@@ -2,7 +2,6 @@ import Link from "next/link";
 import { loadGuides } from "@/lib/guides";
 import { TIER_LABELS } from "@/lib/schema";
 import { RouteMap, type Row } from "@/components/RouteMap";
-import { Ask } from "@/components/Ask";
 import { Logo } from "@/components/Logo";
 import { LOGOS } from "@/lib/logos";
 import { Lookup } from "@/components/Lookup";
@@ -77,12 +76,6 @@ export default function Home() {
             <p className="lede">Pick a provider to see the full guide, or sort to find the fastest one to launch.</p>
           </div>
           <RouteMap rows={rows} />
-        </div>
-      </section>
-
-      <section className="sect dark">
-        <div className="wrap">
-          <Ask examples={["Which providers need a review before other companies can use my app?", "How long does Google verification take?", "What can an agent do for me on Shopify?"]} />
         </div>
       </section>
     </main>

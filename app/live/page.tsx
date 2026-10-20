@@ -11,7 +11,9 @@ type Err = { headline: string; fix: string[]; raw: string };
 
 export default function Live() {
   const [app, setApp] = useState("");
-  useEffect(() => { try { const q = new URLSearchParams(location.search).get("app"); if (q) setApp(q.slice(0, 120)); } catch {} }, []);
+  useEffect(() => { try { const q = new URLSearchParams(location.search).get("app"); if (q) { setApp(q.slice(0, 120)); if (new URLSearchParams(location.search).get("go") === "1") setAuto(true); } } catch {} }, []);
+  const [auto, setAuto] = useState(false);
+  useEffect(() => { if (auto && app.trim().length >= 2) { setAuto(false); void run(null); } }); // eslint-disable-line react-hooks/exhaustive-deps
   const [busy, setBusy] = useState(false);
   const [steps, setSteps] = useState<Step[]>([]);
   const [now, setNow] = useState("");
