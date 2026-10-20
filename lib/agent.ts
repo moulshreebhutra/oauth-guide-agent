@@ -49,7 +49,7 @@ export async function* generateGuide(input: { name: string; site?: string }): As
   const T0 = Date.now();
   const slug = input.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "app";
 
-  if (!process.env.GEMINI_API_KEY) {
+  if (!process.env.GEMINI_API_KEY && !process.env.ANTHROPIC_API_KEY && !process.env.GROQ_API_KEY && !process.env.OPENROUTER_API_KEY) {
     yield { type: "error", msg: "Live generation is not configured on this server (GEMINI_API_KEY missing). The library guides still work." };
     return;
   }

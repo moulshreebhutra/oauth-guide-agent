@@ -7,6 +7,7 @@ export const safeError = (e: unknown) =>
   String((e as any)?.message ?? e)
     .replace(/^This operation was aborted$/i, "no reply before the time limit")
     .replace(/AIza[0-9A-Za-z_-]{20,}/g, "[key]")
+    .replace(/sk-[0-9A-Za-z_-]{20,}/g, "[key]")
     .replace(/\s+/g, " ")
     .slice(0, 220);
 
@@ -38,11 +39,48 @@ async function callGroq(prompt: string, ms: number, temperature: number): Promis
   return String(t);
 }
 
+async function callAnthropic(prompt: string, ms: number, temperature: number): Promise<string> {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-api-key": process.env.ANTHROPIC_API_KEY!, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || "claude-haiku-5-5", max_tokens: 900, temperature, messages: [{ role: "user", content: prompt }] }),
+    signal: AbortSignal.timeout(ms),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 160)}`);
+  const j: any = await res.json();
+  const t = j?.content?.map((c: any) => c.text ?? "").join("");
+  if (!t) throw new Error("empty answer");
+  return String(t);
+}
+
 export async function generate(
   prompt: string,
   opts: { json?: boolean; timeoutMs?: number; temperature?: number; models?: string[]; deadlineMs?: number; race?: boolean; fast?: boolean } = {},
 ): Promise<string> {
+  // Paid primary: Anthropic (steady, no free-tier quota). Free providers below are the backup if it fails.
+  let primaryErr = "";
+  if (process.env.ANTHROPIC_API_KEY) {
+    const budget = Math.min(opts.timeoutMs ?? 25_000, opts.deadlineMs ?? 25_000, 30_000);
+    const t0 = Date.now();
+    for (let n = 0; n < 2; n++) {
+      const left = budget - (Date.now() - t0);
+      if (left < 3000) break;
+      try { return await callAnthropic(prompt, Math.min(left, 18_000), opts.temperature ?? 0.2); }
+      catch (e) {
+        primaryErr = `claude: ${safeError(e)}`;
+        if (/HTTP 40[0134]/.test(primaryErr)) break; // bad key, billing or request: retrying will not help
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+    if (!process.env.GEMINI_API_KEY && !process.env.GROQ_API_KEY && !process.env.OPENROUTER_API_KEY) throw new Error(primaryErr);
+  }
   const key = process.env.GEMINI_API_KEY;
+  if (!key && (process.env.GROQ_API_KEY || process.env.OPENROUTER_API_KEY)) {
+    const rs: Promise<string>[] = [];
+    if (process.env.GROQ_API_KEY) rs.push(callGroq(prompt, 15_000, opts.temperature ?? 0.2));
+    if (process.env.OPENROUTER_API_KEY) rs.push(callOpenRouter(prompt, 15_000, opts.temperature ?? 0.2));
+    try { return await Promise.any(rs); } catch { throw new Error([primaryErr, "free providers failed"].filter(Boolean).join(" | ")); }
+  }
   if (!key) throw new Error("GEMINI_API_KEY is not set on the server");
   const models = [...new Set([...(opts.models ?? []), process.env.GEMINI_MODEL, ...FALLBACKS].filter(Boolean) as string[])];
   const client = new GoogleGenAI({ apiKey: key });

@@ -8,8 +8,16 @@ export const maxDuration = 30;
 export async function GET(req: Request) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
   if (!rateLimit("health:" + ip, 6)) return Response.json({ error: "Too many checks. Try again later." }, { status: 429 });
+  let claude: unknown = { configured: false };
+  if (process.env.ANTHROPIC_API_KEY) {
+    const t0 = Date.now();
+    try {
+      const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "content-type": "application/json", "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || "claude-haiku-5-5", max_tokens: 5, messages: [{ role: "user", content: "Say ok" }] }), signal: AbortSignal.timeout(15_000) });
+      claude = { configured: true, ok: r.ok, status: r.status, ms: Date.now() - t0, ...(r.ok ? {} : { error: safeError(await r.text()).slice(0, 160) }) };
+    } catch (e) { claude = { configured: true, ok: false, error: safeError(e) }; }
+  }
   const key = process.env.GEMINI_API_KEY;
-  if (!key) return Response.json({ keyConfigured: false });
+  if (!key) return Response.json({ claude, keyConfigured: false });
   const client = new GoogleGenAI({ apiKey: key });
   let listed: string[] = [];
   let listError: string | undefined;
@@ -43,5 +51,5 @@ export async function GET(req: Request) {
       groq = { configured: true, ok: r.ok, status: r.status, ms: Date.now() - t0 };
     } catch (e) { groq = { configured: true, ok: false, error: safeError(e) }; }
   }
-  return Response.json({ keyConfigured: true, groq, modelsVisibleToKey: listed, listError, tests });
+  return Response.json({ claude, keyConfigured: true, groq, modelsVisibleToKey: listed, listError, tests });
 }
