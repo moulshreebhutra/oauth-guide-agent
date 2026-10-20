@@ -6,9 +6,9 @@ import { appFromInput } from "@/lib/webask";
 
 export const maxDuration = 300; // writing a whole guide with a model takes longer than 60s; the page shows progress meanwhile
 
-// A finished guide is remembered for 6 hours, so a repeat request costs nothing and returns at once.
+// A finished guide is remembered for 24 hours, so a repeat request costs nothing and returns at once.
 // Stored in Vercel Blob when it is connected (shared by all visitors), else in this instance's memory; the browser keeps its own copy too.
-const TTL_MS = 6 * 3600_000;
+const TTL_MS = 24 * 3600_000;
 const keyOf = (i: { name: string; site?: string }) => `${i.name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()}|${(i.site ?? "").toLowerCase()}`;
 
 export async function POST(req: Request) {

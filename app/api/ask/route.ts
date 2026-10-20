@@ -13,7 +13,7 @@ export const maxDuration = 60;
 const passageView = (h: Hit) => ({ id: h.id, slug: h.slug, app: h.app, section: h.section, text: h.text, tag: h.tag ?? null });
 
 
-// Successful AI answers are remembered for 6 hours, so repeat questions (and the example chips) answer instantly and never depend on Google being up.
+// Successful AI answers are remembered for 24 hours, so repeat questions (and the example chips) answer instantly and never depend on Google being up.
 const cacheKey = (q: string, slug?: string) => `${slug ?? "*"}|${q.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim()}`;
 const cachePut = (k: string, body: unknown) => { void sharedSet("ask:" + k, body); };
 
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   const other = OTHER_APPS.find((a) => lower.includes(` ${a} `));
 
   const ck = cacheKey(question, slug);
-  if (body.phase !== "quick") { const hit = await sharedGet<unknown>("ask:" + ck, 6 * 3600_000); if (hit) return Response.json(hit.value); }
+  if (body.phase !== "quick") { const hit = await sharedGet<unknown>("ask:" + ck, 24 * 3600_000); if (hit) return Response.json(hit.value); }
 
   const phase = body.phase === "quick" ? "quick" : "write";
   const quick = phase === "quick";

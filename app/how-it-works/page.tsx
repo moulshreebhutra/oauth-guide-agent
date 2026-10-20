@@ -78,7 +78,7 @@ ${CLASSES}`,
   askLibrary: `flowchart TD
   Q["Question about a library app"]:::code --> RL{"Under 20 questions<br/>this hour?"}
   RL -- no --> E1["Try again later"]:::stop
-  RL -- yes --> CA{"Same question answered<br/>in the last 6 hours?"}
+  RL -- yes --> CA{"Same question answered<br/>in the last 24 hours?"}
   CA -- yes --> H["Return the saved answer"]:::good
   CA -- no --> T{"About connecting,<br/>registering or authorising an app?"}
   T -- no --> OT["Polite out-of-scope message<br/>no model is called"]:::stop
@@ -88,7 +88,7 @@ ${CLASSES}`,
   HY --> PR["Prompt = the written skill + top passages<br/>passages are data, not instructions"]:::code
   PR --> M["AI router picks a model"]:::ai
   M --> V{"Is every citation a passage<br/>that was really retrieved?"}
-  V -- yes --> A["Answer with clickable citations<br/>saved for 6 hours"]:::good
+  V -- yes --> A["Answer with clickable citations<br/>saved for 24 hours"]:::good
   V -- "no, or all models failed" --> F["Show the guides' own wording,<br/>composed by code, labelled"]:::human
 ${CLASSES}`,
 
@@ -114,7 +114,7 @@ ${CLASSES}`,
 
   agent: `flowchart TD
   I["App name, website, or a typed question"]:::code --> X["Find the app inside the text<br/>sentences with no app are refused"]:::code
-  X --> CK{"A guide for this app<br/>made in the last 6 hours?"}
+  X --> CK{"A guide for this app<br/>made in the last 24 hours?"}
   CK -- yes --> RE["Replay it instantly<br/>costs nothing"]:::good
   CK -- no --> RL{"Under 5 new guides<br/>this hour?"}
   RL -- no --> E1["Try again later"]:::stop
@@ -133,7 +133,7 @@ ${CLASSES}`,
   WR --> RP["Repair near-misses<br/>label case, null minutes, bad enums"]:::code
   RP --> EN["Enforce checks<br/>see the next diagram"]:::good
   EN --> OK2{"Passed?"}
-  OK2 -- yes --> SH["Show guide<br/>save 6 hours, signed share link"]:::good
+  OK2 -- yes --> SH["Show guide<br/>save 24 hours, signed share link"]:::good
   OK2 -- no --> RT{"First try?"}
   RT -- yes --> WR
   RT -- no --> ER2["Show why nothing was shown,<br/>never an unchecked guide"]:::stop
@@ -204,7 +204,7 @@ const TECH: [string, string][] = [
   ["Tavily search, then fetch", "Search finds the provider's pages. Fetch reads them (private addresses blocked, size and time capped). When a site shows a bot check, the text the search engine read is used and labelled as such. Results that are news, jobs, app-store pages or about another product are filtered out, repeats of one page are merged, and when picking review and quota pages it skips customer-account checks, product reviews, release notes and audit-log marketing pages."],
   ["Composio API and public toolkit docs", "Tell us whether Composio manages the OAuth app and which auth methods the toolkit supports."],
   ["Signed share links", "A guide is packed into the URL and signed with HMAC-SHA256 using a server secret. Nothing is stored; only this server can mint a valid link."],
-  ["Caches and limits", "Answers and guides are remembered for 6 hours in your browser and on the server (in Vercel Blob when connected, so every visitor shares them). Ask allows 20 questions an hour and the Live agent 5 new guides an hour per visitor; repeats cost nothing."],
+  ["Caches and limits", "Answers and guides are remembered for 24 hours in your browser and on the server (in Vercel Blob when connected, so every visitor shares them). Ask allows 20 questions an hour and the Live agent 5 new guides an hour per visitor; repeats cost nothing."],
   ["Tests", "81 automated tests cover the schema, quote checks, the claim-versus-page checks, retrieval, the AI router, link signing and the text cleaning. Run with npm test."],
 ];
 
@@ -348,7 +348,7 @@ export default function How() {
             "The write step uses the heavy router (Claude first most of the time), a JSON template taken from a researched guide, and a size limit so the reply is not cut off.",
             "A near-miss such as a wrong label case or a missing number is repaired. Missing setup minutes become a tier-based estimate tagged Inferred.",
             "The prompt tells the writer to rate a tier by what stops <b>your own app</b> from working for other people. A marketplace listing is a separate, optional step and does not raise the tier.",
-            "A finished guide is saved for 6 hours, and a signed share link is made.",
+            "A finished guide is saved for 24 hours, and a signed share link is made.",
           ]}
         />
 
