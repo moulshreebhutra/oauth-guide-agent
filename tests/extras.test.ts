@@ -27,3 +27,9 @@ test("export: markdown and agent brief contain the right parts for every guide",
     assert.ok(!/AIza|sk-[a-z0-9]{10}/i.test(md + br));
   }
 });
+
+import { webPrompt } from "../lib/webask";
+test("web prompt carries the method, format and gap rules", () => {
+  const p = webPrompt("How long is review?", { app: "Zoom", passages: [{ id: "w1#1", slug: "web", app: "Zoom", section: "x", text: "Zoom. Apps need review.", url: "https://developers.zoom.us/x" } as any], pages: [], composio: { status: "yes", methods: ["OAUTH2"] }, steps: [] });
+  for (const s of ["METHOD", "FORMAT", "Not stated in the pages we read", "[w1#1]", "AVAILABLE", "QUESTION: How long is review?"]) if (!p.includes(s)) throw new Error("missing " + s);
+});
