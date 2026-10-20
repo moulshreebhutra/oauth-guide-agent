@@ -26,17 +26,26 @@ async function callOpenRouter(prompt: string, ms: number, temperature: number): 
 }
 
 async function callGroq(prompt: string, ms: number, temperature: number): Promise<string> {
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${process.env.GROQ_API_KEY}` },
-    body: JSON.stringify({ model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile", temperature, max_tokens: 700, messages: [{ role: "user", content: prompt }] }),
-    signal: AbortSignal.timeout(ms),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 120)}`);
-  const j: any = await res.json();
-  const t = j?.choices?.[0]?.message?.content;
-  if (!t) throw new Error("empty answer");
-  return String(t);
+  // Groq retires models from time to time, so try the configured one, then current alternatives
+  const models = [process.env.GROQ_MODEL, "openai/gpt-oss-120b", "llama-3.3-70b-versatile", "openai/gpt-oss-20b"].filter(Boolean) as string[];
+  let last = "";
+  for (const model of [...new Set(models)]) {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+      body: JSON.stringify({ model, temperature, max_tokens: 900, messages: [{ role: "user", content: prompt }] }),
+      signal: AbortSignal.timeout(ms),
+    });
+    if (res.ok) {
+      const t = (await res.json() as any)?.choices?.[0]?.message?.content;
+      if (t) return String(t);
+      last = `${model}: empty answer`;
+      continue;
+    }
+    last = `HTTP ${res.status} ${(await res.text()).slice(0, 120)}`;
+    if (res.status !== 404 && res.status !== 400) throw new Error(last); // quota/auth/overload: another model will not help
+  }
+  throw new Error(last);
 }
 
 async function callAnthropic(prompt: string, ms: number, temperature: number): Promise<string> {
