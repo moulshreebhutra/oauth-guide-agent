@@ -46,7 +46,13 @@ const SEARCH_TEXT = new Map<string, string>();
 const BLOCKED = /just a moment|verify you are (a )?human|checking your browser|captcha|access denied|enable javascript and cookies|attention required/i;
 
 /** fetchPage, but when the page comes back blocked or empty, use the text the search engine read instead (marked as such). */
-export async function fetchReadable(url: string): Promise<{ url: string; title: string; text: string; status: number; links: string[] }> {
+/** Page-to-text conversion leaves "https : //host" and "word ." gaps around code: close them so quotes and previews read right. */
+const tidy = (t: string) => t.replace(/\b(https?)\s:\s?\/\//gi, "$1://");
+export async function fetchReadable(url: string): ReturnType<typeof fetchReadableRaw> {
+  const p = await fetchReadableRaw(url);
+  return { ...p, text: tidy(p.text) };
+}
+async function fetchReadableRaw(url: string): Promise<{ url: string; title: string; text: string; status: number; links: string[] }> {
   const fallback = SEARCH_TEXT.get(url) ?? SEARCH_TEXT.get(url.replace(/\/$/, "")) ?? SEARCH_TEXT.get(url + "/");
   try {
     const p = await fetchPage(url);

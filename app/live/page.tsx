@@ -134,7 +134,7 @@ export default function Live() {
                 </div>
                 <ol className="agsteps">
                   {steps.map((st, idx) => {
-                    const sub0 = st.data?.items ? `${st.data.items.length} results` : st.data?.url ? hostOf(st.data.url) : "";
+                    const sub0 = st.data?.items ? `${st.data.items.length} ${st.data.items.length === 1 ? "result" : "results"}` : st.data?.url ? hostOf(st.data.url) : "";
                     const sub = sub0 && !st.title.includes(sub0) ? sub0 : "";
                     const body = st.detail || st.data;
                     const row = (
@@ -155,7 +155,7 @@ export default function Live() {
                               )}
                               {!st.data?.facts?.length && st.data?.excerpt && <p className="dtext"><Md t={st.data.excerpt} />{st.data.excerpt.length >= 400 ? "…" : ""}</p>}
                               {st.data?.items && (
-                                <div className="stgroup"><h4>{st.data.items.length} results</h4><ul className="dlinks">{st.data.items.map((it) => <li key={it.url}><a href={it.url} target="_blank" rel="noreferrer">{it.title.slice(0, 90)}</a><span>{hostOf(it.url)}</span></li>)}</ul></div>
+                                <div className="stgroup"><h4>Pages found</h4><ul className="dlinks">{st.data.items.map((it) => <li key={it.url}><a href={it.url} target="_blank" rel="noreferrer">{it.title.slice(0, 90)}</a><span>{hostOf(it.url)}</span></li>)}</ul></div>
                               )}
                               {st.data?.url && <a className="dopen" href={st.data.url} target="_blank" rel="noreferrer">{st.data.title ? `Open: ${st.data.title.slice(0, 60)}` : "Open the page"}</a>}
                             </div>

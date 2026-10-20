@@ -26,7 +26,7 @@ const WRITE_TIMEOUT_MS = 110_000;
 const PER_PAGE_PROMPT_CHARS = 9000;
 /** A page is worth keeping only if it has real text and is about the app (JavaScript shells and marketing stubs are dropped). */
 export const usablePage = (text: string, app: string) => text.length >= 300 && new RegExp(`\\b${app.split(/[.\s]/)[0].replace(/[^a-z0-9-]/gi, "")}`, "i").test(text.slice(0, 20000));
-const GATE_WORDS = /verif|review|approv|submit|publish|listing|marketplace|audit|access|tier|production|guidelines|certif|quota|limit|pricing|partner|security|extension|mode|checkpoint/i;
+const GATE_WORDS = /verif|review|approv|submit|publish|listing|marketplace|audit|access|tier|production|guidelines|certif|quota|limit|pricing|security|extension|mode|checkpoint/i;
 const OFFICIAL_HINT = /(docs?|developers?|developer|learn|support|help|api)\./i;
 const COMMUNITY = /^(forum|forums|community|discuss|devforum|answers|stackoverflow)\b|(^|\.)(stackoverflow|reddit)\.com$/i;
 /** Owned by the provider (or Composio): not a forum, community board or third-party site. */
@@ -111,6 +111,9 @@ You write OAuth-app setup guides for developers. Hard rules:
 - Steps done by clicking in the provider's console, portal or dashboard are always "you" (they need the user's signed-in session). "either" is only for Composio configuration, code or API calls an agent can make.
 - Gotchas are things that would make setup fail or surprise the developer (limits, expiry, exact-match rules, plan requirements). Never list tool counts, marketing facts or the Composio toolkit size as a gotcha.
 - Do not say a Composio setup guide "was not fetched": the reader is already told whether one exists.
+- Write the difficulty rationale in plain words for a developer. Never mention forums, evidence rules, tags or "tier" mechanics inside it.
+- Cite the page a claim actually came from. A step taken from Composio's setup guide must cite that guide, not an unrelated overview page. Do not cite a pricing or marketing page for a registration claim.
+- Gotchas and requirements are about registering the app, authorizing, reviewing, limits and expiry. Leave out unrelated API endpoint trivia, other processes you are only ruling out, and login reminders.
 - Never mention internal fields such as provider_domain or OFFICIAL_GUESS in the guide.
 - Say "unknown" instead of guessing. Put open questions in "uncertainties".
 - effort.hands_on_minutes.min and .max are always numbers (minutes), never null. If no page states a time, give your best estimate and tag effort "inferred".
@@ -225,7 +228,7 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
         const r = await searchWeb(String(act.arg).slice(0, 200), input.name);
         for (const x of r) known.add(canonicalUrl(x.url));
         log.push(`search "${act.arg}" -> ${r.map((x) => x.url).join(" | ")}`);
-        yield { type: "tool", name: "search_web", arg: act.arg, result: `${r.length} results`, data: { items: r.slice(0, 8) } };
+        yield { type: "tool", name: "search_web", arg: act.arg, result: `${r.length} ${r.length === 1 ? "result" : "results"}`, data: { items: r.slice(0, 8) } };
       } else if (act.action === "fetch") {
         const p = await fetchReadable(canonicalUrl(String(act.arg)));
         for (const l of p.links ?? []) known.add(canonicalUrl(l));
@@ -248,14 +251,14 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
     const queries = [
       `${input.name} developer app verification review process how long does it take`,
       `${input.name} API access approval audit production access tier requirements developer docs`,
-      `${input.name} developer quota limits development mode certification partner program`,
+      `${input.name} developer API rate limits quota development mode usage limits`,
     ];
     for (const q of queries) {
       if (Date.now() - t0 > RESEARCH_BUDGET_MS + 35_000) break;
       try {
         const r = await searchWeb(q, input.name);
         for (const x of r) known.add(canonicalUrl(x.url));
-        yield { type: "tool", name: "search_web", arg: q, result: `${r.length} results`, data: { items: r.slice(0, 8) } };
+        yield { type: "tool", name: "search_web", arg: q, result: `${r.length} ${r.length === 1 ? "result" : "results"}`, data: { items: r.slice(0, 8) } };
         const score = (x: { title: string; url: string }) => {
           const host = new URL(x.url).hostname;
           const own = host.includes(cslug) || (input.site ? host.endsWith(input.site.replace(/^www\./, "")) : false);
@@ -282,7 +285,7 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
       const q = `${input.name} developer create OAuth app register redirect URI client ID`;
       const r = await searchWeb(q, input.name);
       for (const x of r) known.add(canonicalUrl(x.url));
-      yield { type: "tool", name: "search_web", arg: q, result: `${r.length} results`, data: { items: r.slice(0, 8) } };
+      yield { type: "tool", name: "search_web", arg: q, result: `${r.length} ${r.length === 1 ? "result" : "results"}`, data: { items: r.slice(0, 8) } };
       const c = r.filter((x) => { try { const h = new URL(x.url).hostname; return !fetched.some((f) => f.url === x.url) && isOfficial(h, cslug, input.site, x.url, x.title) && !/composio/.test(h) && !/support\.|help\./.test(h); } catch { return false; } })[0];
       if (c) {
         const p = await fetchReadable(canonicalUrl(c.url));

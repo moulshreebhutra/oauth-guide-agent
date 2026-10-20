@@ -13,6 +13,7 @@ type Cited = { tag: Tag; evidence: string[] };
  *  4. nothing may be tagged 'tested' (only humans test);
  *  5. the result is schema-validated and linted.
  */
+const STOP = new Set("should would could because before after through during between without within another against which where while being their there these those other about under using called added check create provide request requests requires required".split(" "));
 export function enforce(draft: unknown, fetched: Fetched[], now = new Date().toISOString().slice(0, 10)) {
   const notes: string[] = [];
   const d = draft as Record<string, any>;
@@ -54,6 +55,17 @@ export function enforce(draft: unknown, fetched: Fetched[], now = new Date().toI
       c.tag = "reported";
       notes.push(`${label}: evidence is community or third-party only; sourced -> reported`);
     }
+    // the cited pages must actually be about what the claim says: shared wording, and any year it names
+    if (c.tag === "sourced" && c.evidence.length > 0) {
+      const claim = String(c.statement ?? c.detail ?? c.text ?? c.rationale ?? "").replace(/https?:\/\/\S+/g, " ").replace(/\[e\d+\]/g, " ").toLowerCase();
+      const hay = c.evidence.map((id: string) => byUrl.get(keptEvidence.find((e) => e.id === id)?.url ?? "")?.text ?? "").join(" ").toLowerCase();
+      const app = String(d.app ?? "").toLowerCase().split(/\W+/)[0];
+      const words = [...new Set(claim.match(/[a-z]{6,}/g) ?? [])].filter((w) => w !== app && !STOP.has(w));
+      const hit = words.filter((w) => hay.includes(w.slice(0, 5))).length;
+      const years = (claim.match(/\b20\d\d\b/g) ?? []).filter((y) => !hay.includes(y));
+      if (words.length >= 4 && hit / words.length < 0.25) { c.tag = "inferred"; notes.push(`${label}: cited pages barely mention what the claim says; sourced -> inferred`); }
+      else if (years.length) { c.tag = "inferred"; notes.push(`${label}: year ${years[0]} is not in the cited pages; sourced -> inferred`); }
+    }
     // a number that only a community page contains is reported, not sourced
     if (c.tag === "sourced" && c.evidence.length > 0) {
       const text = String(c.statement ?? c.detail ?? c.text ?? c.rationale ?? "").replace(/https?:\/\/\S+/g, "").replace(/\[e\d+\]/g, "");
@@ -76,9 +88,12 @@ export function enforce(draft: unknown, fetched: Fetched[], now = new Date().toI
     const t = String(c?.text ?? "");
     if (c?.tag === "sourced" && ABSENCE.test(t) && noNum(t)) { c.tag = "unknown"; notes.push("an absence ('no review mentioned') cannot be sourced; tagged unknown"); }
   }
+  const lead = /^\s*(no|none|nothing)\b[^.]{0,60}\b(review|approval|wait|step|gate)\b/i;
+  if (d.wait?.tag === "sourced" && (d.wait.kind === "none" || lead.test(String(d.wait.statement))) ) { d.wait.tag = "inferred"; notes.push("wait: 'no review' is an absence, not a finding; tagged inferred"); }
+  if (d.difficulty?.tier === 1 && d.difficulty.tag === "sourced" && /\bno (review|approval)\b|without (a )?review/i.test(String(d.difficulty.rationale))) { d.difficulty.tag = "inferred"; notes.push("difficulty: 'no review' tier rests on an absence; tagged inferred"); }
   fix(d.difficulty, "difficulty");
   // a high tier needs a stated gate; a reported or inferred one lowers it to 2
-  if (d.difficulty?.tier >= 3 && d.difficulty.tag !== "sourced" && !(d.review_process ?? []).some((c: any) => c.tag === "sourced")) { d.difficulty.tier = 2; notes.push("tier lowered to 2: the gate is only reported or inferred, not stated by an official page"); d.uncertainties = [...(d.uncertainties ?? []), "A review or partner gate was mentioned but not confirmed by an official page, so the tier was kept at 2 (light checks)."]; }
+  if (d.difficulty?.tier >= 3 && !(d.review_process ?? []).some((c: any) => c.tag === "sourced")) { d.difficulty.tier = 2; notes.push("tier lowered to 2: the gate is only reported or inferred, not stated by an official page"); d.uncertainties = [...(d.uncertainties ?? []), "A review or partner gate was mentioned but not confirmed by an official page, so the tier was kept at 2 (light checks)."]; }
   // "no duration is published" is an absence, not something a page states
   if (d.wait?.kind === "unpublished" && d.wait.tag === "sourced") { d.wait.tag = "unknown"; notes.push("wait: an unpublished duration is tagged unknown, not sourced"); }
   fix(d.wait, "wait");

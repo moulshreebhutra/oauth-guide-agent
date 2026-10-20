@@ -205,7 +205,7 @@ test("enforce: forum-only evidence is 'reported', and an unpublished wait is 'un
   const page = { url: "https://forum.example.com/t/1", title: "Forum", text: "Our review took six weeks and nobody answered us at all.", official: false };
   const d: any = JSON.parse(JSON.stringify(RAW_GUIDES.find((g: any) => g.slug === "github")));
   d.evidence = [{ id: "e1", url: page.url, title: "Forum", retrieved_at: "2026-01-01", excerpt: "review took six weeks", official: true, quote_check: "unchecked" }];
-  d.wait = { ...d.wait, tag: "sourced", kind: "stated", evidence: ["e1"] };
+  d.wait = { ...d.wait, statement: "The review took six weeks and nobody answered.", tag: "sourced", kind: "stated", evidence: ["e1"] };
   const a: any = enforce(d, [page]);
   assert.ok(a.notes.some((n: string) => /wait: evidence is community or third-party only/.test(n)));
   const d2: any = JSON.parse(JSON.stringify(d));
@@ -257,4 +257,20 @@ test("console steps are never the agent's, and page previews drop code and cut-o
   assert.equal(r.guide?.steps[0].who ?? "you", "you");
   const f = keyFacts("The app provides the Client ID and Client Secret needed to\nconst { access_token } = await tokenResponse . json () ;\nRegister the app, then copy the client secret and store it securely in your vault.");
   assert.ok(f.every((x) => !/await|needed to$/.test(x)) && f.length === 1);
+});
+
+test("enforce: a sourced claim whose cited page does not say it, or names a year the page lacks, is downgraded", async () => {
+  const { enforce } = await import("../lib/postprocess");
+  const { RAW_GUIDES } = await import("../data/guides");
+  const page = { url: "https://developers.example.com/p", title: "Pricing", text: "Starting at two dollars per user, per month for the plan.", official: true };
+  const d: any = JSON.parse(JSON.stringify(RAW_GUIDES.find((g: any) => g.slug === "github")));
+  d.evidence = [{ id: "e1", url: page.url, title: "P", retrieved_at: "2026-01-01", excerpt: "per user, per month", official: true, quote_check: "unchecked" }];
+  d.requirements = [{ text: "The integrator plan makes key developer features available by default for every organization.", tag: "sourced", evidence: ["e1"] }];
+  d.gotchas = [{ text: "Granular scopes apply to apps created after March 2026 per user.", tag: "sourced", evidence: ["e1"] }];
+  d.wait = { ...d.wait, kind: "none", tag: "sourced", statement: "No review step.", evidence: ["e1"] };
+  const r: any = enforce(d, [page]);
+  assert.ok(r.ok, r.error);
+  assert.equal(r.guide.requirements[0].tag, "inferred");
+  assert.equal(r.guide.gotchas[0].tag, "inferred");
+  assert.equal(r.guide.wait.tag, "inferred");
 });
