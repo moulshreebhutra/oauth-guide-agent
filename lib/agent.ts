@@ -100,6 +100,7 @@ You write OAuth-app setup guides for developers. Hard rules:
 - Time estimates: only tag effort/wait "sourced" if a page states a duration. Otherwise tag "inferred" or "unknown" and say so in "basis"/"statement".
 - Difficulty tier: 1 self-serve, 2 light checks, 3 review required, 4 gated/partner approval. Explain the rationale.
 - For each step say who does it: "you", "agent" or "either". Use "you" with "why_not_agent" when it needs the user's signed-in session, secrets, legal or business decisions.
+- If the provider has several products (for example an in-app SDK versus a REST or Connect API, or a marketing API versus login), say which product the guide covers and never use a page about one product as evidence for another; list the mismatch in "uncertainties".
 - Say "unknown" instead of guessing. Put open questions in "uncertainties".
 - effort.hands_on_minutes.min and .max are always numbers (minutes), never null. If no page states a time, give your best estimate and tag effort "inferred".
 - ALLOWED VALUES: tag is one of "sourced","reported","inferred","unknown". wait.kind is one of "none" (no review step), "stated" (a page gives a duration), "unpublished" (no duration found). who is one of "you","agent","either". quote_check is "unchecked". composio_managed.status is "yes","no" or "unknown". difficulty tier is the number 1, 2, 3 or 4. generated_by is "agent". wait.range is null unless a page states days or weeks.
@@ -168,6 +169,9 @@ export async function* generateGuide(input: { name: string; site?: string }): As
   const t0 = Date.now();
   const known = new Set<string>(); // addresses the model may fetch: search results and links on pages already read
   const done = new Set<string>();   // searches and fetches already made
+  const searches: Set<string>[] = []; // word sets of earlier searches: a reworded repeat of one is refused
+  let lastTwo: string[] = [];         // the last two actions: two searches in a row must be followed by a fetch
+  const words = (q: string) => new Set(q.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !["the","and","for","how","does","long","take","developer","docs"].includes(w)));
   const siteHost = input.site ? input.site.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0] : "";
   for (let i = 0; i < MAX_ACTIONS; i++) {
     if (Date.now() - t0 > RESEARCH_BUDGET_MS) {
@@ -181,7 +185,7 @@ Task: find how a developer registers an OAuth app for "${input.name}"${input.sit
 Pages fetched so far:\n${have}
 Recent tool log:\n${log.slice(-6).join("\n") || "(none)"}
 Choose ONE next action as JSON: {"action":"search","arg":"<query>"} | {"action":"fetch","arg":"<https url>"} | {"action":"done","arg":""}.
-Prefer the provider's official developer docs (OAuth app creation, app review/verification, distribution) and any Composio guide at composio.dev/auth/<slug>. If the product is registered through a parent platform (Instagram -> Meta, YouTube -> Google, Teams -> Microsoft), research the parent platform's pages. Look for: where the app is created, account prerequisites, scopes, dev versus live mode, review or verification and any stated duration, fees or minimums, token lifetime, rate limits. Also check whether the specific API or product the developer will use has its own approval, audit or access tier (for example TikTok Content Posting API audit, Meta Advanced Access, LinkedIn product access, Zoom scope review): search for words like audit, access level, production access, quota. Never repeat a search or fetch you already made. Only fetch addresses that appeared in search results or as links on a page you read; do not guess URLs. If the Composio toolkit page describes a different product than the one you are researching (for example an ads API when you researched login), research the product the developer most likely means and say which one in the summary. Cite only pages about the same product or API, never pages about an unrelated platform (for example an Android store policy for a web API). Say done once you have the official registration page, the review/approval information AND any such product gate, or ${MAX_ACTIONS} actions are used.`;
+Prefer the provider's official developer docs (OAuth app creation, app review/verification, distribution) and any Composio guide at composio.dev/auth/<slug>. If the product is registered through a parent platform (Instagram -> Meta, YouTube -> Google, Teams -> Microsoft), research the parent platform's pages. Look for: where the app is created, account prerequisites, scopes, dev versus live mode, review or verification and any stated duration, fees or minimums, token lifetime, rate limits. Also check whether the specific API or product the developer will use has its own approval, audit or access tier (for example TikTok Content Posting API audit, Meta Advanced Access, LinkedIn product access, Zoom scope review): search for words like audit, access level, production access, quota. Never repeat a search or fetch you already made, and never reword a search you already ran; after two searches, fetch the best official result before searching again. Only fetch addresses that appeared in search results or as links on a page you read; do not guess URLs. If the Composio toolkit page describes a different product than the one you are researching (for example an ads API when you researched login), research the product the developer most likely means and say which one in the summary. Cite only pages about the same product or API, never pages about an unrelated platform (for example an Android store policy for a web API). Say done once you have the official registration page, the review/approval information AND any such product gate, or ${MAX_ACTIONS} actions are used.`;
     let act: { action: string; arg: string };
     try {
       act = parseJson(await ask(prompt));
@@ -193,6 +197,14 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
     const key = `${act.action}:${canonicalUrl(String(act.arg)).toLowerCase()}`;
     if (done.has(key)) { log.push(`${act.action} "${act.arg}" was already done: choose something different or say done`); continue; }
     done.add(key);
+    if (act.action === "search") {
+      const w = words(String(act.arg));
+      const same = searches.some((p) => { const inter = [...w].filter((x) => p.has(x)).length; return inter / Math.max(1, Math.min(w.size, p.size)) >= 0.7; });
+      if (same) { log.push(`search "${act.arg}" is a reworded copy of an earlier search: fetch one of its results instead`); continue; }
+      if (lastTwo.length === 2 && lastTwo.every((x) => x === "search")) { log.push("two searches in a row: fetch the best official result before searching again"); continue; }
+      searches.push(w);
+    }
+    lastTwo = [...lastTwo, act.action].slice(-2);
     if (act.action === "fetch") {
       let h = ""; try { h = new URL(String(act.arg)).hostname; } catch { /* not a URL */ }
       if (!known.has(canonicalUrl(String(act.arg))) && !(siteHost && h.endsWith(siteHost))) { log.push(`fetch ${act.arg} rejected: it is not an address from a search result or a link on a page already read; pick one that is`); continue; }

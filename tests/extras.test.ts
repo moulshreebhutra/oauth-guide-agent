@@ -213,3 +213,8 @@ test("enforce: forum-only evidence is 'reported', and an unpublished wait is 'un
   const b: any = enforce(d2, [page]);
   assert.ok(b.notes.some((n: string) => /unpublished duration is tagged unknown/.test(n)));
 });
+
+test("composio toolkit text drops markdown bold markers so quotes read cleanly", async () => {
+  const { parseComposioToolkit } = await import("../lib/tools");
+  assert.equal(parseComposioToolkit("- **Composio-managed OAuth available?** Yes".replace(/\*\*/g, "")).status, "yes");
+});

@@ -72,7 +72,7 @@ export async function searchWeb(query: string, app?: string): Promise<{ title: s
   const r = await searchWebRaw(query);
   const word = (app ?? "").toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2)[0];
   const about = (x: { title: string; url: string }) => { try { const h = new URL(x.url).hostname.replace(/^www\./, ""); return !word || h.includes(word) || DOCS_HOST.test(h) && (x.title + x.url).toLowerCase().includes(word) || (x.title + " " + x.url).toLowerCase().includes(word) && !JUNK_HOST.test(h); } catch { return false; } };
-  const clean = r.filter((x) => { try { return !JUNK_HOST.test(new URL(x.url).hostname); } catch { return false; } });
+  const clean = r.filter((x) => { try { const h = new URL(x.url).hostname; return !JUNK_HOST.test(h) || (!!word && h.includes(word)); } catch { return false; } });
   const rel = clean.filter(about);
   return rel.length ? rel : clean.length ? clean : r;
 }
@@ -176,9 +176,9 @@ export async function composioToolkit(name: string): Promise<ToolkitPage | null>
     for (const url of [`https://docs.composio.dev/toolkits/${slug}.md`, `https://docs.composio.dev/toolkits/${slug}`]) {
       try {
         const r = await fetchPage(url);
-        if (r.status !== 200 || !/Auth/i.test(r.text) || !/composio/i.test(r.text) || !new RegExp(name.split(/[^a-z0-9]+/i).filter((w) => w.length > 2)[0] ?? "x", "i").test(r.text.slice(0, 4000))) continue;
+        if (r.status !== 200 || !/composio/i.test(r.text) || !new RegExp(name.split(/[^a-z0-9]+/i).filter((w) => w.length > 2)[0] ?? "x", "i").test(r.text.slice(0, 4000))) continue;
         const shown = url.endsWith(".md") ? `https://docs.composio.dev/toolkits/${slug}` : r.url;
-        found = { url: shown, title: r.title && !/^https?:/.test(r.title) ? r.title : `Composio toolkit: ${slug}`, text: r.text.slice(0, 6000), ...parseComposioToolkit(r.text) };
+        found = { url: shown, title: r.title && !/^https?:/.test(r.title) ? r.title : `Composio toolkit: ${slug}`, text: r.text.replace(/\*\*/g, "").slice(0, 6000), ...parseComposioToolkit(r.text) };
         break outer;
       } catch {
         /* no page at this address, try the next */
