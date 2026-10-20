@@ -1,9 +1,17 @@
 /** Turns the agent's raw events into plain sentences, and raw provider errors into a readable explanation. */
-export type Step = { id: number; state: "done" | "warn" | "error"; title: string; detail?: string };
+export type ToolData = { url?: string; excerpt?: string; items?: { title: string; url: string }[] };
+export type Step = { id: number; state: "done" | "warn" | "error"; title: string; detail?: string; data?: ToolData };
 
 const host = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return u.slice(0, 40); } };
 
-export function friendlyTool(name: string, arg: string, result: string): { title: string; detail?: string; state: Step["state"] } {
+export function friendlyTool(name: string, arg: string, result: string, data?: ToolData): { title: string; detail?: string; state: Step["state"]; data?: ToolData } {
+  const r = friendlyToolBase(name, arg, result);
+  // sizes like "4584 chars" say nothing: show what was actually read instead
+  const sizeOnly = /\d+ (chars|results)\)?$/.test(r.detail ?? "") && r.state !== "warn";
+  return { ...r, data, detail: data && sizeOnly ? undefined : r.detail };
+}
+
+function friendlyToolBase(name: string, arg: string, result: string): { title: string; detail?: string; state: Step["state"] } {
   const none = /no Composio guide|none published|0 results|not found/i.test(result);
   switch (name) {
     case "check_composio_managed":

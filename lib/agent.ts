@@ -10,11 +10,12 @@ import { loadGuide } from "./guides";
 
 export type Ev =
   | { type: "status"; msg: string }
-  | { type: "tool"; name: string; arg: string; result: string }
+  | { type: "tool"; name: string; arg: string; result: string; data?: { url?: string; excerpt?: string; items?: { title: string; url: string }[] } }
   | { type: "warn"; msg: string }
   | { type: "guide"; guide: Guide; notes: string[] }
   | { type: "error"; msg: string };
 
+const excerpt = (t: string, n = 700) => t.replace(/\s+/g, " ").trim().slice(0, n);
 const MAX_ACTIONS = 5;
 const RESEARCH_BUDGET_MS = 22_000; // stop researching early so the whole run fits a 60s function limit
 const TOTAL_BUDGET_MS = 52_000;
@@ -24,7 +25,7 @@ const PER_PAGE_PROMPT_CHARS = 9000;
 const OFFICIAL_HINT = /(docs?|developers?|developer|learn|support|help|api)\./i;
 
 async function ask(prompt: string, timeoutMs = ACTION_TIMEOUT_MS, json = true, maxTokens?: number): Promise<string> {
-  return generate(prompt, { json, timeoutMs, maxTokens });
+  return generate(prompt, { json, timeoutMs, maxTokens, accept: json ? (t) => { try { parseJson(t); return true; } catch { return false; } } : undefined });
 }
 
 function parseJson(s: string): any {
@@ -70,7 +71,7 @@ export async function* generateGuide(input: { name: string; site?: string }): As
   const toolkit = await composioToolkit(input.name);
   if (toolkit) {
     fetched.push({ url: toolkit.url, title: toolkit.title, text: toolkit.text, official: true });
-    yield { type: "tool", name: "composio_toolkit_page", arg: input.name, result: `${toolkit.status === "yes" ? "managed OAuth available" : toolkit.status === "no" ? "managed OAuth not available" : "status not stated"}; auth: ${toolkit.methods.join(", ") || "n/a"}` };
+    yield { type: "tool", name: "composio_toolkit_page", arg: input.name, result: `${toolkit.status === "yes" ? "managed OAuth available" : toolkit.status === "no" ? "managed OAuth not available" : "status not stated"}; auth: ${toolkit.methods.join(", ") || "n/a"}`, data: { url: toolkit.url, excerpt: excerpt(toolkit.text) } };
   }
 
   if (input.site) {
@@ -84,7 +85,7 @@ export async function* generateGuide(input: { name: string; site?: string }): As
   try {
     const p = await fetchPage(`https://composio.dev/auth/${cslug}`);
     fetched.push({ url: p.url, title: p.title, text: p.text, official: true });
-    yield { type: "tool", name: "fetch_composio_guide", arg: cslug, result: `${p.text.length} chars` };
+    yield { type: "tool", name: "fetch_composio_guide", arg: cslug, result: `${p.text.length} chars`, data: { url: p.url, excerpt: excerpt(p.text) } };
   } catch {
     yield { type: "tool", name: "fetch_composio_guide", arg: cslug, result: "no Composio guide at that address" };
   }
@@ -95,7 +96,7 @@ export async function* generateGuide(input: { name: string; site?: string }): As
   const famGuide = fam ? loadGuide(fam.slug) : undefined;
   if (fam && famGuide) {
     fetched.push({ url: `https://oauth-guide-agent.vercel.app/guide/${fam.slug}`, title: `Our researched ${fam.parent} guide (${input.name} is registered through ${fam.parent})`, text: guideMarkdown(famGuide), official: false });
-    yield { type: "tool", name: "parent_platform_guide", arg: fam.parent, result: `${input.name} is registered through ${fam.parent}; using our ${fam.parent} guide as evidence` };
+    yield { type: "tool", name: "parent_platform_guide", arg: fam.parent, result: `${input.name} is registered through ${fam.parent}; using our ${fam.parent} guide as evidence`, data: { url: `https://oauth-guide-agent.vercel.app/guide/${fam.slug}`, excerpt: excerpt(guideMarkdown(famGuide)) } };
   }
 
   // RAG step: pull how our researched guides judged difficulty/review for similar apps, so tiers stay consistent.
@@ -132,7 +133,7 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
       if (act.action === "search") {
         const r = await searchWeb(String(act.arg).slice(0, 200));
         log.push(`search "${act.arg}" -> ${r.map((x) => x.url).join(" | ")}`);
-        yield { type: "tool", name: "search_web", arg: act.arg, result: `${r.length} results` };
+        yield { type: "tool", name: "search_web", arg: act.arg, result: `${r.length} results`, data: { items: r.slice(0, 8) } };
       } else if (act.action === "fetch") {
         const p = await fetchPage(String(act.arg));
         if (!fetched.some((f) => f.url === p.url)) {
@@ -141,7 +142,7 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
           fetched.push({ url: p.url, title: p.title, text: p.text, official });
         }
         log.push(`fetched ${p.url}`);
-        yield { type: "tool", name: "fetch_page", arg: p.url, result: `${p.text.length} chars` };
+        yield { type: "tool", name: "fetch_page", arg: p.url, result: `${p.text.length} chars`, data: { url: p.url, excerpt: excerpt(p.text) } };
       } else break;
     } catch (e: any) {
       log.push(`${act.action} failed: ${e.message}`);

@@ -95,7 +95,7 @@ async function callXai(prompt: string, ms: number, temperature: number): Promise
 }
 
 let lastPaidErr = "";
-type GenOpts = { maxTokens?: number; json?: boolean; timeoutMs?: number; temperature?: number; models?: string[]; deadlineMs?: number; race?: boolean; fast?: boolean; only?: "gemini" };
+type GenOpts = { accept?: (text: string) => boolean; maxTokens?: number; json?: boolean; timeoutMs?: number; temperature?: number; models?: string[]; deadlineMs?: number; race?: boolean; fast?: boolean; only?: "gemini" };
 
 /**
  * Public entry. Providers are tried in three tiers, one provider per tier:
@@ -130,8 +130,12 @@ export async function generate(prompt: string, opts: GenOpts = {}): Promise<stri
     const left = total - (Date.now() - started);
     if (left < 3000) { errors.push(`${name}: no time left`); break; }
     const share = i < tiers.length - 1 ? Math.max(3000, Math.floor(left * 0.6)) : left;
-    try { return await run[name](Math.min(share, 30_000)); }
-    catch (e) { errors.push(`${name}: ${safeError(e)}`); used.add(name); }
+    try {
+      const out = await run[name](Math.min(share, 30_000));
+      // a reply that fails the caller's format check counts as a failure, so the next provider gets a turn
+      if (opts.accept && !opts.accept(out)) throw new Error(`reply failed the format check (${out.trim().slice(0, 60).replace(/\s+/g, " ")}…)`);
+      return out;
+    } catch (e) { errors.push(`${name}: ${safeError(e)}`); used.add(name); }
   }
   throw new Error(errors.join(" | ").slice(0, 900));
 }

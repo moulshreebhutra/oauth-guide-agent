@@ -53,7 +53,7 @@ export default function Live() {
           if (ev.type === "guide") { got = true; setGuide({ g: ev.guide, notes: ev.notes }); }
           else if (ev.type === "share") setShare(ev.path);
           else if (ev.type === "error") { got = true; setErr(explainError(String(ev.msg))); }
-          else if (ev.type === "tool") add(friendlyTool(ev.name, String(ev.arg), String(ev.result)));
+          else if (ev.type === "tool") add(friendlyTool(ev.name, String(ev.arg), String(ev.result), ev.data));
           else if (ev.type === "warn") add({ state: "warn", title: /did not answer|unreadable/i.test(ev.msg) ? "An AI model did not answer; trying another" : String(ev.msg).slice(0, 140), detail: String(ev.msg) });
           else setNow(String(ev.msg));
         }
@@ -86,7 +86,14 @@ export default function Live() {
                 {steps.map((st) => (
                   <li key={st.id} className={`st-${st.state}`}>
                     <span className="dot" aria-hidden>{st.state === "warn" ? "!" : "✓"}</span>
-                    <div><b>{st.title}</b>{st.detail && <details><summary>detail</summary><code>{st.detail}</code></details>}</div>
+                    <div><b>{st.title}</b>{(st.detail || st.data) && (
+                      <details><summary>{st.data?.items ? `see the ${st.data.items.length} results` : st.data?.excerpt ? "see what it read" : "detail"}</summary>
+                        {st.detail && <p className="dtext">{st.detail}</p>}
+                        {st.data?.items && <ul className="dlinks">{st.data.items.map((it) => <li key={it.url}><a href={it.url} target="_blank" rel="noreferrer">{it.title.slice(0, 90)}</a><span>{new URL(it.url).hostname}</span></li>)}</ul>}
+                        {st.data?.excerpt && <p className="dtext excerpt">{st.data.excerpt}{st.data.excerpt.length >= 700 ? "…" : ""}</p>}
+                        {st.data?.url && <a className="dopen" href={st.data.url} target="_blank" rel="noreferrer">Open the page</a>}
+                      </details>
+                    )}</div>
                   </li>
                 ))}
               </ol>

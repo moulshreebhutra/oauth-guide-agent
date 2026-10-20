@@ -57,3 +57,38 @@ test("live log: friendly steps and readable errors", () => {
   assert.ok(e.fix.some((f) => /TAVILY/.test(f)) && e.fix.some((f) => /Claude/.test(f)));
   assert.ok(!/^\s*\{/.test(e.headline));
 });
+
+import { generate } from "../lib/llm";
+test("llm: a reply that fails the format check moves on; Claude gets a final retry", async () => {
+  const saved = { fetch: globalThis.fetch, a: process.env.ANTHROPIC_API_KEY, g: process.env.GROQ_API_KEY, m: process.env.GEMINI_API_KEY, o: process.env.OPENROUTER_API_KEY };
+  process.env.ANTHROPIC_API_KEY = "test"; delete process.env.GROQ_API_KEY; delete process.env.GEMINI_API_KEY; delete process.env.OPENROUTER_API_KEY;
+  const replies = ["Sure! Here is the guide in prose", '{"ok":true}'];
+  let calls = 0;
+  globalThis.fetch = (async () => new Response(JSON.stringify({ content: [{ type: "text", text: replies[calls++] }] }), { status: 200 })) as any;
+  try {
+    const out = await generate("x", { json: true, deadlineMs: 30_000, accept: (t) => { try { JSON.parse(t); return true; } catch { return false; } } });
+    assert.equal(out, '{"ok":true}');
+    assert.equal(calls, 2);
+  } finally {
+    globalThis.fetch = saved.fetch;
+    for (const [k, v] of [["ANTHROPIC_API_KEY", saved.a], ["GROQ_API_KEY", saved.g], ["GEMINI_API_KEY", saved.m], ["OPENROUTER_API_KEY", saved.o]] as const) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+  }
+});
+test("llm: errors name every provider that failed", async () => {
+  const saved = { fetch: globalThis.fetch, a: process.env.ANTHROPIC_API_KEY, g: process.env.GROQ_API_KEY, m: process.env.GEMINI_API_KEY, o: process.env.OPENROUTER_API_KEY };
+  process.env.ANTHROPIC_API_KEY = "test"; delete process.env.GROQ_API_KEY; delete process.env.GEMINI_API_KEY; delete process.env.OPENROUTER_API_KEY;
+  globalThis.fetch = (async () => new Response('{"error":"nope"}', { status: 401 })) as any;
+  try { await assert.rejects(() => generate("x", { deadlineMs: 20_000 }), /claude: HTTP 401/); }
+  finally {
+    globalThis.fetch = saved.fetch;
+    for (const [k, v] of [["ANTHROPIC_API_KEY", saved.a], ["GROQ_API_KEY", saved.g], ["GEMINI_API_KEY", saved.m], ["OPENROUTER_API_KEY", saved.o]] as const) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+  }
+});
+
+test("live log: sizes are replaced by what was read", () => {
+  const r = friendlyTool("fetch_page", "https://developers.zoom.us/docs/x", "6815 chars", { url: "https://developers.zoom.us/docs/x", excerpt: "Zoom apps need review before listing." });
+  assert.equal(r.detail, undefined);
+  assert.match(r.data!.excerpt!, /Zoom apps/);
+  const s = friendlyTool("search_web", "q", "8 results", { items: [{ title: "t", url: "https://a.com" }] });
+  assert.equal(s.detail, undefined);
+});
