@@ -59,3 +59,11 @@ Deploy: import the repo in Vercel (Next.js, no build settings), add the variable
 - Free-tier model limits are per project; heavy use will hit them, which is why Ask falls back to other providers and then to code.
 - Gemini free-tier content may be used by Google to improve its products; the agent sends only the app name and public page text.
 - Composio's managed-auth status for Google and Meta was read from the Gmail and Facebook toolkit pages; other toolkits under those providers were not each checked.
+
+
+## Extras beyond the brief
+- `/plan`: launch planner. Pick providers; get start order, earliest and latest launch date, and what stays unknown. Shareable URL.
+- `/compare`: up to three providers side by side.
+- Guide page buttons: copy as Markdown, copy an agent brief (stops where a person must act), print or save PDF, copy a README badge.
+- `/api/guides` and `/api/guides/<slug>`: JSON for agents and tools. `/llms.txt` describes them. `/badge/<slug>` returns an SVG badge.
+- Free model fallbacks: Gemini (several models) plus Groq and OpenRouter when `GROQ_API_KEY` / `OPENROUTER_API_KEY` are set; all are raced and the first valid answer wins. Groq and OpenRouter have not been run against the live services yet.

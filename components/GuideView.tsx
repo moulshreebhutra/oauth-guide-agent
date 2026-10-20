@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { Guide, Claim } from "@/lib/schema";
 import { PageHead } from "./PageHead";
 import { Logo } from "./Logo";
+import { GuideActions } from "./GuideActions";
+import { agentBrief, guideMarkdown } from "@/lib/export";
 
 const idOf = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
@@ -77,6 +79,7 @@ export function GuideView({ g, notes = [], back = false, banner }: { g: Guide; n
           <span>Last verified {g.last_verified}</span>
         </div>
       </PageHead>
+      <div className="wrap actionsbar"><GuideActions markdown={guideMarkdown(g)} brief={agentBrief(g)} slug={g.slug} /></div>
       <div className="wrap guide-grid">
         <nav className="toc" aria-label="Contents">
           <b>Contents</b>

@@ -24,6 +24,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/" className="brand"><span className="mark" aria-hidden />OAuth Route Map</Link>
             <span className="links">
               <Link href="/">Library</Link>
+              <Link href="/plan">Plan</Link>
+              <Link href="/compare">Compare</Link>
               <Link href="/playbook">Playbook</Link>
               <Link href="/findings">Findings</Link>
               <Link href="/how-it-works">How it works</Link>

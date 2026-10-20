@@ -1,0 +1,10 @@
+# OAuth Route Map
+
+> For developers connecting apps for their users: how hard it is to register and get an OAuth app approved, how long the provider wait is, what an agent can do and where a person takes over. Every claim is tagged tested, sourced, reported, inferred or unknown.
+
+- [Library index (JSON)](https://oauth-guide-agent.vercel.app/api/guides): ten providers with tier, hands-on time, approval wait, Composio managed-auth status
+- [One guide (JSON)](https://oauth-guide-agent.vercel.app/api/guides/slack): replace "slack" with github, notion, hubspot, salesforce, microsoft-outlook, shopify, google-workspace, linkedin, meta
+- [Launch planner](https://oauth-guide-agent.vercel.app/plan): earliest and latest launch date for a set of providers
+- [Playbook](https://oauth-guide-agent.vercel.app/playbook): patterns and an eight-question checklist for any provider
+- [Research any app](https://oauth-guide-agent.vercel.app/live): an agent reads the provider's pages and writes a guide
+- [Method](https://oauth-guide-agent.vercel.app/method): what the labels mean and what is not verified
