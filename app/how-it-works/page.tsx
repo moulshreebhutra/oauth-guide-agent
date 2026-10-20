@@ -1,103 +1,410 @@
-const stages = [
-  { c: "var(--l1)", t: "Research becomes data", p: "Each guide is a typed JSON record (data/guides). A schema rejects a guide that is missing fields, cites evidence that does not exist, or claims 'sourced' without a quote. Nothing reaches a page without passing it." },
-  { c: "var(--l2)", t: "The data is cut into passages and indexed", p: "Every claim, step, blocker and source quote becomes a small passage that remembers its app, section and evidence tag. A keyword index (BM25) ranks passages against a question. This is the retrieval half of RAG." },
-  { c: "var(--l3)", t: "Asking a question", p: "Your question retrieves the six best passages. Gemini may answer only from them and must cite passage ids. Code then checks every cited id was really retrieved; if not, the written answer is hidden and the passages are shown instead. No match at all returns 'not covered' without calling the model." },
-  { c: "var(--l4)", t: "Researching an app that is not in the library", p: "The agent checks Composio's managed-auth flag and the provider's OAuth discovery document, then loops: the model picks a search or a page, our code runs it (with limits and private-address blocking). Finally it writes the guide, using retrieved library judgements to keep tiers consistent." },
-  { c: "var(--l1)", t: "Guardrails run in code, not in the prompt", p: "Quotes must appear in pages it actually read, or they are removed. A claim that loses its quote drops from sourced to inferred. The model cannot mark anything tested. The result must pass the schema. If it cannot, nothing is shown." },
-  { c: "var(--l2)", t: "Deployment", p: "Vercel builds the Next.js app from the repo. Pages are pre-rendered; the two API routes run as short serverless functions. Keys (Gemini, Composio) live only in Vercel environment variables." },
+import { PageHead } from "@/components/PageHead";
+import { Mermaid } from "@/components/Mermaid";
+
+const CLASSES = `
+  classDef code fill:#ffffff,stroke:#0f0f0f,color:#0f0f0f;
+  classDef ai fill:#eef0ff,stroke:#0007cd,color:#0f0f0f;
+  classDef human fill:#fff4d6,stroke:#9a6400,color:#0f0f0f;
+  classDef stop fill:#fde8e1,stroke:#cf4519,color:#0f0f0f;
+  classDef good fill:#e6f4ee,stroke:#0a7a58,color:#0f0f0f;
+  classDef data fill:#f0f0f0,stroke:#5c5c5c,color:#0f0f0f;`;
+
+const D = {
+  architecture: `flowchart TD
+  U["Browser<br/>Library, Ask, Live agent, Plan, Compare"]:::code
+  U --> PG
+  U --> AS
+  U --> GE
+  subgraph APP["Next.js 16 on Vercel"]
+    direction LR
+    PG["Pages<br/>pre-rendered"]:::code
+    EX["/api/guides, /badge, llms.txt<br/>exports"]:::code
+    AS["/api/ask<br/>answers questions"]:::code
+    GE["/api/generate<br/>Live agent, streams progress"]:::code
+  end
+  PG --> LB
+  EX --> LB
+  AS --> LB
+  LB[("Library<br/>10 researched JSON guides + passage index")]:::data
+  AS --> OR
+  GE --> OR
+  OR["Orchestration and guardrails, in code<br/>schema, quote check, tags, rate limits, address blocking"]:::good
+  OR --> R["AI router<br/>Claude, Groq, Bedrock, Grok, Gemini, OpenRouter"]:::ai
+  OR --> W["Web research<br/>Tavily or Brave search + page fetch"]:::code
+  OR --> C["Composio<br/>API or public toolkit docs"]:::code
+${CLASSES}`,
+
+  scenarios: `flowchart TD
+  Q["You name an app<br/>(in Ask or the Live agent)"]:::code --> L{"Is it one of the 10<br/>researched library apps?"}
+  L -- yes --> LG["Researched guide<br/>written from official docs,<br/>quotes checked against pages"]:::good
+  L -- no --> LV["Live research<br/>pages read a moment ago,<br/>quotes checked by code"]:::ai
+  LG --> M1{"Does Composio<br/>manage the OAuth app?"}
+  LV --> M2{"Does Composio<br/>manage the OAuth app?"}
+  M1 -- yes --> S1["Scenario 1<br/>Library + managed"]:::good
+  M1 -- no --> S2["Scenario 2<br/>Library + you register your own"]:::good
+  M2 -- yes --> S3["Scenario 3<br/>Not in library + managed"]:::ai
+  M2 -- no or unknown --> S4["Scenario 4<br/>Not in library + you register<br/>or not confirmed"]:::ai
+${CLASSES}`,
+
+  composio: `flowchart TD
+  A["App name"]:::code --> B{"COMPOSIO_API_KEY<br/>set on the server?"}
+  B -- yes --> C["Ask the Composio API for<br/>the toolkit's managed auth schemes"]:::code
+  B -- no --> D["Read the public page<br/>docs.composio.dev/toolkits/app"]:::code
+  C --> E{"What did it say?"}
+  D --> E
+  E -- "managed OAuth available" --> Y["Status yes<br/>tagged Sourced"]:::good
+  E -- "not available" --> N["Status no<br/>tagged Sourced"]:::good
+  E -- "no page, or not stated" --> U["Status unknown<br/>tagged Unknown, nothing assumed"]:::human
+  Y --> Y2["Guide says: you can connect users<br/>without registering your own provider app first.<br/>Register your own only for your branding,<br/>scopes or rate limits."]:::code
+  N --> N2["Guide says: you must register your own app.<br/>Steps: create the app, redirect URI, scopes,<br/>review, then give the credentials to a Composio auth config."]:::code
+  U --> U2["Guide shows Not confirmed<br/>and plans for the worse case:<br/>register your own app"]:::code
+  Y2 --> Z["Your own app, if you make one,<br/>still faces the provider's review.<br/>The wait shown is for that review."]:::human
+  N2 --> Z
+  U2 --> Z
+${CLASSES}`,
+
+  library: `flowchart TD
+  R["Research<br/>official provider docs +<br/>Composio's guide, by a person"]:::human --> J["One typed JSON guide<br/>data/guides"]:::data
+  J --> Z{"Schema and evidence check<br/>npm run validate"}
+  Z -- "missing field, unknown source,<br/>Sourced without a quote" --> J
+  Z -- passes --> Q{"Do the quotes still match<br/>the live pages?<br/>npm run verify-quotes"}
+  Q --> PG["Pre-rendered pages<br/>guide, library, compare, plan"]:::good
+  Q --> IX["Passage index (BM25)<br/>+ optional embeddings"]:::good
+  Q --> EX["Exports: Markdown, agent brief,<br/>JSON API, README badge, llms.txt"]:::good
+  PG --> T["A person registers the app by hand<br/>and logs it in docs/TESTING.md"]:::human
+  T --> TG["Only then may a claim be tagged Tested"]:::good
+${CLASSES}`,
+
+  askLibrary: `flowchart TD
+  Q["Question about a library app"]:::code --> RL{"Under 20 questions<br/>this hour?"}
+  RL -- no --> E1["Try again later"]:::stop
+  RL -- yes --> CA{"Same question answered<br/>in the last 6 hours?"}
+  CA -- yes --> H["Return the saved answer"]:::good
+  CA -- no --> T{"About connecting,<br/>registering or authorising an app?"}
+  T -- no --> OT["Polite out-of-scope message<br/>no model is called"]:::stop
+  T -- yes --> K["Phase 1: keyword search<br/>BM25 + synonym groups<br/>(approval = review = verification)"]:::code
+  K --> Q1["Show passages at once,<br/>assembled by code, no AI"]:::good
+  Q1 --> HY["Phase 2: re-rank by meaning<br/>Gemini embeddings, 4s cap,<br/>keyword order if it fails"]:::ai
+  HY --> PR["Prompt = the written skill + top passages<br/>passages are data, not instructions"]:::code
+  PR --> M["AI router picks a model"]:::ai
+  M --> V{"Is every citation a passage<br/>that was really retrieved?"}
+  V -- yes --> A["Answer with clickable citations<br/>saved for 6 hours"]:::good
+  V -- "no, or all models failed" --> F["Show the guides' own wording,<br/>composed by code, labelled"]:::human
+${CLASSES}`,
+
+  askWeb: `flowchart TD
+  Q["Question names an app<br/>that is not in the library"]:::code --> N["Find the app name<br/>known-apps list, domain or capitalised word"]:::code
+  N --> S["3 web searches in parallel<br/>setup, review and scopes, authentication"]:::code
+  N --> CT["Composio toolkit page"]:::code
+  N --> PF{"Registered through a parent?<br/>Instagram to Meta, YouTube to Google"}
+  S --> O["Official hosts first<br/>docs, developers, support"]:::code
+  O --> FP["Fetch pages, follow auth and review links.<br/>If a site blocks us, use the text<br/>the search engine already read"]:::code
+  FP --> FL["Keep only pages about the app.<br/>Drop tool lists and script shells"]:::code
+  PF -- yes --> PG["Add our parent guide's passages"]:::good
+  FL --> PA["Cut into passages and rank (BM25)"]:::code
+  CT --> PA
+  PG --> PA
+  FL -- "nothing readable" --> GK["Labelled general-knowledge answer<br/>no sources, may be out of date"]:::human
+  PA --> PR["Prompt = skill + passages"]:::code
+  PR --> M["AI router"]:::ai
+  M --> V{"Citations valid?"}
+  V -- yes --> A["Answer: researched live,<br/>not human-checked, pages listed"]:::ai
+  V -- no --> F["Passages composed by code"]:::human
+${CLASSES}`,
+
+  agent: `flowchart TD
+  I["App name, website, or a typed question"]:::code --> X["Find the app inside the text<br/>sentences with no app are refused"]:::code
+  X --> CK{"A guide for this app<br/>made in the last 6 hours?"}
+  CK -- yes --> RE["Replay it instantly<br/>costs nothing"]:::good
+  CK -- no --> RL{"Under 5 new guides<br/>this hour?"}
+  RL -- no --> E1["Try again later"]:::stop
+  RL -- yes --> P1["Fixed probes, no AI<br/>Composio managed flag, Composio toolkit page,<br/>composio.dev/auth guide, OAuth discovery if a website was given"]:::code
+  P1 --> P2{"Registered through a parent?"}
+  P2 -- yes --> PG["Our parent guide becomes evidence"]:::good
+  P2 -- no --> LP
+  PG --> LP["Research loop: up to 5 actions in about 20s<br/>the model picks search, fetch or done;<br/>code runs it with limits"]:::ai
+  LP --> VP["Always look for the review or verification page"]:::code
+  VP --> OK{"Any usable page read?"}
+  OK -- no --> ER["Stop. No guide is invented."]:::stop
+  OK -- yes --> WR["Write the guide as JSON<br/>heavy AI router, up to 110s"]:::ai
+  WR --> RP["Repair near-misses<br/>label case, null minutes, bad enums"]:::code
+  RP --> EN["Enforce checks<br/>see the next diagram"]:::good
+  EN --> OK2{"Passed?"}
+  OK2 -- yes --> SH["Show guide<br/>save 6 hours, signed share link"]:::good
+  OK2 -- no --> RT{"First try?"}
+  RT -- yes --> WR
+  RT -- no --> ER2["Show why nothing was shown,<br/>never an unchecked guide"]:::stop
+${CLASSES}`,
+
+  enforce: `flowchart TD
+  D["Draft guide from the model"]:::ai --> E1{"Evidence URL was<br/>actually fetched?"}
+  E1 -- no --> X1["Drop that evidence"]:::stop
+  E1 -- yes --> E2{"Quote appears in the<br/>page text, character for character?"}
+  E2 -- no --> X2["Drop that evidence"]:::stop
+  E2 -- yes --> K["Keep it, mark quote verified"]:::good
+  X1 --> C
+  X2 --> C
+  K --> C["For every claim"]:::code
+  C --> T1{"Tagged Tested?"}
+  T1 -- yes --> DG1["Downgrade to Inferred<br/>Tested is for humans only"]:::human
+  T1 -- no --> T2{"Tagged Sourced but no<br/>verified quote left?"}
+  DG1 --> T2
+  T2 -- yes --> DG2["Downgrade to Inferred"]:::human
+  T2 -- no --> CM
+  DG2 --> CM["Composio managed status<br/>is set by code, never by the model"]:::code
+  CM --> SC{"Passes the schema?<br/>Zod: types, enums, numbers"}
+  SC -- no --> FAIL["Rejected: nothing shown"]:::stop
+  SC -- yes --> OUT["Guide + a list of every automatic change"]:::good
+${CLASSES}`,
+
+  router: `flowchart TD
+  R["Request to an AI model"]:::code --> H{"Writing a whole guide?"}
+  H -- no --> A1["Tier 1: one at random of<br/>Claude, Groq, Bedrock, Grok<br/>(only those with a key)"]:::ai
+  A1 -- "error, timeout or wrong format" --> A2["Tier 2: Gemini or OpenRouter, 50-50"]:::ai
+  A2 -- fails --> A3["Tier 3: Claude once more"]:::ai
+  H -- yes --> G1["Claude first 80% of the time,<br/>otherwise Bedrock or Grok.<br/>Groq is skipped for long prompts"]:::ai
+  G1 -- fails --> G2["Gemini or Groq"]:::ai
+  G2 -- fails --> G3["Claude last"]:::ai
+  A1 --> OKK["First good reply wins"]:::good
+  A2 --> OKK
+  A3 --> OKK
+  G1 --> OKK
+  G2 --> OKK
+  G3 --> OKK
+  A3 -- fails --> ERR["Error names every provider<br/>and why it failed"]:::stop
+  G3 -- fails --> ERR
+${CLASSES}`,
+};
+
+const SCENARIOS = [
+  { n: "1", t: "In the library, Composio manages the OAuth app", e: "Researched by a person, quotes checked against pages", how: "Instant keyword answer, then an AI answer written only from the guide's passages. Cards show Composio managed auth as Available.", ex: "GitHub, Notion, Slack, HubSpot, Shopify" },
+  { n: "2", t: "In the library, you register your own app", e: "Researched by a person, quotes checked against pages", how: "Same pipeline. The full setup, review and wait are the whole job, and the guide says which steps only you can do.", ex: "Salesforce, LinkedIn, Meta (advanced access)" },
+  { n: "3", t: "Not in the library, Composio manages the OAuth app", e: "Pages read a moment ago, not human-checked", how: "Ask researches the web and answers from those pages. The Live agent writes a guide; the managed flag comes from Composio and is set by code.", ex: "Zoom, Discord, Dropbox" },
+  { n: "4", t: "Not in the library, you register your own, or Composio is silent", e: "Pages read a moment ago, not human-checked", how: "Same research. If Composio's status cannot be found the guide says Not confirmed and plans for the worse case. Anything no page states is Unknown.", ex: "Smaller or newer apps" },
 ];
 
-import { PageHead } from "@/components/PageHead";
+const TECH: [string, string][] = [
+  ["Next.js 16 (App Router), React 19, TypeScript", "Pages are pre-rendered; the API routes run as serverless functions on Vercel. The Live agent streams its progress to the browser as server-sent events."],
+  ["Zod schema", "Every guide, written by a person or an AI, must fit one typed shape. A guide that does not fit is rejected, not repaired into something else."],
+  ["BM25 + synonym groups", "Keyword retrieval over passages cut from the guides. Synonym groups (approval, review, verification, listing) let a question and a guide use different words."],
+  ["Gemini embeddings (optional)", "Re-orders keyword hits by meaning. Capped at 4 seconds; if it fails the keyword order stands. Vectors can be prebuilt with npm run build:embeddings."],
+  ["AI router", "Claude, Groq, AWS Bedrock, xAI Grok, Gemini and OpenRouter, used only when their key is set. Tiers and random choice spread load and survive any one provider failing."],
+  ["Tavily or Brave search, then fetch", "Search finds the provider's pages. Fetch reads them (private addresses blocked, size and time capped). When a site shows a bot check, the text the search engine read is used and labelled as such."],
+  ["Composio API and public toolkit docs", "Tell us whether Composio manages the OAuth app and which auth methods the toolkit supports."],
+  ["Signed share links", "A guide is packed into the URL and signed with HMAC-SHA256 using a server secret. Nothing is stored; only this server can mint a valid link."],
+  ["Caches and limits", "Answers and guides are remembered for 6 hours on the server and in your browser. Ask allows 20 questions an hour and the Live agent 5 new guides an hour per visitor; repeats cost nothing."],
+  ["Tests", "70 automated tests cover the schema, quote checks, retrieval, the AI router, link signing and the text cleaning. Run with npm test."],
+];
+
+function Fig({ title, intro, bullets, code, label }: { title: string; intro?: string; bullets: string[]; code: string; label: string }) {
+  return (
+    <section className="hw">
+      <h2>{title}</h2>
+      {intro && <p>{intro}</p>}
+      <Mermaid code={code} label={label} />
+      <ul className="hw-bul">{bullets.map((b) => <li key={b} dangerouslySetInnerHTML={{ __html: b }} />)}</ul>
+    </section>
+  );
+}
 
 export default function How() {
   return (
     <main>
-      <PageHead eyebrow="End to end" title="How this works, end to end" />
-      <div className="wrap narrow prose">
+      <PageHead eyebrow="End to end" title="How this works, end to end" lede="Every route a question or an app can take, what is checked by code and what is left to a model, and where a person is still needed." />
+      <div className="wrap hwpage">
+        <aside className="hw-legend" aria-label="Diagram key">
+          <b>Diagram key</b>
+          <span><i style={{ background: "#fff", borderColor: "#0f0f0f" }} />Code, no AI</span>
+          <span><i style={{ background: "#eef0ff", borderColor: "#0007cd" }} />An AI model</span>
+          <span><i style={{ background: "#e6f4ee", borderColor: "#0a7a58" }} />Checked, safe result</span>
+          <span><i style={{ background: "#fff4d6", borderColor: "#9a6400" }} />A person, or a labelled fallback</span>
+          <span><i style={{ background: "#fde8e1", borderColor: "#cf4519" }} />Stop or refuse</span>
+          <span><i style={{ background: "#f0f0f0", borderColor: "#5c5c5c" }} />Stored data</span>
+        </aside>
 
-      <h2>The problem</h2>
-      <p>
-        To let your users connect their Google, LinkedIn or Shopify account, you register an app with that provider. For some providers this takes ten minutes. For others it means a review that can run for weeks, and the setup guides you find say how to click through the forms but not how hard it is, how long approval takes, or which parts only you can do. Teams discover this late. This site puts those answers first and says how sure it is about each.
-      </p>
+        <section className="hw">
+          <h2>The problem</h2>
+          <ul className="hw-bul">
+            <li>To let users connect their Google, LinkedIn or Shopify account, you register an app with that provider.</li>
+            <li>For some providers that takes ten minutes. For others it means a review that can run for weeks.</li>
+            <li>Setup guides explain the clicking, but not how hard it is, how long approval takes, or which steps only you can do.</li>
+            <li>This site puts those answers first and says how sure it is about each: <b>Tested, Sourced, Reported, Inferred or Unknown</b>.</li>
+          </ul>
+        </section>
 
-      <h2>The pieces</h2>
-      <svg className="diagram" viewBox="0 0 760 330" role="img" aria-label="Architecture: browser calls Next.js on Vercel, which reads guide data and a retrieval index, calls Gemini, and reads provider documentation on the web.">
-        <defs>
-          <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="currentColor" /></marker>
-        </defs>
-        <g fill="none" stroke="currentColor" strokeWidth="1.6" color="var(--muted)">
-          <rect x="10" y="125" width="130" height="70" rx="10" fill="var(--card)" />
-          <rect x="190" y="20" width="300" height="290" rx="14" fill="var(--card)" />
-          <rect x="210" y="50" width="120" height="50" rx="8" />
-          <rect x="350" y="50" width="120" height="50" rx="8" />
-          <rect x="210" y="125" width="260" height="50" rx="8" />
-          <rect x="210" y="200" width="260" height="50" rx="8" />
-          <rect x="210" y="262" width="260" height="36" rx="8" />
-          <rect x="560" y="30" width="190" height="60" rx="10" fill="var(--card)" />
-          <rect x="560" y="135" width="190" height="60" rx="10" fill="var(--card)" />
-          <rect x="560" y="240" width="190" height="60" rx="10" fill="var(--card)" />
-          <path d="M140 160 H190" markerEnd="url(#a)" />
-          <path d="M470 75 H560" markerEnd="url(#a)" />
-          <path d="M470 135 L560 85" markerEnd="url(#a)" />
-          <path d="M470 150 H560" markerEnd="url(#a)" />
-          <path d="M470 165 L560 255" markerEnd="url(#a)" />
-        </g>
-        <g fill="currentColor" fontSize="14" textAnchor="middle">
-          <text x="75" y="155" fontWeight="700">Browser</text><text x="75" y="175" fontSize="12">pages, Ask, Live</text>
-          <text x="340" y="42" fontWeight="700">Next.js on Vercel</text>
-          <text x="270" y="80">Pages</text><text x="270" y="94" fontSize="11">library, guides</text>
-          <text x="410" y="80">/api/ask</text><text x="410" y="94" fontSize="11">retrieve, answer</text>
-          <text x="340" y="148">/api/generate</text><text x="340" y="164" fontSize="11">live agent loop</text>
-          <text x="340" y="222">Guardrails</text><text x="340" y="238" fontSize="11">quote check, tags, schema, limits</text>
-          <text x="340" y="285" fontSize="12">Guide data + passage index</text>
-          <text x="655" y="56" fontWeight="700">Gemini</text><text x="655" y="74" fontSize="12">writes answers and guides</text>
-          <text x="655" y="161" fontWeight="700">Provider docs</text><text x="655" y="179" fontSize="12">fetched live, treated as data</text>
-          <text x="655" y="266" fontWeight="700">Composio API</text><text x="655" y="284" fontSize="12">managed-auth lookup</text>
-        </g>
-      </svg>
+        <Fig
+          title="The pieces"
+          intro="Everything runs in one Next.js app on Vercel. The browser never talks to an AI model, a search engine or Composio directly."
+          code={D.architecture}
+          label="Architecture: browser, Next.js routes, guardrails, library data, AI router, web research and Composio."
+          bullets={[
+            "<b>Pages</b> are pre-rendered from the library data, so the 10 researched guides load instantly and never depend on an AI.",
+            "<b>/api/ask</b> answers a question from the library, or researches the web when the app is not in it.",
+            "<b>/api/generate</b> is the Live agent: it researches one app and streams its progress while it writes a guide.",
+            "<b>Guardrails</b> sit in code, not in the prompt: schema, quote matching, tag downgrades, rate limits and private-address blocking.",
+            "<b>Keys</b> (Claude, Groq, Gemini, Tavily and the rest) live only in Vercel environment variables, never in the repository or the browser.",
+          ]}
+        />
 
-      <h2>What happens, in order</h2>
-      <div className="flow">
-        {stages.map((s, i) => (
-          <div key={s.t} className="stage" style={{ ["--c" as string]: s.c }}>
-            <span className="n">{i + 1}</span>
-            <div>
-              <h3>{s.t}</h3>
-              <p>{s.p}</p>
-            </div>
+        <section className="hw">
+          <h2>Four scenarios</h2>
+          <p>Two questions decide the route: is the app in the library, and does Composio manage its OAuth app?</p>
+          <Mermaid code={D.scenarios} label="The four scenarios: library or not, Composio managed or not." />
+          <div className="hw-table" role="region" aria-label="The four scenarios" tabIndex={0}>
+            <table>
+              <thead><tr><th>Scenario</th><th>How sure we are</th><th>What happens</th><th>Examples</th></tr></thead>
+              <tbody>
+                {SCENARIOS.map((s) => (
+                  <tr key={s.n}><td><b>{s.n}.</b> {s.t}</td><td>{s.e}</td><td>{s.how}</td><td>{s.ex}</td></tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
-      </div>
+          <ul className="hw-bul">
+            <li>Library answers are <b>researched by a person</b> and every quote is checked against its page.</li>
+            <li>Everything else is <b>researched live</b>, labelled as not human-checked, and shows the pages it read.</li>
+            <li>Whether an app is in the library is separate from whether Composio manages its OAuth app. The next diagram covers the second question.</li>
+          </ul>
+        </section>
 
-      <h2>Plain-language glossary</h2>
-      <ul>
-        <li><b>OAuth app</b>: the registration your product holds with a provider so users can grant access without sharing passwords.</li>
-        <li><b>Provider review</b>: the provider checking your app before strangers can use it. This is the slow part.</li>
-        <li><b>RAG</b>: look up relevant passages first, then let the model answer from them. It keeps answers tied to written sources.</li>
-        <li><b>Agent</b>: a model that decides which tool to use next (search, fetch a page) in a loop, within limits we set.</li>
-        <li><b>Hallucination</b>: a model stating something that sounds right but is not supported. Our checks look for exactly this.</li>
-        <li><b>Evidence tag</b>: Tested, Sourced, Reported, Inferred or Unknown, shown beside each claim.</li>
-      </ul>
+        <Fig
+          title="Composio managed or not"
+          intro="The managed status is looked up by code, never guessed by a model."
+          code={D.composio}
+          label="How the Composio managed-auth status is found and what the guide says for yes, no and unknown."
+          bullets={[
+            "<b>Managed (yes):</b> Composio's own OAuth app can connect your users, so you can skip registering with the provider first.",
+            "<b>Not managed (no):</b> you register your own OAuth app. This is the case the guides are built for, with effort, wait and what only you can do.",
+            "<b>Unknown:</b> no Composio page was found or it does not say. The card shows Not confirmed and the guide plans for the worse case.",
+            "Even when Composio manages it, your <b>own</b> app, for your branding, scopes or rate limits, still faces the provider's review.",
+            "The status and its tag come from code (Composio API if a key is set, otherwise the public toolkit page) and the model cannot overwrite them.",
+          ]}
+        />
 
-      <h2>From 10 guides to 100</h2>
-      <p>The library is a slice; the same agent that answers live requests builds the rest. <code>scripts/batch-generate.ts</code> takes a list of app names or websites, runs each through the live agent with the same guardrails, and saves the result to <code>data/guides/_generated</code> for a person to review. Nothing generated reaches the site until it is checked and moved into the library. The plan for 100:</p>
-      <ol>
-        <li><b>Seed the list</b> from Composio&apos;s managed-auth directory (OAuth toolkits), starting with the apps developers ask for most.</li>
-        <li><b>Run the batch</b>: about five model calls and a few page fetches per app, paced for free-tier limits.</li>
-        <li><b>Review a sample</b>: open each guide&apos;s quotes, run <code>npm run verify-quotes</code>, and spot-check the tier against the provider&apos;s own docs.</li>
-        <li><b>Promote</b> reviewed guides into the library; guides nobody has checked stay labelled as generated by the agent.</li>
-        <li><b>Re-check on a schedule</b>, because provider docs change: each guide shows its last-verified date.</li>
-      </ol>
+        <Fig
+          title="Flow 1: how a library guide is made"
+          code={D.library}
+          label="From research to a published library guide: schema check, quote check, pages, index, exports and hands-on testing."
+          bullets={[
+            "A person researches the provider's official docs and Composio's own guide, then records the result as <b>one typed JSON guide</b>.",
+            "The <b>schema check</b> rejects a guide with missing fields, a cited source that does not exist, or a Sourced claim without a quote.",
+            "<b>verify-quotes</b> re-fetches the pages and confirms each quote is still there. Until it has run against open network, quotes show as not re-matched.",
+            "One guide feeds <b>everything</b>: its pages, the compare and plan tools, the search index, Markdown and agent-brief export, the JSON API, README badge and llms.txt.",
+            "<b>Tested</b> means a person registered the app by hand and logged it in docs/TESTING.md. Until then no claim carries that tag.",
+          ]}
+        />
 
-      <h2>Which AI answers, and what happens when it cannot</h2>
-      <p>Ask and the live agent call several free models at the same time and use the first good answer: four Gemini models, plus Groq and OpenRouter when their keys are set. Transient errors (busy or rate-limited) are retried with growing delays. If no model answers, Ask still returns a summary written by code from the guides&apos; own sentences, labelled as not written by AI, with the reason. Good answers are remembered for six hours.</p>
+        <Fig
+          title="Flow 2: Ask, app in the library"
+          code={D.askLibrary}
+          label="Ask for a library app: limits, cache, topic check, instant keyword answer, re-rank, AI answer, citation check and fallback."
+          bullets={[
+            "<b>Phase 1 is instant and uses no AI.</b> Keyword search finds passages and code assembles an answer, so there is always something useful on screen.",
+            "<b>Phase 2</b> re-orders passages by meaning, then a model writes an answer using only those passages and the written skill (method, format, link rules).",
+            "Passages are passed as <b>data, not instructions</b>, so a sentence inside a guide cannot redirect the model.",
+            "<b>Citation check:</b> every [id] in the answer must be a passage that was retrieved. If one is not, the AI text is hidden.",
+            "If every model fails, the answer is the guides' own wording, assembled by code, with the reason shown.",
+            "Questions that are not about connecting an app are turned away politely, with no model call.",
+          ]}
+        />
 
-      <h2>What is not built yet</h2>
-      <ul>
-        <li>Retrieval is hybrid: keywords (with synonym groups such as approval, review and verification) decide what is eligible, then Gemini embeddings re-order it by meaning. The embedding step has not been run against the live model yet; if it fails the keyword order is used.</li>
-        <li>Share links carry the whole guide inside the URL (signed, nothing stored). Very long guides may not fit; those get no link and can still be copied as JSON.</li>
-        <li>Hands-on registrations are still to be logged, so no claim is tagged Tested.</li>
-      </ul>
+        <Fig
+          title="Flow 3: Ask, app not in the library"
+          code={D.askWeb}
+          label="Ask for an app outside the library: search, official pages first, parent platform, passages, AI answer or labelled fallback."
+          bullets={[
+            "The app name comes from a known-apps list, a domain, or a capitalised word in the question.",
+            "<b>Three searches</b> run at once (setup, review and scopes, authentication). Official hosts such as docs, developers and support are read first.",
+            "Pages that do not mention the app, tool-name lists and script-built shells are dropped, so they cannot be cited as evidence.",
+            "A product registered through a parent (Instagram, WhatsApp and Threads through Meta; YouTube and Gmail through Google) also brings in <b>our parent guide's passages</b>.",
+            "If a site blocks our fetch behind a bot check, the text the search engine already read is used and the source says so.",
+            "The answer is labelled <b>researched live, not human-checked</b>. If nothing readable was found, a general-knowledge answer is shown with no sources and a clear label.",
+          ]}
+        />
+
+        <Fig
+          title="Flow 4: the Live agent writes a guide"
+          intro="This route takes 90 to 170 seconds. The page shows a loader and a collapsed list of every step."
+          code={D.agent}
+          label="The Live agent: cache, limits, fixed probes, research loop, writing, repair, checks and the retry."
+          bullets={[
+            "A typed question is reduced to the app it names; a sentence with no app is refused with a hint to use the Ask box.",
+            "<b>Fixed probes run first and use no AI:</b> Composio managed flag, Composio's toolkit page and setup guide, and OAuth discovery if a website was given.",
+            "In the <b>research loop</b> the model chooses a search, a page or done; code runs each action with time, size and address limits. It stops after 5 actions or about 20 seconds.",
+            "The agent <b>always looks for the review or verification page</b>, because models often skip the one page that answers how long approval takes.",
+            "If no usable page was read, it stops. <b>It never invents a guide.</b>",
+            "The write step uses the heavy router (Claude first most of the time), a JSON template taken from a researched guide, and a size limit so the reply is not cut off.",
+            "A near-miss such as a wrong label case or a missing number is repaired. Missing setup minutes become a tier-based estimate tagged Inferred.",
+            "A finished guide is saved for 6 hours, and a signed share link is made.",
+          ]}
+        />
+
+        <Fig
+          title="Flow 5: what the checks do"
+          intro="These run in code after the model has written. They are the reason a quote on a guide is trustworthy."
+          code={D.enforce}
+          label="Enforcement of evidence, tags, Composio status and schema on a generated guide."
+          bullets={[
+            "A source the agent never fetched is dropped. So is a quote that is not in the page text, character for character.",
+            "A claim that loses its quote drops from <b>Sourced</b> to <b>Inferred</b>. The model cannot mark anything <b>Tested</b>.",
+            "The Composio status is set by code. The model's own value is overwritten.",
+            "The schema check fixes the shape: if it fails twice, nothing is shown, and the screen says why.",
+            "Every automatic change is listed under <b>Automatic checks applied</b> on the guide, so nothing happens silently.",
+          ]}
+        />
+
+        <Fig
+          title="Which AI answers, and what happens when one fails"
+          code={D.router}
+          label="AI router: tiers for short answers and for whole guides, with fallbacks and an error listing every provider."
+          bullets={[
+            "Short answers pick one of <b>Claude, Groq, Bedrock or Grok</b> at random (only those with a key), then <b>Gemini or OpenRouter</b>, then Claude once more.",
+            "Whole guides lean on Claude first, then Bedrock or Grok, then Gemini or Groq, then Claude last. Groq is skipped for long prompts because of its size limit.",
+            "A reply in the wrong format (for example prose where JSON was needed) counts as a failure and moves to the next provider.",
+            "If everyone fails, the error lists <b>every provider and its reason</b>, so a quota problem on one is not hidden behind another.",
+            "<b>/api/health</b> tests each provider and shows which ones respond right now.",
+          ]}
+        />
+
+        <section className="hw">
+          <h2>Technology used</h2>
+          <dl className="hw-tech">
+            {TECH.map(([t, d]) => (<div key={t}><dt>{t}</dt><dd>{d}</dd></div>))}
+          </dl>
+        </section>
+
+        <section className="hw">
+          <h2>What is checked by code and what is not</h2>
+          <ul className="hw-bul">
+            <li><b>By code, every time:</b> quotes against page text, tags, Composio status, schema, link signing, rate limits, private-address blocking, citations against retrieved passages.</li>
+            <li><b>By a model:</b> choosing the next page to read, writing the answer or guide, and reading the question.</li>
+            <li><b>By a person, still pending:</b> registering apps by hand, so no claim is Tested yet, and a review of live-generated guides before they join the library.</li>
+            <li><b>Known limits:</b> a guide takes 90 to 170 seconds; retrieval re-ranking by meaning has not been prebuilt; Gemini needs billing enabled before it adds capacity; the server cache is per instance, while the browser copy is reliable.</li>
+          </ul>
+        </section>
+
+        <section className="hw">
+          <h2>From 10 guides to 100</h2>
+          <ul className="hw-bul">
+            <li><b>Seed the list</b> from Composio's managed-auth directory, starting with the apps developers ask for most.</li>
+            <li><b>Run the batch</b> (scripts/batch-generate.ts): each app goes through the Live agent with the same checks and is saved for review.</li>
+            <li><b>Review a sample:</b> open the quotes, run npm run verify-quotes and compare the tier with the provider's own docs.</li>
+            <li><b>Promote</b> reviewed guides into the library. Unreviewed ones stay labelled as written by the agent.</li>
+            <li><b>Re-check on a schedule,</b> because provider docs change. Each guide shows its last-verified date.</li>
+          </ul>
+        </section>
+
+        <section className="hw">
+          <h2>Plain-language glossary</h2>
+          <dl className="hw-tech">
+            <div><dt>OAuth app</dt><dd>The registration your product holds with a provider so users can grant access without sharing passwords.</dd></div>
+            <div><dt>Provider review</dt><dd>The provider checking your app before strangers can use it. This is the slow part.</dd></div>
+            <div><dt>RAG</dt><dd>Look up relevant passages first, then let a model answer from them, so answers stay tied to written sources.</dd></div>
+            <div><dt>Agent</dt><dd>A model that decides which tool to use next, such as search or fetch a page, in a loop within limits we set.</dd></div>
+            <div><dt>Hallucination</dt><dd>A model stating something that sounds right but is not supported. The quote and citation checks look for exactly this.</dd></div>
+            <div><dt>Evidence tag</dt><dd>Tested, Sourced, Reported, Inferred or Unknown, shown beside each claim.</dd></div>
+          </dl>
+        </section>
       </div>
     </main>
   );
