@@ -42,6 +42,7 @@ Every claim carries one tag: **tested** (we did it), **sourced** (a quoted excer
 - **Not yet done, and said plainly:** no hands-on registration is logged, so nothing is tagged *tested*; library quotes are `unchecked` until `npm run verify-quotes` is run from an open network; the prediction-vs-actual check for unseen apps (`docs/TESTING.md`) has not been run.
 
 ## Agents, and how they are kept reliable
+- After the checks above, a **second review** (`lib/audit.ts`) reads every claim next to the quotes it cites and flags what they do not support: unsupported, wrong scope (private apps only, older policy, another product), two processes blended, or off-topic. It can only remove or downgrade, never add or raise a tag, and it is skipped, with a note, if time runs short. `docs/TESTING.md` lists every fault found so far and what stops it.
 - The live agent reads `docs.composio.dev/toolkits/<app>` first, then picks searches and pages (JSON actions). Code executes them under an action and time budget (6 actions, about 45 s of research, about 190 s in total), refuses repeated or reworded searches and pages that no search or link returned, runs three fixed searches for review, access-tier and quota pages and reads the best matches, skips customer-account, product-review, release-note and audit-log pages when choosing which to read, makes sure a provider page about registering the app was read, blocks private/loopback addresses on every redirect, and treats page text as data.
 - Models: each call goes through a small router (`lib/llm.ts`) that tries **Claude** or **Groq** first, then **Gemini** or **OpenRouter**, then Claude again as the last resort; writing a whole guide goes to Claude first with most of the time. A provider without a key is skipped and every failure is reported by name. Verified live: Claude, Groq, OpenRouter. Gemini is wired in but currently answers 429/503 until billing is enabled on the Google project, so it is optional.
 - Web search is Tavily (`TAVILY_API_KEY`); DuckDuckGo is the keyless fallback but blocks most cloud hosts. When a page blocks the fetch, the search engine's own copy of its text is used and labelled.
@@ -53,7 +54,7 @@ Every claim carries one tag: **tested** (we did it), **sourced** (a quoted excer
 npm install
 cp .env.example .env.local     # fill in the keys you have; every key is optional
 npm run dev                    # http://localhost:3000
-npm test                       # 82 offline tests (guardrails, claim-versus-page checks, share links, retrieval, citations)
+npm test                       # 83 offline tests (guardrails, claim-versus-page checks, share links, retrieval, citations)
 npm run validate               # schema + consistency checks on every library guide
 npm run verify-quotes          # re-matches every library quote against the live page (needs internet)
 npm run check:live -- https://oauth-guide-agent.vercel.app

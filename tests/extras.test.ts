@@ -310,3 +310,30 @@ test("enforce: a gate backed only by a forum post cannot hold Tier 4 (the cap ru
   assert.equal(r.guide.review_process[0].tag, "reported");
   assert.equal(r.guide.difficulty.tier, 2);
 });
+
+test("second review: only removes or downgrades, ignores bad ids and cannot raise a tag", async () => {
+  const { applyVerdicts, auditPrompt } = await import("../lib/audit");
+  const { RAW_GUIDES } = await import("../data/guides");
+  const g: any = JSON.parse(JSON.stringify(RAW_GUIDES.find((x: any) => x.slug === "github")));
+  g.gotchas = [
+    { text: "Release notes trivia.", tag: "inferred", evidence: [] },
+    { text: "Limit applies to private apps only.", tag: "sourced", evidence: [g.evidence[0].id] },
+    { text: "Fine claim.", tag: "sourced", evidence: [g.evidence[0].id] },
+  ];
+  g.wait.tag = "inferred";
+  const prompt = auditPrompt(g);
+  assert.ok(prompt.includes("[gotchas.1]") && prompt.includes("Fine claim."));
+  const notes = applyVerdicts(g, [
+    { id: "gotchas.0", verdict: "off_topic" },
+    { id: "gotchas.1", verdict: "wrong_scope", why: "private apps only" },
+    { id: "gotchas.9", verdict: "unsupported" },
+    { id: "nonsense", verdict: "unsupported" },
+    { id: "wait", verdict: "unsupported" },
+    { id: "gotchas.2", verdict: "bogus" as any },
+  ]);
+  assert.equal(g.gotchas.length, 2);
+  assert.equal(g.gotchas[0].tag, "inferred");
+  assert.equal(g.gotchas[1].tag, "sourced");
+  assert.equal(g.wait.tag, "inferred");
+  assert.ok(notes.length >= 2);
+});

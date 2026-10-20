@@ -47,3 +47,28 @@ Generated guides for 23 apps outside the library were read next to their step lo
 | Source did not support the claim | Okta | Claim must share wording with its cited page |
 | Console steps marked "you or agent" | Dropbox, Box, Mailchimp, Webflow | Console steps are always "you" |
 | Unrelated search noise (partner programs) | Airtable, Intercom, Okta | Query changed to quotas and limits |
+
+## Failure catalog: every fault found in generated guides, and what now stops it
+Each row came from reading real generated guides (23 apps in the first audit, 10 more in the re-tests). "Second review" is the independent pass in `lib/audit.ts`, which catches the same classes of fault in cases the rules below do not name.
+
+| Fault seen | Apps | Stopped by |
+|---|---|---|
+| Quote not on the page | many | `enforce`: quote must literally appear in a page fetched in that run |
+| Sourced claim whose page does not say it | Airtable, Okta | `enforce`: shared-wording check; second review (unsupported) |
+| Year or figure not on the cited page | Spotify, Airtable | `enforce`: years and figures of 10+ must be on a cited page |
+| Number only on a forum page presented as sourced | Spotify, Intercom | `enforce`: community-only evidence becomes reported |
+| "No review mentioned" shown as a finding | Xero, Okta, Calendly | `enforce`: absence is never sourced |
+| High tier resting on a forum post | Square, Reddit | `enforce`: tier cap, run after the community downgrade |
+| Console steps given to the agent | Webflow, Etsy | `enforce`: provider-console steps are always "you" |
+| Limit stated for all apps, quote said private apps | Intercom | second review (wrong_scope); prompt rule |
+| Two reviews blended in one wait | Intercom | second review (mixed); prompt rule |
+| Release-note and other trivia as gotchas | Okta, Reddit | `enforce`: unsupported off-topic gotchas dropped; second review (off_topic) |
+| Another product of the provider mixed in | Reddit (Devvit), Stripe | second review (off_topic, wrong_scope); prompt rule |
+| Older and newer policy both stated | Spotify | prompt rule; second review (wrong_scope) |
+| Example figure presented as a hard limit | Airtable | prompt rule; second review (wrong_scope) |
+| Account-verification, review-article or homepage read as a gate page | Airtable, Intercom, Linear, Stripe | probe candidates must match review or quota wording and not an off-topic title |
+| Bot-check page titled "Just a moment..." | Discord, Reddit | search-engine title kept |
+| Search results about other products | Linear | empty result instead of off-app pages |
+| Wrong library match for "Teams", "LinkedIn Ads" | home search | exact or prefix match only |
+
+What this cannot promise: the second review is itself a model, so it can miss a fault or flag a good claim (it only ever removes or lowers a tag, never adds). No layer replaces a person registering the app. Run the apps in `docs/TEST-QUESTIONS.md` after any change to the agent and read the guides against their sources.

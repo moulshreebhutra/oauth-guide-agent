@@ -2,6 +2,8 @@ import { generate, hasModel, safeError, safeErrorLong } from "./llm";
 import { cleanText, keyFacts } from "./text";
 import { fetchPage, fetchReadable, searchWeb, probeOAuthDiscovery, checkComposioManaged, composioToolkit, canonicalUrl } from "./tools";
 import { enforce, type Fetched } from "./postprocess";
+import { auditPrompt, applyVerdicts, type Verdict } from "./audit";
+import { Guide as GuideSchema, lintGuide } from "./schema";
 import type { Guide } from "./schema";
 import { search } from "./rag";
 import { RAW_GUIDES } from "@/data/guides";
@@ -335,7 +337,24 @@ EXAMPLE:\n${exampleGuide()}\n\nCALIBRATION (how our researched guides judged sim
     if (r.ok) {
       // the managed-auth fact comes from code, so keep the tag the code assigned
       r.guide.composio_managed = { status: managed.status, note: managed.note, tag: managed.status === "unknown" ? "unknown" : "sourced" };
-      yield { type: "guide", guide: r.guide, notes: r.notes };
+      // an independent second pass reads each claim next to its quotes; it can only remove or downgrade, never add or raise
+      let final: Guide = r.guide;
+      let notes = r.notes;
+      const left = TOTAL_BUDGET_MS - (Date.now() - T0);
+      if (left > 30_000) {
+        yield { type: "status", msg: "Second check: reading every claim next to the quotes it cites" };
+        try {
+          const raw = parseJson(await ask(auditPrompt(r.guide), Math.min(30_000, left - 10_000), true, 1500));
+          const copy = JSON.parse(JSON.stringify(r.guide));
+          const extra = applyVerdicts(copy, Array.isArray(raw?.verdicts) ? (raw.verdicts as Verdict[]).slice(0, 40) : []);
+          const ok = GuideSchema.safeParse(copy);
+          if (ok.success && !lintGuide(ok.data).length) { final = ok.data; notes = [...r.notes, ...extra]; }
+          if (extra.length && ok.success) final = { ...final, uncertainties: [...final.uncertainties.filter((u) => !/^Automatic checks adjusted/.test(u)), `Automatic checks adjusted ${notes.length} item(s) (e.g. unverifiable quotes were removed or claims downgraded after a second review).`] };
+        } catch {
+          final = { ...final, uncertainties: [...final.uncertainties, "A second automatic review of the claims did not complete in time, so only the first set of checks was applied."] };
+        }
+      }
+      yield { type: "guide", guide: final, notes };
       return;
     }
     lastErr = r.error;

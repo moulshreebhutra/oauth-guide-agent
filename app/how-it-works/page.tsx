@@ -205,7 +205,7 @@ const TECH: [string, string][] = [
   ["Composio API and public toolkit docs", "Tell us whether Composio manages the OAuth app and which auth methods the toolkit supports."],
   ["Signed share links", "A guide is packed into the URL and signed with HMAC-SHA256 using a server secret. Nothing is stored; only this server can mint a valid link."],
   ["Caches and limits", "Answers and guides are remembered for 24 hours in your browser and on the server (in Vercel Blob when connected, so every visitor shares them). Ask allows 20 questions an hour and the Live agent 5 new guides an hour per visitor; repeats cost nothing."],
-  ["Tests", "82 automated tests cover the schema, quote checks, the claim-versus-page checks, retrieval, the AI router, link signing and the text cleaning. Run with npm test."],
+  ["Tests", "83 automated tests cover the schema, quote checks, the claim-versus-page checks, retrieval, the AI router, link signing and the text cleaning. Run with npm test."],
 ];
 
 function Fig({ title, intro, bullets, code, label }: { title: string; intro?: string; bullets: string[]; code: string; label: string }) {
@@ -361,7 +361,7 @@ export default function How() {
             "A source the agent never fetched is dropped. So is a quote that is not in the page text, character for character. Pages on forums, community boards and Q and A sites never count as official, even on the provider's own domain.",
             "A claim that loses its quote drops from <b>Sourced</b> to <b>Inferred</b>. One backed only by community pages becomes <b>Reported</b>. The model cannot mark anything <b>Tested</b>.",
             "A <b>Sourced</b> claim must match its cited page: shared wording, and any year it names must appear there. Every figure of 10 or more must be on a cited page, or the claim becomes <b>Inferred</b>; one only a community page contains makes it <b>Reported</b>.",
-            "An absence (\"no review is mentioned\") is never <b>Sourced</b>. A Tier 3 or 4 without a Sourced review step is lowered to Tier 2, with a note. Steps done in the provider's console are always <b>You</b>. Sources nobody cites are dropped, and an unsupported gotcha that is not about setup, auth, review or limits is removed.",
+            "An absence (\"no review is mentioned\") is never <b>Sourced</b>. A Tier 3 or 4 without a Sourced review step is lowered to Tier 2, with a note. Steps done in the provider's console are always <b>You</b>. Then a second, independent review reads each claim next to its quotes and removes or lowers anything they do not support (wrong scope, two reviews blended, off-topic); it can never raise a tag. Sources nobody cites are dropped, and an unsupported gotcha that is not about setup, auth, review or limits is removed.",
             "The Composio status is set by code. The model's own value is overwritten.",
             "The schema check fixes the shape: if it fails twice, nothing is shown, and the screen says why.",
             "Every automatic change is listed under <b>Automatic checks applied</b> on the guide, so nothing happens silently.",
