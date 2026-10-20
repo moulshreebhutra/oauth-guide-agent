@@ -17,8 +17,22 @@ export async function GET(req: Request) {
       claude = { configured: true, ok: r.ok, status: r.status, ms: Date.now() - t0, ...(r.ok ? {} : { error: safeError(await r.text()).slice(0, 160) }) };
     } catch (e) { claude = { configured: true, ok: false, error: safeError(e) }; }
   }
+  const ping = async (url: string, headers: Record<string, string>, body: unknown) => {
+    const t0 = Date.now();
+    try {
+      const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body), signal: AbortSignal.timeout(15_000) });
+      return { configured: true, ok: r.ok, status: r.status, ms: Date.now() - t0, ...(r.ok ? {} : { error: safeError(await r.text()).slice(0, 160) }) };
+    } catch (e) { return { configured: true, ok: false, error: safeError(e) }; }
+  };
+  const none = { configured: false };
+  const [grok, bedrock, openrouter] = await Promise.all([
+    process.env.XAI_API_KEY ? ping("https://api.x.ai/v1/chat/completions", { authorization: `Bearer ${process.env.XAI_API_KEY}` }, { model: process.env.XAI_MODEL || "grok-4", max_tokens: 5, messages: [{ role: "user", content: "Say ok" }] }) : none,
+    process.env.AWS_BEARER_TOKEN_BEDROCK ? ping(`https://bedrock-runtime.${process.env.BEDROCK_REGION || "us-east-1"}.amazonaws.com/model/${encodeURIComponent(process.env.BEDROCK_MODEL_ID || "us.amazon.nova-lite-v1:0")}/converse`, { authorization: `Bearer ${process.env.AWS_BEARER_TOKEN_BEDROCK}` }, { messages: [{ role: "user", content: [{ text: "Say ok" }] }], inferenceConfig: { maxTokens: 5 } }) : none,
+    process.env.OPENROUTER_API_KEY ? ping("https://openrouter.ai/api/v1/chat/completions", { authorization: `Bearer ${process.env.OPENROUTER_API_KEY}` }, { model: process.env.OPENROUTER_MODEL || "meta-llama/llama-3.3-70b-instruct:free", max_tokens: 5, messages: [{ role: "user", content: "Say ok" }] }) : none,
+  ]);
+  const providers = { claude, grok, bedrock, openrouter };
   const key = process.env.GEMINI_API_KEY;
-  if (!key) return Response.json({ claude, keyConfigured: false });
+  if (!key) return Response.json({ providers, claude, keyConfigured: false });
   const client = new GoogleGenAI({ apiKey: key });
   let listed: string[] = [];
   let listError: string | undefined;
@@ -52,5 +66,5 @@ export async function GET(req: Request) {
       groq = { configured: true, ok: r.ok, status: r.status, ms: Date.now() - t0 };
     } catch (e) { groq = { configured: true, ok: false, error: safeError(e) }; }
   }
-  return Response.json({ claude, embeddingsPrebuilt: embeddingsPrebuilt(), keyConfigured: true, groq, modelsVisibleToKey: listed, listError, tests });
+  return Response.json({ providers, claude, embeddingsPrebuilt: embeddingsPrebuilt(), keyConfigured: true, groq, modelsVisibleToKey: listed, listError, tests });
 }
