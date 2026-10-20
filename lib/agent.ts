@@ -1,6 +1,6 @@
 import { generate, hasModel, safeError, safeErrorLong } from "./llm";
 import { cleanText, keyFacts } from "./text";
-import { fetchPage, fetchReadable, searchWeb, probeOAuthDiscovery, checkComposioManaged, composioToolkit } from "./tools";
+import { fetchPage, fetchReadable, searchWeb, probeOAuthDiscovery, checkComposioManaged, composioToolkit, canonicalUrl } from "./tools";
 import { enforce, type Fetched } from "./postprocess";
 import type { Guide } from "./schema";
 import { search } from "./rag";
@@ -27,6 +27,10 @@ const PER_PAGE_PROMPT_CHARS = 9000;
 /** A page is worth keeping only if it has real text and is about the app (JavaScript shells and marketing stubs are dropped). */
 export const usablePage = (text: string, app: string) => text.length >= 300 && new RegExp(`\\b${app.split(/[.\s]/)[0].replace(/[^a-z0-9-]/gi, "")}`, "i").test(text.slice(0, 20000));
 const OFFICIAL_HINT = /(docs?|developers?|developer|learn|support|help|api)\./i;
+const COMMUNITY = /^(forum|forums|community|discuss|devforum|answers|stackoverflow)\b|(^|\.)(stackoverflow|reddit)\.com$/i;
+/** Owned by the provider (or Composio): not a forum, community board or third-party site. */
+const isOfficial = (host: string, cslug: string, site?: string) =>
+  !COMMUNITY.test(host) && ((site ? host.endsWith(site.replace(/^www\./, "")) : false) || OFFICIAL_HINT.test(host) || host.includes(cslug) || host === "composio.dev" || host.endsWith(".composio.dev"));
 
 async function ask(prompt: string, timeoutMs = ACTION_TIMEOUT_MS, json = true, maxTokens?: number): Promise<string> {
   return generate(prompt, { json, timeoutMs, maxTokens, heavy: (maxTokens ?? 0) >= 6000, accept: json ? (t) => { try { parseJson(t); return true; } catch { return false; } } : undefined });
@@ -162,6 +166,9 @@ export async function* generateGuide(input: { name: string; site?: string }): As
 
   // Agent loop: the model chooses searches and pages; code executes and enforces caps.
   const t0 = Date.now();
+  const known = new Set<string>(); // addresses the model may fetch: search results and links on pages already read
+  const done = new Set<string>();   // searches and fetches already made
+  const siteHost = input.site ? input.site.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0] : "";
   for (let i = 0; i < MAX_ACTIONS; i++) {
     if (Date.now() - t0 > RESEARCH_BUDGET_MS) {
       yield { type: "status", msg: "Research time used up. Writing the guide from the pages read…" };
@@ -174,7 +181,7 @@ Task: find how a developer registers an OAuth app for "${input.name}"${input.sit
 Pages fetched so far:\n${have}
 Recent tool log:\n${log.slice(-6).join("\n") || "(none)"}
 Choose ONE next action as JSON: {"action":"search","arg":"<query>"} | {"action":"fetch","arg":"<https url>"} | {"action":"done","arg":""}.
-Prefer the provider's official developer docs (OAuth app creation, app review/verification, distribution) and any Composio guide at composio.dev/auth/<slug>. If the product is registered through a parent platform (Instagram -> Meta, YouTube -> Google, Teams -> Microsoft), research the parent platform's pages. Look for: where the app is created, account prerequisites, scopes, dev versus live mode, review or verification and any stated duration, fees or minimums, token lifetime, rate limits. Also check whether the specific API or product the developer will use has its own approval, audit or access tier (for example TikTok Content Posting API audit, Meta Advanced Access, LinkedIn product access, Zoom scope review): search for words like audit, access level, production access, quota. Say done once you have the official registration page, the review/approval information AND any such product gate, or ${MAX_ACTIONS} actions are used.`;
+Prefer the provider's official developer docs (OAuth app creation, app review/verification, distribution) and any Composio guide at composio.dev/auth/<slug>. If the product is registered through a parent platform (Instagram -> Meta, YouTube -> Google, Teams -> Microsoft), research the parent platform's pages. Look for: where the app is created, account prerequisites, scopes, dev versus live mode, review or verification and any stated duration, fees or minimums, token lifetime, rate limits. Also check whether the specific API or product the developer will use has its own approval, audit or access tier (for example TikTok Content Posting API audit, Meta Advanced Access, LinkedIn product access, Zoom scope review): search for words like audit, access level, production access, quota. Never repeat a search or fetch you already made. Only fetch addresses that appeared in search results or as links on a page you read; do not guess URLs. If the Composio toolkit page describes a different product than the one you are researching (for example an ads API when you researched login), research the product the developer most likely means and say which one in the summary. Cite only pages about the same product or API, never pages about an unrelated platform (for example an Android store policy for a web API). Say done once you have the official registration page, the review/approval information AND any such product gate, or ${MAX_ACTIONS} actions are used.`;
     let act: { action: string; arg: string };
     try {
       act = parseJson(await ask(prompt));
@@ -183,16 +190,25 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
       break;
     }
     if (act.action === "done") break;
+    const key = `${act.action}:${canonicalUrl(String(act.arg)).toLowerCase()}`;
+    if (done.has(key)) { log.push(`${act.action} "${act.arg}" was already done: choose something different or say done`); continue; }
+    done.add(key);
+    if (act.action === "fetch") {
+      let h = ""; try { h = new URL(String(act.arg)).hostname; } catch { /* not a URL */ }
+      if (!known.has(canonicalUrl(String(act.arg))) && !(siteHost && h.endsWith(siteHost))) { log.push(`fetch ${act.arg} rejected: it is not an address from a search result or a link on a page already read; pick one that is`); continue; }
+    }
     try {
       if (act.action === "search") {
-        const r = await searchWeb(String(act.arg).slice(0, 200));
+        const r = await searchWeb(String(act.arg).slice(0, 200), input.name);
+        for (const x of r) known.add(canonicalUrl(x.url));
         log.push(`search "${act.arg}" -> ${r.map((x) => x.url).join(" | ")}`);
         yield { type: "tool", name: "search_web", arg: act.arg, result: `${r.length} results`, data: { items: r.slice(0, 8) } };
       } else if (act.action === "fetch") {
-        const p = await fetchReadable(String(act.arg));
+        const p = await fetchReadable(canonicalUrl(String(act.arg)));
+        for (const l of p.links ?? []) known.add(canonicalUrl(l));
         if (!fetched.some((f) => f.url === p.url) && usablePage(p.text, input.name)) {
           const host = new URL(p.url).hostname;
-          const official = (input.site ? host.endsWith(input.site.replace(/^www\./, "")) : false) || OFFICIAL_HINT.test(host) || host.includes(cslug) || host === "composio.dev" || host.endsWith(".composio.dev");
+          const official = isOfficial(host, cslug, input.site);
           fetched.push({ url: p.url, title: p.title, text: p.text, official });
         }
         log.push(`fetched ${p.url}`);
@@ -213,7 +229,8 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
     for (const q of queries) {
       if (Date.now() - t0 > RESEARCH_BUDGET_MS + 35_000) break;
       try {
-        const r = await searchWeb(q);
+        const r = await searchWeb(q, input.name);
+        for (const x of r) known.add(canonicalUrl(x.url));
         yield { type: "tool", name: "search_web", arg: q, result: `${r.length} results`, data: { items: r.slice(0, 8) } };
         const score = (x: { title: string; url: string }) => {
           const host = new URL(x.url).hostname;
@@ -223,10 +240,10 @@ Prefer the provider's official developer docs (OAuth app creation, app review/ve
         const cand = r.filter((x) => !fetched.some((f) => f.url === x.url) && score(x) >= 4).sort((a, b) => score(b) - score(a)).slice(0, 1);
         for (const c of cand) {
           try {
-            const p = await fetchReadable(c.url);
+            const p = await fetchReadable(canonicalUrl(c.url));
             if (!usablePage(p.text, input.name) || fetched.some((f) => f.url === p.url)) continue;
             const host = new URL(p.url).hostname;
-            fetched.push({ url: p.url, title: p.title, text: p.text, official: host.includes(cslug) || OFFICIAL_HINT.test(host) });
+            fetched.push({ url: p.url, title: p.title, text: p.text, official: isOfficial(host, cslug, input.site) });
             yield { type: "tool", name: "fetch_page", arg: p.url, result: `${p.text.length} chars`, data: pageData(p.url, p.title, p.text) };
           } catch { /* unreadable: skip */ }
         }

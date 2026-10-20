@@ -191,3 +191,25 @@ test("enforce renumbers evidence after some is dropped", async () => {
   const r: any = enforce(draft, [page]);
   if (r.ok) { assert.deepEqual(r.guide.evidence.map((e: any) => e.id), ["e1"]); }
 });
+
+test("canonicalUrl collapses language variants so a page is not read twice", async () => {
+  const { canonicalUrl } = await import("../lib/tools");
+  assert.equal(canonicalUrl("https://developers.google.com/photos/library/guides/get-started?hl=ar"), canonicalUrl("https://developers.google.com/photos/library/guides/get-started?hl=pl"));
+  assert.ok(canonicalUrl("https://learn.microsoft.com/da-dk/entra/identity-platform/x").includes("/en-us/"));
+  assert.equal(canonicalUrl("https://example.com/a/#frag"), "https://example.com/a");
+});
+
+test("enforce: forum-only evidence is 'reported', and an unpublished wait is 'unknown'", async () => {
+  const { enforce } = await import("../lib/postprocess");
+  const { RAW_GUIDES } = await import("../data/guides");
+  const page = { url: "https://forum.example.com/t/1", title: "Forum", text: "Our review took six weeks and nobody answered us at all.", official: false };
+  const d: any = JSON.parse(JSON.stringify(RAW_GUIDES.find((g: any) => g.slug === "github")));
+  d.evidence = [{ id: "e1", url: page.url, title: "Forum", retrieved_at: "2026-01-01", excerpt: "review took six weeks", official: true, quote_check: "unchecked" }];
+  d.wait = { ...d.wait, tag: "sourced", kind: "stated", evidence: ["e1"] };
+  const a: any = enforce(d, [page]);
+  assert.ok(a.notes.some((n: string) => /wait: evidence is community or third-party only/.test(n)));
+  const d2: any = JSON.parse(JSON.stringify(d));
+  d2.wait = { ...d2.wait, tag: "sourced", kind: "unpublished", evidence: [] };
+  const b: any = enforce(d2, [page]);
+  assert.ok(b.notes.some((n: string) => /unpublished duration is tagged unknown/.test(n)));
+});

@@ -6,6 +6,7 @@ const host = (u: string) => { try { return new URL(u).hostname.replace(/^www\./,
 
 export function friendlyTool(name: string, arg: string, result: string, data?: ToolData): { title: string; detail?: string; state: Step["state"]; data?: ToolData } {
   const r = friendlyToolBase(name, arg, result);
+  if (name === "fetch_page" && data?.title && /not found|404|doesn.t exist/i.test(data.title)) return { title: `That page does not exist on ${host(arg)}, so it was skipped`, state: "warn", data, detail: arg };
   // sizes like "4584 chars" say nothing: show what was actually read instead
   const sizeOnly = /\d+ (chars|results)\)?$/.test(r.detail ?? "") && r.state !== "warn";
   return { ...r, data, detail: data && sizeOnly ? undefined : r.detail };

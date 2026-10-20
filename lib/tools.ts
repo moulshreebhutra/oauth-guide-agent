@@ -63,13 +63,18 @@ export async function fetchReadable(url: string): Promise<{ url: string; title: 
  * Web search. DuckDuckGo's free HTML endpoint is blocked (403) from most cloud hosts, so a search key is used when present:
  * TAVILY_API_KEY (free tier, tavily.com); DuckDuckGo is the keyless last resort.
  */
-const JUNK_HOST = /(^|\.)(finance\.yahoo\.com|yahoo\.com|businessinsider\.com|wikipedia\.org|indeed\.com|glassdoor\.com|apple\.com|apps\.apple\.com|play\.google\.com|youtube\.com|youtu\.be|facebook\.com\/public|tiktok\.com\/@|pinterest\.com|quora\.com)$/i;
+const JUNK_HOST = /(^|\.)(finance\.yahoo\.com|yahoo\.com|businessinsider\.com|wikipedia\.org|indeed\.com|glassdoor\.com|apple\.com|play\.google\.com|youtube\.com|youtu\.be|pinterest\.com|quora\.com|mashable\.com|cnbc\.com|tracxn\.com|stocktitan\.net|efficient\.app|smartsuite\.com|sellersprite\.com|volanea\.com|schellman\.com|bundle\.social|mailchimp\.com)$/i;
+const DOCS_HOST = /^(docs?|developers?|developer|learn|support|help|api|dev|devforum|forum|community|answers)\./i;
 
-/** Web search with news, jobs, video and app-store results removed: they are never the provider's own OAuth documentation. */
-export async function searchWeb(query: string): Promise<{ title: string; url: string }[]> {
+/** Web search with news, jobs, video, app-store and generic-OAuth-tutorial results removed. When the app is named, a result must also be about it:
+ *  its address or title mentions the app, or it is on a docs, developer, support or community site. Anything else is noise, never the provider's own pages. */
+export async function searchWeb(query: string, app?: string): Promise<{ title: string; url: string }[]> {
   const r = await searchWebRaw(query);
-  const kept = r.filter((x) => { try { return !JUNK_HOST.test(new URL(x.url).hostname); } catch { return false; } });
-  return kept.length ? kept : r;
+  const word = (app ?? "").toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2)[0];
+  const about = (x: { title: string; url: string }) => { try { const h = new URL(x.url).hostname.replace(/^www\./, ""); return !word || h.includes(word) || DOCS_HOST.test(h) && (x.title + x.url).toLowerCase().includes(word) || (x.title + " " + x.url).toLowerCase().includes(word) && !JUNK_HOST.test(h); } catch { return false; } };
+  const clean = r.filter((x) => { try { return !JUNK_HOST.test(new URL(x.url).hostname); } catch { return false; } });
+  const rel = clean.filter(about);
+  return rel.length ? rel : clean.length ? clean : r;
 }
 
 async function searchWebRaw(query: string): Promise<{ title: string; url: string }[]> {
@@ -157,7 +162,7 @@ const TOOLKIT_CACHE = new Map<string, { at: number; v: ToolkitPage | null }>();
 export function toolkitSlugs(name: string): string[] {
   const words = name.toLowerCase().replace(/\(.*?\)/g, " ").split(/[^a-z0-9]+/).filter(Boolean);
   const base = words.join("");
-  return [...new Set([base, base.replace(/(inc|app|api)$/, ""), words.join("_"), words.join("-"), words[0]])].filter((x) => x && x.length > 1);
+  return [...new Set([base, base.replace(/(inc|app|api)$/, ""), words.join("_"), words.join("-"), words[0], ...(words.length === 1 ? [`google${base}`, `google_${base}`, `microsoft${base}`, `microsoft_${base}`] : [])])].filter((x) => x && x.length > 1);
 }
 
 /** Composio's public toolkit docs page (docs.composio.dev/toolkits/<app>). Searched first for every app. It states the auth methods and whether Composio manages the OAuth app; no API key needed.
@@ -171,7 +176,7 @@ export async function composioToolkit(name: string): Promise<ToolkitPage | null>
     for (const url of [`https://docs.composio.dev/toolkits/${slug}.md`, `https://docs.composio.dev/toolkits/${slug}`]) {
       try {
         const r = await fetchPage(url);
-        if (r.status !== 200 || !/Auth/i.test(r.text) || !/composio/i.test(r.text)) continue;
+        if (r.status !== 200 || !/Auth/i.test(r.text) || !/composio/i.test(r.text) || !new RegExp(name.split(/[^a-z0-9]+/i).filter((w) => w.length > 2)[0] ?? "x", "i").test(r.text.slice(0, 4000))) continue;
         const shown = url.endsWith(".md") ? `https://docs.composio.dev/toolkits/${slug}` : r.url;
         found = { url: shown, title: r.title && !/^https?:/.test(r.title) ? r.title : `Composio toolkit: ${slug}`, text: r.text.slice(0, 6000), ...parseComposioToolkit(r.text) };
         break outer;
@@ -183,7 +188,7 @@ export async function composioToolkit(name: string): Promise<ToolkitPage | null>
   if (!found && process.env.TAVILY_API_KEY) {
     // the site could not be fetched from the server: use the search engine's own copy of the page, if it found it
     try {
-      const hits = await searchWeb(`site:docs.composio.dev/toolkits ${name} Composio toolkit authentication`);
+      const hits = await searchWeb(`site:docs.composio.dev/toolkits ${name} Composio toolkit authentication`, "composio");
       const h = hits.find((x) => /^https:\/\/docs\.composio\.dev\/toolkits\/[a-z0-9_-]+\/?$/i.test(x.url) && toolkitSlugs(name).includes(x.url.split("/").filter(Boolean).pop()!.toLowerCase()));
       const t = h && (SEARCH_TEXT.get(h.url) ?? SEARCH_TEXT.get(h.url.replace(/\/$/, "")));
       if (h && t && /Auth/i.test(t)) found = { url: h.url, title: h.title, text: t.slice(0, 6000), ...parseComposioToolkit(t) };
@@ -191,4 +196,16 @@ export async function composioToolkit(name: string): Promise<ToolkitPage | null>
   }
   TOOLKIT_CACHE.set(key, { at: Date.now(), v: found });
   return found;
+}
+
+
+/** One address per page: language and locale variants collapse to English, so the same page is never read twice in two languages. */
+export function canonicalUrl(u: string): string {
+  try {
+    const x = new URL(u);
+    if (/(^|\.)google\.com$/.test(x.hostname) || /(^|\.)googleblog\.com$/.test(x.hostname)) { x.searchParams.delete("hl"); if (x.hostname !== "www.google.com") x.searchParams.set("hl", "en"); }
+    x.pathname = x.pathname.replace(/^\/([a-z]{2}-[a-z]{2})\//i, "/en-us/");
+    x.hash = "";
+    return x.toString().replace(/\/$/, "");
+  } catch { return u; }
 }

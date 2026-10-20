@@ -33,7 +33,7 @@ export function prettyTitle(title: string, url: string): string {
 }
 
 const KEY = /review|approv|verif|scope|permission|redirect|token|business|requir|access|submit|publish|\b\d+\s*(days?|weeks?|hours?|minutes?)\b|\bfees?\b|free|paid|rate limit|oauth|client (id|secret)|managed|partner|production|development|app (creation|registration)|register/i;
-const NOISE = /([A-Z]+_){2,}[A-Z]+|Copy page|Skip to (main )?content|Documentation Index|Fetch the complete|All Toolkits|Latest version|cookie|sign in to|log in to/;
+const NOISE = /https?:\/\/\S*[?#=]\S*=|access_token=|=\{|\.\.\.\}|([A-Z]+_){2,}[A-Z]+|Copy page|Skip to (main )?content|Documentation Index|Fetch the complete|All Toolkits|Latest version|cookie|sign in to|log in to/;
 
 /** The few sentences of a page that matter for OAuth setup, as plain text. Used for the agent's "what it found" previews. */
 export function keyFacts(text: string, n = 3): string[] {

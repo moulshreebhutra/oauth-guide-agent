@@ -49,6 +49,11 @@ export function enforce(draft: unknown, fetched: Fetched[], now = new Date().toI
       c.tag = "inferred";
       notes.push(`${label}: 'tested' is reserved for human tests; downgraded`);
     }
+    // a claim backed only by forum or community posts is what people report, not what the provider states
+    if (c.tag === "sourced" && c.evidence.length > 0 && c.evidence.every((id: string) => keptEvidence.find((e) => e.id === id)?.official === false)) {
+      c.tag = "reported";
+      notes.push(`${label}: evidence is community or third-party only; sourced -> reported`);
+    }
     if (c.tag === "sourced" && c.evidence.length === 0) {
       c.tag = "inferred";
       notes.push(`${label}: no verified evidence; downgraded sourced -> inferred`);
@@ -56,6 +61,8 @@ export function enforce(draft: unknown, fetched: Fetched[], now = new Date().toI
   };
 
   fix(d.difficulty, "difficulty");
+  // "no duration is published" is an absence, not something a page states
+  if (d.wait?.kind === "unpublished" && d.wait.tag === "sourced") { d.wait.tag = "unknown"; notes.push("wait: an unpublished duration is tagged unknown, not sourced"); }
   fix(d.wait, "wait");
   if (d.effort?.tag === "tested") d.effort.tag = "inferred";
   // a sourced effort needs a verified quote that states time; we never let the model claim it
