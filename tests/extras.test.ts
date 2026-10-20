@@ -163,3 +163,18 @@ test("keyFacts picks the OAuth-relevant sentences and skips navigation noise", (
   assert.ok(f.every((x) => !/INSTAGRAM_|Skip to/.test(x)));
   assert.ok(f.some((x) => /App Review/.test(x) && !/\]\(/.test(x)));
 });
+
+test("composio toolkit page: reads the web wording and the plain-text .md wording, and tries sensible slugs", async () => {
+  const { parseComposioToolkit, toolkitSlugs } = await import("../lib/tools");
+  assert.equal(parseComposioToolkit("- **Auth:** OAUTH2\n- **Composio-managed OAuth available?** No").status, "no");
+  assert.equal(parseComposioToolkit("- **Auth:** OAUTH2\n- **Composio-managed OAuth available?** Yes").status, "yes");
+  assert.deepEqual(parseComposioToolkit("- **Auth:** OAUTH2").methods, ["OAuth2"]);
+  assert.ok(toolkitSlugs("TikTok").includes("tiktok"));
+  assert.ok(toolkitSlugs("Google Calendar").includes("googlecalendar") && toolkitSlugs("Google Calendar").includes("google_calendar"));
+});
+
+test("composio toolkit page: the TikTok page text as shown in a browser reads as not managed, OAuth2", async () => {
+  const { parseComposioToolkit } = await import("../lib/tools");
+  const r = parseComposioToolkit("TikTok short-form video platform\nAuthentication DetailsComposio-managed OAuth not available\nOAuth2\nTools (9)");
+  assert.deepEqual(r, { status: "no", methods: ["OAuth2"] });
+});

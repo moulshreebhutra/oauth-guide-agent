@@ -109,14 +109,16 @@ export async function probeOAuthDiscovery(domain: string) {
 }
 
 /** Composio's managed-auth flag for a toolkit. Needs COMPOSIO_API_KEY; response shape is unverified, so we only report what we can read. */
-export async function checkComposioManaged(slug: string): Promise<{ status: "yes" | "no" | "unknown"; note: string }> {
+export async function checkComposioManaged(name: string): Promise<{ status: "yes" | "no" | "unknown"; note: string }> {
   const key = process.env.COMPOSIO_API_KEY;
   if (!key) {
     // no API key: read Composio's public toolkit docs page instead
-    const page = await composioToolkit(slug);
+    const slug = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const page = await composioToolkit(name);
     if (page && page.status !== "unknown") return { status: page.status, note: `Composio's toolkit page lists ${page.methods.join(", ") || "its auth methods"} and says "Composio-managed OAuth ${page.status === "yes" ? "available" : "not available"}".` };
     return { status: "unknown", note: page ? "Composio's toolkit page was found but does not state managed-auth status." : `No Composio toolkit page found for '${slug}'.` };
   }
+  const slug = name.toLowerCase().replace(/[^a-z0-9]/g, "");
   try {
     const res = await fetch(`https://backend.composio.dev/api/v3.1/toolkits/${encodeURIComponent(slug)}`, { headers: { "x-api-key": key } });
     if (res.status === 404) return { status: "unknown", note: `No Composio toolkit named '${slug}' was found.` };
@@ -131,25 +133,53 @@ export async function checkComposioManaged(slug: string): Promise<{ status: "yes
 }
 
 
-/** Pure parser so it can be tested offline: what does Composio's toolkit page say about auth? */
+/** Pure parser so it can be tested offline: what does Composio's toolkit page say about auth? Reads both the web page wording and the plain-text (.md) version. */
 export function parseComposioToolkit(text: string): { status: "yes" | "no" | "unknown"; methods: string[] } {
-  const status = /Composio-managed OAuth not available/i.test(text) ? "no" : /Composio-managed OAuth available/i.test(text) ? "yes" : "unknown";
+  const md = text.match(/Composio-managed OAuth available\?\**\s*(yes|no)\b/i);
+  const status = /Composio-managed OAuth not available/i.test(text) ? "no" : /Composio-managed OAuth available(?!\?)/i.test(text) ? "yes" : md ? (md[1].toLowerCase() === "yes" ? "yes" : "no") : "unknown";
   const methods = [...new Set((text.match(/\b(OAuth2|OAUTH2|S2S_OAUTH2|API[_ ]?KEY|BEARER_TOKEN|BASIC|OAuth1)\b/g) ?? []).map((m) => m.replace("OAUTH2", "OAuth2").replace("API_KEY", "API Key")))];
   return { status, methods };
 }
 
-/** Composio's public toolkit docs page. States auth methods and whether Composio manages the OAuth app, no API key needed. */
-export async function composioToolkit(name: string): Promise<{ url: string; title: string; text: string; status: "yes" | "no" | "unknown"; methods: string[] } | null> {
-  const base = name.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const tries = [...new Set([base, base.replace(/(inc|app|api)$/, "")])].filter((x) => x.length > 1);
-  for (const slug of tries) {
-    try {
-      const r = await fetchPage(`https://docs.composio.dev/toolkits/${slug}`);
-      if (r.status !== 200 || !/Authentication/i.test(r.text)) continue;
-      return { url: r.url, title: r.title || `Composio docs - ${slug}`, text: r.text.slice(0, 6000), ...parseComposioToolkit(r.text) };
-    } catch {
-      /* no such toolkit page */
+type ToolkitPage = { url: string; title: string; text: string; status: "yes" | "no" | "unknown"; methods: string[] };
+const TOOLKIT_CACHE = new Map<string, { at: number; v: ToolkitPage | null }>();
+
+/** Candidate slugs for docs.composio.dev/toolkits/<slug>: the name squashed together, without a trailing word, hyphenated or underscored. */
+export function toolkitSlugs(name: string): string[] {
+  const words = name.toLowerCase().replace(/\(.*?\)/g, " ").split(/[^a-z0-9]+/).filter(Boolean);
+  const base = words.join("");
+  return [...new Set([base, base.replace(/(inc|app|api)$/, ""), words.join("_"), words.join("-"), words[0]])].filter((x) => x && x.length > 1);
+}
+
+/** Composio's public toolkit docs page (docs.composio.dev/toolkits/<app>). Searched first for every app. It states the auth methods and whether Composio manages the OAuth app; no API key needed.
+ *  The plain-text .md version is tried first because the web page is built by script; the web page is the fallback. */
+export async function composioToolkit(name: string): Promise<ToolkitPage | null> {
+  const key = name.toLowerCase();
+  const hit = TOOLKIT_CACHE.get(key);
+  if (hit && Date.now() - hit.at < 600_000) return hit.v;
+  let found: ToolkitPage | null = null;
+  outer: for (const slug of toolkitSlugs(name)) {
+    for (const url of [`https://docs.composio.dev/toolkits/${slug}.md`, `https://docs.composio.dev/toolkits/${slug}`]) {
+      try {
+        const r = await fetchPage(url);
+        if (r.status !== 200 || !/Auth/i.test(r.text) || !/composio/i.test(r.text)) continue;
+        const shown = url.endsWith(".md") ? `https://docs.composio.dev/toolkits/${slug}` : r.url;
+        found = { url: shown, title: r.title && !/^https?:/.test(r.title) ? r.title : `Composio toolkit: ${slug}`, text: r.text.slice(0, 6000), ...parseComposioToolkit(r.text) };
+        break outer;
+      } catch {
+        /* no page at this address, try the next */
+      }
     }
   }
-  return null;
+  if (!found && process.env.TAVILY_API_KEY) {
+    // the site could not be fetched from the server: use the search engine's own copy of the page, if it found it
+    try {
+      const hits = await searchWeb(`site:docs.composio.dev/toolkits ${name} Composio toolkit authentication`);
+      const h = hits.find((x) => /^https:\/\/docs\.composio\.dev\/toolkits\/[a-z0-9_-]+\/?$/i.test(x.url) && toolkitSlugs(name).includes(x.url.split("/").filter(Boolean).pop()!.toLowerCase()));
+      const t = h && (SEARCH_TEXT.get(h.url) ?? SEARCH_TEXT.get(h.url.replace(/\/$/, "")));
+      if (h && t && /Auth/i.test(t)) found = { url: h.url, title: h.title, text: t.slice(0, 6000), ...parseComposioToolkit(t) };
+    } catch { /* search unavailable */ }
+  }
+  TOOLKIT_CACHE.set(key, { at: Date.now(), v: found });
+  return found;
 }

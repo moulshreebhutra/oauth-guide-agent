@@ -115,14 +115,16 @@ export async function* generateGuide(input: { name: string; site?: string }): As
   yield { type: "status", msg: `Investigating ${input.name}${input.site ? ` (${input.site})` : ""}…` };
 
   // Fixed, cheap probes first
-  const managed = await checkComposioManaged(input.name.toLowerCase().replace(/[^a-z0-9]/g, ""));
-  yield { type: "tool", name: "check_composio_managed", arg: input.name, result: `${managed.status}: ${managed.note}` };
-
+  // 1) Composio's own toolkit page, docs.composio.dev/toolkits/<app>, is always the first thing read
   const toolkit = await composioToolkit(input.name);
   if (toolkit) {
     fetched.push({ url: toolkit.url, title: toolkit.title, text: toolkit.text, official: true });
     yield { type: "tool", name: "composio_toolkit_page", arg: input.name, result: `${toolkit.status === "yes" ? "managed OAuth available" : toolkit.status === "no" ? "managed OAuth not available" : "status not stated"}; auth: ${toolkit.methods.join(", ") || "n/a"}`, data: pageData(toolkit.url, toolkit.title, toolkit.text) };
+  } else {
+    yield { type: "tool", name: "composio_toolkit_page", arg: input.name, result: "no Composio toolkit page for this app" };
   }
+  const managed = await checkComposioManaged(input.name);
+  yield { type: "tool", name: "check_composio_managed", arg: input.name, result: `${managed.status}: ${managed.note}` };
 
   if (input.site) {
     const disc = await probeOAuthDiscovery(input.site);
