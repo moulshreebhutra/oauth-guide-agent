@@ -214,3 +214,18 @@ details{background:var(--card);border:1px solid var(--rule);padding:14px 18px;ma
 footer{background:var(--dk);color:var(--dk-muted);font:13px/1.7 var(--mono);padding:48px 0;border-top:1px solid var(--dk-rule)}
 footer .wrap{display:flex;gap:16px 48px;flex-wrap:wrap;justify-content:space-between}
 footer a{color:#fff}
+
+/* ---------- ask loader ---------- */
+.chip:disabled{opacity:.5;cursor:not-allowed}
+.loader{margin-top:24px;border:1px solid var(--dk-rule);background:var(--dk-card);padding:20px 24px;color:#fff}
+.loader ol{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:8px;font:13px var(--mono);text-transform:uppercase;color:var(--dk-muted)}
+.loader li{display:flex;align-items:center;gap:12px}
+.loader .dot{width:10px;height:10px;border:1px solid var(--dk-muted);flex:none}
+.loader li.done{color:#fff}.loader li.done .dot{background:#fff;border-color:#fff}
+.loader li.now{color:#fff}.loader li.now .dot{background:var(--blue-2);border-color:var(--blue-2);animation:pulse 1s ease-in-out infinite}
+.loader .bar{height:3px;background:var(--dk-rule);overflow:hidden;margin-bottom:12px}
+.loader .bar i{display:block;height:100%;width:35%;background:var(--blue-2);animation:slide 1.4s ease-in-out infinite}
+.loader .muted{margin:0}
+@keyframes pulse{50%{opacity:.3}}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+.answer details{margin:12px 0}
