@@ -17,6 +17,18 @@ Scope: a focused slice that answers the developer's questions **before** they st
 | **Findings** (`/findings`) | What the research taught us, what was corrected or held back, what could not be verified. |
 | **How it works / Method** | Architecture, the evidence labels, what code checks, the plan for scaling to 100 apps. |
 
+## How this maps to the brief
+| Asked for | Where it is |
+|---|---|
+| Look up an app, get a guide to use and share | One search box on the home page: library guide, a saved live copy, or a fresh live run. Guides have copy-as-Markdown, an agent brief, print, a badge, and signed share links for live guides |
+| Live generation for apps outside the library, in real time | `/live` (and the home search): the agent probes Composio and OAuth discovery, searches, reads the provider's pages and writes a guide, streaming each step |
+| Varied real apps | Ten guides chosen for different difficulty: GitHub, Notion, HubSpot, Salesforce, Microsoft/Outlook, Shopify, Slack, Google Workspace, LinkedIn, Meta |
+| How hard, how long, requirements, agent vs you | Each guide: tier with reason, hands-on time, approval wait, requirements, scopes, steps marked you/agent/either, blockers and escalation |
+| What was tested, what sources support, what is uncertain | Evidence tags on every claim; quotes checked by code for live guides; `/findings` and `/method` list corrections and gaps |
+| Check a sample against sources | `/findings` (what was corrected or held back) and `docs/TESTING.md` for the hands-on log; **no hands-on registration has been done yet** |
+| Path to 100 apps | `scripts/batch-generate.ts` and `data/seed-apps.txt` (36 candidate apps); see "From 10 guides to 100" |
+| README, decisions, limitations, no credentials | This file; keys live only in host environment variables |
+
 ## Key findings (details on `/findings`)
 - Registering is often instant; the wait attaches to a later step (Marketplace listing, package security review, scope review).
 - No official page gave an approval duration for 3 of 10 providers; where a number exists it is often a maximum (Slack) or one stage (HubSpot).
