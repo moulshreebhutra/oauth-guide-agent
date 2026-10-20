@@ -29,7 +29,7 @@ export default function Findings() {
         <div className="finding"><h3>For most providers a developer may not need their own OAuth app to start.</h3>
           <p>Composio&apos;s own toolkit pages say &quot;Composio-managed OAuth available&quot; for {managedYes} of {n} providers. {managedNo.join(", ")} says &quot;not available&quot;, so there the developer registers first and the provider&apos;s rules apply in full. We found this by reading each toolkit&apos;s docs page, because the managed-auth directory page only fills in its toolkit list with script.</p></div>
         <div className="finding"><h3>Existing setup guides cover the clicking, not the decision.</h3>
-          <p>Composio publishes 46 setup guides. The ten we read give steps but no setup time, difficulty rating or troubleshooting, and several never mention approval. That is the gap these guides fill, and we cite theirs as sources rather than copying them.</p></div>
+          <p>Composio lists 46 setup guides (45 apps). The ten we read give steps but no setup time, difficulty rating or troubleshooting, and several never mention approval. That is the gap these guides fill, and we cite theirs as sources rather than copying them.</p></div>
 
         <h2>What we corrected or held back</h2>
         <div className="finding"><h3>Managed-auth status was &quot;not checked&quot;. Now sourced for all ten.</h3><p>The first version said &quot;not checked against the Composio API&quot; for nine guides. Reading each toolkit page replaced that with a quoted statement, and turned Shopify into the one exception.</p></div>

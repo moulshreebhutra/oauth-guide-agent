@@ -72,45 +72,13 @@ async function callAnthropic(prompt: string, ms: number, _temperature?: number, 
   return String(t);
 }
 
-/** Amazon Bedrock Converse with a Bedrock API key (bearer token). Works with any Bedrock chat model you have enabled. */
-async function callBedrock(prompt: string, ms: number, temperature: number): Promise<string> {
-  const region = process.env.BEDROCK_REGION || "us-east-1";
-  const model = process.env.BEDROCK_MODEL_ID || "us.amazon.nova-lite-v1:0";
-  const res = await fetch(`https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(model)}/converse`, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${process.env.AWS_BEARER_TOKEN_BEDROCK}` },
-    body: JSON.stringify({ messages: [{ role: "user", content: [{ text: prompt }] }], inferenceConfig: { maxTokens: 900, temperature } }),
-    signal: AbortSignal.timeout(ms),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 160)}`);
-  const j: any = await res.json();
-  const t = j?.output?.message?.content?.map((c: any) => c.text ?? "").join("");
-  if (!t) throw new Error("empty answer");
-  return String(t);
-}
-
-/** xAI Grok (OpenAI-compatible endpoint). Model is set with XAI_MODEL. */
-async function callXai(prompt: string, ms: number, temperature: number): Promise<string> {
-  const res = await fetch("https://api.x.ai/v1/chat/completions", {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${process.env.XAI_API_KEY}` },
-    body: JSON.stringify({ model: process.env.XAI_MODEL || "grok-4", temperature, max_tokens: 900, messages: [{ role: "user", content: prompt }] }),
-    signal: AbortSignal.timeout(ms),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 160)}`);
-  const j: any = await res.json();
-  const t = j?.choices?.[0]?.message?.content;
-  if (!t) throw new Error("empty answer");
-  return String(t);
-}
-
 let lastPaidErr = "";
 type GenOpts = { heavy?: boolean; accept?: (text: string) => boolean; maxTokens?: number; json?: boolean; timeoutMs?: number; temperature?: number; models?: string[]; deadlineMs?: number; race?: boolean; fast?: boolean; only?: "gemini" };
 
 /**
  * Public entry. Providers are tried in three tiers, one provider per tier:
  *   1) Claude or Groq (a coin flip, so load is shared)   2) Gemini or OpenRouter (coin flip)   3) Claude, as the last resort.
- * Bedrock and Grok, if configured, join tier 1. A tier with nothing configured is skipped. Every failure is reported by name,
+ * A tier with nothing configured is skipped. Every failure is reported by name,
  * so a wrong key, no credit or a bad model name is visible instead of hidden behind another provider's error.
  */
 export async function generate(prompt: string, opts: GenOpts = {}): Promise<string> {
@@ -122,17 +90,15 @@ export async function generate(prompt: string, opts: GenOpts = {}): Promise<stri
   const run: Record<string, (ms: number) => Promise<string>> = {
     claude: (ms) => callAnthropic(p, ms, temp, opts.maxTokens),
     groq: (ms) => callGroq(p, ms, temp),
-    bedrock: (ms) => callBedrock(p, ms, temp),
-    grok: (ms) => callXai(p, ms, temp),
     openrouter: (ms) => callOpenRouter(p, ms, temp),
     gemini: (ms) => generateCore(p, { ...opts, only: "gemini", race: true, fast: true, timeoutMs: ms, deadlineMs: ms }),
   };
-  const have: Record<string, boolean> = { claude: !!env.ANTHROPIC_API_KEY, groq: !!env.GROQ_API_KEY, bedrock: !!env.AWS_BEARER_TOKEN_BEDROCK, grok: !!env.XAI_API_KEY, openrouter: !!env.OPENROUTER_API_KEY, gemini: !!env.GEMINI_API_KEY };
+  const have: Record<string, boolean> = { claude: !!env.ANTHROPIC_API_KEY, groq: !!env.GROQ_API_KEY, openrouter: !!env.OPENROUTER_API_KEY, gemini: !!env.GEMINI_API_KEY };
   // Groq's free tier takes about 8,000 tokens a minute and OpenRouter's free models write long JSON badly:
   // keep both away from big requests, and let a heavy job (a whole guide) go to Claude first with most of the time.
   if (p.length > 12_000) have.groq = false;
   if (opts.heavy) have.openrouter = false;
-  const tiers = (opts.heavy ? [["claude", "bedrock", "grok"], ["gemini", "groq"], ["claude"]] : [["claude", "groq", "bedrock", "grok"], ["gemini", "openrouter"], ["claude"]]).map((t) => t.filter((n) => have[n])).filter((t) => t.length);
+  const tiers = (opts.heavy ? [["claude"], ["gemini", "groq"], ["claude"]] : [["claude", "groq"], ["gemini", "openrouter"], ["claude"]]).map((t) => t.filter((n) => have[n])).filter((t) => t.length);
   if (!tiers.length) throw new Error("No AI model is configured on the server");
   const errors: string[] = [];
   const used = new Set<string>();
@@ -158,7 +124,7 @@ async function generateCore(
   prompt: string,
   opts: GenOpts = {},
 ): Promise<string> {
-  // Paid primaries (Anthropic API and/or Amazon Bedrock) race each other; free providers below are the backup.
+  // Paid primaries (Anthropic API) go first; free providers below are the backup.
   let primaryErr = "";
   const paid: Promise<string>[] = [];
   const budget = Math.min(opts.timeoutMs ?? 25_000, opts.deadlineMs ?? 25_000, 30_000);
@@ -174,8 +140,6 @@ async function generateCore(
     throw new Error(last || `${name}: no time left`);
   })();
   if (process.env.ANTHROPIC_API_KEY) paid.push(twice("claude", (ms) => callAnthropic(prompt, ms, opts.temperature ?? 0.2)));
-  if (process.env.AWS_BEARER_TOKEN_BEDROCK) paid.push(twice("bedrock", (ms) => callBedrock(prompt, ms, opts.temperature ?? 0.2)));
-  if (process.env.XAI_API_KEY) paid.push(twice("grok", (ms) => callXai(prompt, ms, opts.temperature ?? 0.2)));
   if (paid.length && !opts.only) {
     try { return await Promise.any(paid); }
     catch (e) { primaryErr = ((e as AggregateError).errors ?? []).map((x: any) => x.message).join(" | "); lastPaidErr = primaryErr; }
@@ -275,4 +239,4 @@ async function generateCore(
 }
 
 /** True when any text model is configured. */
-export const hasModel = () => !!(process.env.ANTHROPIC_API_KEY || process.env.AWS_BEARER_TOKEN_BEDROCK || process.env.XAI_API_KEY || process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY || process.env.OPENROUTER_API_KEY);
+export const hasModel = () => !!(process.env.ANTHROPIC_API_KEY || process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY || process.env.OPENROUTER_API_KEY);

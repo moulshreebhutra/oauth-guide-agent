@@ -61,7 +61,7 @@ export async function fetchReadable(url: string): Promise<{ url: string; title: 
 
 /**
  * Web search. DuckDuckGo's free HTML endpoint is blocked (403) from most cloud hosts, so a search key is used when present:
- * TAVILY_API_KEY (free tier, tavily.com) or BRAVE_API_KEY (Brave Search API); DuckDuckGo is the keyless last resort.
+ * TAVILY_API_KEY (free tier, tavily.com); DuckDuckGo is the keyless last resort.
  */
 export async function searchWeb(query: string): Promise<{ title: string; url: string }[]> {
   const errs: string[] = [];
@@ -76,17 +76,8 @@ export async function searchWeb(query: string): Promise<{ title: string; url: st
       if (out.length) return out;
     } catch (e: any) { errs.push(String(e?.message ?? e)); }
   }
-  if (process.env.BRAVE_API_KEY) {
-    try {
-      const res = await fetch("https://api.search.brave.com/res/v1/web/search?count=8&q=" + encodeURIComponent(query), { headers: { "x-subscription-token": process.env.BRAVE_API_KEY, accept: "application/json" }, signal: AbortSignal.timeout(9_000) });
-      if (!res.ok) throw new Error(`brave ${res.status}`);
-      const j: any = await res.json();
-      const out = (j.web?.results ?? []).map((r: any) => ({ title: String(r.title ?? r.url), url: String(r.url) }));
-      if (out.length) return out;
-    } catch (e: any) { errs.push(String(e?.message ?? e)); }
-  }
   const res = await fetch("https://html.duckduckgo.com/html/?q=" + encodeURIComponent(query), { headers: { "user-agent": UA } });
-  if (!res.ok) throw new Error(`search failed ${res.status}${errs.length ? " (" + errs.join("; ") + ")" : ""}${process.env.TAVILY_API_KEY || process.env.BRAVE_API_KEY ? "" : ": add TAVILY_API_KEY for reliable search"}`);
+  if (!res.ok) throw new Error(`search failed ${res.status}${errs.length ? " (" + errs.join("; ") + ")" : ""}${process.env.TAVILY_API_KEY ? "" : ": add TAVILY_API_KEY for reliable search"}`);
   const html = await res.text();
   const out: { title: string; url: string }[] = [];
   const re = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g;

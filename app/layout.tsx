@@ -40,7 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <footer>
           <div className="wrap">
             <span>Built by <Link href="/#about">{ABOUT.name}</Link> as a take-home prototype for Composio. This site never asks for credentials or secrets.</span>
-            <span>Guides last verified 2026-10-20. <Link href="/method">What was and was not tested</Link></span>
+            <span>Library guides researched 2026-10-20 (quotes not yet re-matched). <Link href="/method">What was and was not tested</Link></span>
           </div>
         </footer>
       </body>

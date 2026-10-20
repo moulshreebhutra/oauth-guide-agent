@@ -30,7 +30,7 @@ export function Lookup({ options }: { options: Opt[] }) {
       <input id="lookup-in" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Look up an app: Slack, Zoom, linear.app…" maxLength={120} list="lookup-apps" autoComplete="off" />
       <datalist id="lookup-apps">{options.map((o) => <option key={o.slug} value={o.app.replace(/\s*\(.*\)/, "")} />)}</datalist>
       <button className="btn" disabled={q.trim().length < 2}>{match ? "Open guide" : "Research it live"}</button>
-      <p className="fine">{q.trim().length < 2 ? "In the library: GitHub, Notion, HubSpot, Salesforce, Microsoft, Shopify, Slack, Google, LinkedIn, Meta. Anything else is researched live." : match ? `${match.app.replace(/\s*\(.*\)/, "")} is in the library.` : "Not in the library. The agent will research it and write a guide in about a minute."}</p>
+      <p className="fine">{q.trim().length < 2 ? "In the library: GitHub, Notion, HubSpot, Salesforce, Microsoft, Shopify, Slack, Google, LinkedIn, Meta. Anything else is researched live." : match ? `${match.app.replace(/\s*\(.*\)/, "")} is in the library.` : "Not in the library. The agent will research it and write a guide in about two minutes."}</p>
     </form>
   );
 }

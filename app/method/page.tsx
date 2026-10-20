@@ -8,7 +8,7 @@ export default function Method() {
 
       <h2>The gap</h2>
       <p>
-        Composio already publishes 46 per-app OAuth setup guides at composio.dev/auth. We read ten of them in full (GitHub, Notion, Slack, Salesforce, HubSpot, Outlook, Shopify, Google, LinkedIn, Meta). Each covers the clicking. In the ten we read, none gives a setup time, a difficulty rating or a troubleshooting section, and the LinkedIn, Meta, Shopify and Outlook ones do not mention provider approval, review or verification at all. Composio&apos;s Google guide says only that you &quot;may need to submit the app for Google verification&quot;.
+        Composio already lists 46 OAuth setup guides (45 apps) at composio.dev/auth. We read ten of them in full (GitHub, Notion, Slack, Salesforce, HubSpot, Outlook, Shopify, Google, LinkedIn, Meta). Each covers the clicking. In the ten we read, none gives a setup time, a difficulty rating or a troubleshooting section, and the LinkedIn, Meta, Shopify and Outlook ones do not mention provider approval, review or verification at all. Composio&apos;s Google guide says only that you &quot;may need to submit the app for Google verification&quot;.
       </p>
       <p>This project adds what is missing and shows how sure we are about each piece.</p>
 

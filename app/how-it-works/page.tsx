@@ -29,8 +29,8 @@ const D = {
   AS --> OR
   GE --> OR
   OR["Orchestration and guardrails, in code<br/>schema, quote check, tags, rate limits, address blocking"]:::good
-  OR --> R["AI router<br/>Claude, Groq, Bedrock, Grok, Gemini, OpenRouter"]:::ai
-  OR --> W["Web research<br/>Tavily or Brave search + page fetch"]:::code
+  OR --> R["AI router<br/>Claude, Groq, Gemini, OpenRouter"]:::ai
+  OR --> W["Web research<br/>Tavily search + page fetch"]:::code
   OR --> C["Composio<br/>API or public toolkit docs"]:::code
 ${CLASSES}`,
 
@@ -69,7 +69,7 @@ ${CLASSES}`,
   Z -- "missing field, unknown source,<br/>Sourced without a quote" --> J
   Z -- passes --> Q{"Do the quotes still match<br/>the live pages?<br/>npm run verify-quotes"}
   Q --> PG["Pre-rendered pages<br/>guide, library, compare, plan"]:::good
-  Q --> IX["Passage index (BM25)<br/>+ optional embeddings"]:::good
+  Q --> IX["Passage index (BM25)<br/>+ optional embeddings (off by default)"]:::good
   Q --> EX["Exports: Markdown, agent brief,<br/>JSON API, README badge, llms.txt"]:::good
   PG --> T["A person registers the app by hand<br/>and logs it in docs/TESTING.md"]:::human
   T --> TG["Only then may a claim be tagged Tested"]:::good
@@ -84,7 +84,7 @@ ${CLASSES}`,
   T -- no --> OT["Polite out-of-scope message<br/>no model is called"]:::stop
   T -- yes --> K["Phase 1: keyword search<br/>BM25 + synonym groups<br/>(approval = review = verification)"]:::code
   K --> Q1["Show passages at once,<br/>assembled by code, no AI"]:::good
-  Q1 --> HY["Phase 2: re-rank by meaning<br/>Gemini embeddings, 4s cap,<br/>keyword order if it fails"]:::ai
+  Q1 --> HY["Phase 2: optional re-rank<br/>Gemini embeddings (not active today),<br/>keyword order stands"]:::ai
   HY --> PR["Prompt = the written skill + top passages<br/>passages are data, not instructions"]:::code
   PR --> M["AI router picks a model"]:::ai
   M --> V{"Is every citation a passage<br/>that was really retrieved?"}
@@ -159,10 +159,10 @@ ${CLASSES}`,
 
   router: `flowchart TD
   R["Request to an AI model"]:::code --> H{"Writing a whole guide?"}
-  H -- no --> A1["Tier 1: one at random of<br/>Claude, Groq, Bedrock, Grok<br/>(only those with a key)"]:::ai
+  H -- no --> A1["Tier 1: Claude or Groq<br/>at random<br/>(only those with a key)"]:::ai
   A1 -- "error, timeout or wrong format" --> A2["Tier 2: Gemini or OpenRouter, 50-50"]:::ai
   A2 -- fails --> A3["Tier 3: Claude once more"]:::ai
-  H -- yes --> G1["Claude first 80% of the time,<br/>otherwise Bedrock or Grok.<br/>Groq is skipped for long prompts"]:::ai
+  H -- yes --> G1["Claude first, with 80% of the time.<br/>Groq is skipped for long prompts"]:::ai
   G1 -- fails --> G2["Gemini or Groq"]:::ai
   G2 -- fails --> G3["Claude last"]:::ai
   A1 --> OKK["First good reply wins"]:::good
@@ -187,9 +187,9 @@ const TECH: [string, string][] = [
   ["Next.js 16 (App Router), React 19, TypeScript", "Pages are pre-rendered; the API routes run as serverless functions on Vercel. The Live agent streams its progress to the browser as server-sent events."],
   ["Zod schema", "Every guide, written by a person or an AI, must fit one typed shape. A guide that does not fit is rejected, not repaired into something else."],
   ["BM25 + synonym groups", "Keyword retrieval over passages cut from the guides. Synonym groups (approval, review, verification, listing) let a question and a guide use different words."],
-  ["Gemini embeddings (optional)", "Re-orders keyword hits by meaning. Capped at 4 seconds; if it fails the keyword order stands. Vectors can be prebuilt with npm run build:embeddings."],
-  ["AI router", "Claude, Groq, AWS Bedrock, xAI Grok, Gemini and OpenRouter, used only when their key is set. Tiers and random choice spread load and survive any one provider failing."],
-  ["Tavily or Brave search, then fetch", "Search finds the provider's pages. Fetch reads them (private addresses blocked, size and time capped). When a site shows a bot check, the text the search engine read is used and labelled as such."],
+  ["Gemini embeddings (optional, off by default)", "Could re-order keyword hits by meaning. Needs a working Gemini key and prebuilt vectors (npm run build:embeddings), neither of which is in place today, so Ask uses keyword order. Capped at 4 seconds if enabled."],
+  ["AI router", "Claude, Groq, Gemini and OpenRouter, used only when their key is set. Claude, Groq and OpenRouter have answered live; Gemini is wired in but over quota until billing is enabled. Tiers and random choice spread load and survive any one provider failing."],
+  ["Tavily search, then fetch", "Search finds the provider's pages. Fetch reads them (private addresses blocked, size and time capped). When a site shows a bot check, the text the search engine read is used and labelled as such."],
   ["Composio API and public toolkit docs", "Tell us whether Composio manages the OAuth app and which auth methods the toolkit supports."],
   ["Signed share links", "A guide is packed into the URL and signed with HMAC-SHA256 using a server secret. Nothing is stored; only this server can mint a valid link."],
   ["Caches and limits", "Answers and guides are remembered for 6 hours on the server and in your browser. Ask allows 20 questions an hour and the Live agent 5 new guides an hour per visitor; repeats cost nothing."],
@@ -300,7 +300,7 @@ export default function How() {
           label="Ask for a library app: limits, cache, topic check, instant keyword answer, re-rank, AI answer, citation check and fallback."
           bullets={[
             "<b>Phase 1 is instant and uses no AI.</b> Keyword search finds passages and code assembles an answer, so there is always something useful on screen.",
-            "<b>Phase 2</b> re-orders passages by meaning, then a model writes an answer using only those passages and the written skill (method, format, link rules).",
+            "<b>Phase 2</b> would re-order passages by meaning with Gemini embeddings; that is optional and not active today, so keyword order is used. Then a model writes an answer using only those passages and the written skill (method, format, link rules).",
             "Passages are passed as <b>data, not instructions</b>, so a sentence inside a guide cannot redirect the model.",
             "<b>Citation check:</b> every [id] in the answer must be a passage that was retrieved. If one is not, the AI text is hidden.",
             "If every model fails, the answer is the guides' own wording, assembled by code, with the reason shown.",
@@ -358,8 +358,8 @@ export default function How() {
           code={D.router}
           label="AI router: tiers for short answers and for whole guides, with fallbacks and an error listing every provider."
           bullets={[
-            "Short answers pick one of <b>Claude, Groq, Bedrock or Grok</b> at random (only those with a key), then <b>Gemini or OpenRouter</b>, then Claude once more.",
-            "Whole guides lean on Claude first, then Bedrock or Grok, then Gemini or Groq, then Claude last. Groq is skipped for long prompts because of its size limit.",
+            "Short answers pick <b>Claude or Groq</b> at random (only those with a key), then <b>Gemini or OpenRouter</b>, then Claude once more.",
+            "Whole guides go to Claude first, then Gemini or Groq, then Claude last. Groq is skipped for long prompts because of its size limit.",
             "A reply in the wrong format (for example prose where JSON was needed) counts as a failure and moves to the next provider.",
             "If everyone fails, the error lists <b>every provider and its reason</b>, so a quota problem on one is not hidden behind another.",
             "<b>/api/health</b> tests each provider and shows which ones respond right now.",

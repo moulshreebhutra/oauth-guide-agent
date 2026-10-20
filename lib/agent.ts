@@ -109,7 +109,7 @@ export async function* generateGuide(input: { name: string; site?: string }): As
   const slug = input.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "app";
 
   if (!hasModel()) {
-    yield { type: "error", msg: "Live generation is not configured on this server (GEMINI_API_KEY missing). The library guides still work." };
+    yield { type: "error", msg: "Live generation is not configured on this server (no AI model key is set). The library guides still work." };
     return;
   }
   yield { type: "status", msg: `Investigating ${input.name}${input.site ? ` (${input.site})` : ""}…` };

@@ -13,7 +13,7 @@ Scope: a focused slice that answers the developer's questions **before** they st
 | **Home** | Look up any app by name or website (library guide, or straight to the live agent). Explains the three pieces people mix up (provider OAuth app, your integration, your users' connections). Compares all ten providers side by side: difficulty, your time, the provider's approval wait, and whether Composio can manage the OAuth app. |
 | **Guides** (`/guide/<app>`) | Per provider: difficulty tier with a written reason, hands-on time, approval wait, Composio managed-auth status, requirements, scopes, steps (marked *you* / *agent* / *either*, with why-not-agent), blockers with fixes and when to escalate, next actions, what was tested, what is uncertain, sources with quoted excerpts. Includes an Ask box scoped to the guide. |
 | **Live agent** (`/live`) | Type an app name or website. The agent probes Composio and the provider's OAuth discovery, searches, reads the provider's pages and writes a guide, streaming its progress. Code checks the result (below). The guide comes with a **share link** (signed, stateless) and a JSON copy. |
-| **Ask** | Question answering over all the guides: BM25 retrieval with synonym groups (approval = review = verification), re-ranked by Gemini embeddings; a model writes the answer from the retrieved passages and code verifies every citation. App names and "tell me everything about X" return that guide in reading order. Questions outside the guides are answered from general model knowledge and labelled as such. |
+| **Ask** | Question answering over all the guides: BM25 retrieval with synonym groups (approval = review = verification), optionally re-ordered by Gemini embeddings when that key works (no vectors are prebuilt, so by default plain keyword order); a model writes the answer from the retrieved passages and code verifies every citation. App names and "tell me everything about X" return that guide in reading order. Questions about apps outside the guides are answered from live web research (Tavily search plus the provider's own pages) with sources, or from general model knowledge, and labelled as such. |
 | **Findings** (`/findings`) | What the research taught us, what was corrected or held back, what could not be verified. |
 | **How it works / Method** | Architecture, the evidence labels, what code checks, the plan for scaling to 100 apps. |
 
@@ -31,7 +31,9 @@ Every claim carries one tag: **tested** (we did it), **sourced** (a quoted excer
 
 ## Agents, and how they are kept reliable
 - The live agent picks searches and pages (JSON actions), code executes them under an action and time budget, blocks private/loopback addresses on every redirect, and treats page text as data.
-- Ask and the agent call **several free models at once and use the first good answer**: four Gemini models, plus Groq and OpenRouter when their keys are set. Busy/rate-limit errors are retried with exponential backoff and jitter. Good answers are cached for six hours. If every model fails, Ask returns a summary composed by code from the guides' own sentences, labelled as not written by AI.
+- Models: each call goes through a small router (`lib/llm.ts`) that tries **Claude** or **Groq** first, then **Gemini** or **OpenRouter**, then Claude again as the last resort; writing a whole guide goes to Claude first with most of the time. A provider without a key is skipped and every failure is reported by name. Verified live: Claude, Groq, OpenRouter. Gemini is wired in but currently answers 429/503 until billing is enabled on the Google project, so it is optional.
+- Web search is Tavily (`TAVILY_API_KEY`); DuckDuckGo is the keyless fallback but blocks most cloud hosts. When a page blocks the fetch, the search engine's own copy of its text is used and labelled.
+- Finished guides are cached for six hours (server memory and the browser); a repeat request returns at once and does not count against the rate limit. If every model fails, Ask returns a summary composed by code from the guides' own sentences, labelled as not written by AI.
 - `/api/health` shows which models your key can see and which answer right now (never the key). `npm run check:live -- <url>` runs an end-to-end check of the deployed site.
 
 ## Run it
@@ -43,10 +45,10 @@ npm test                       # offline tests (guardrails, share links, retriev
 npm run validate               # schema + consistency checks on every library guide
 npm run verify-quotes          # re-matches every library quote against the live page (needs internet)
 npm run check:live -- https://oauth-guide-agent.vercel.app
-GEMINI_API_KEY=... npx tsx scripts/batch-generate.ts "Linear" "Zoom"   # research more apps for review
+ANTHROPIC_API_KEY=... npx tsx scripts/batch-generate.ts "Linear" "Zoom"   # research more apps for review
 ```
 Environment variables (host secrets only, **never commit keys**; `.env*` is git-ignored and the app never asks users for credentials):
-`GEMINI_API_KEY` (live agent, Ask, embeddings) · `GROQ_API_KEY`, `OPENROUTER_API_KEY` (optional extra free providers) · `SHARE_SECRET` (16+ chars, enables share links) · `COMPOSIO_API_KEY` (optional, managed-auth lookup for live guides) · `GEMINI_MODEL`, `GEMINI_EMBED_MODEL`, `GROQ_MODEL`, `OPENROUTER_MODEL` (optional overrides).
+`ANTHROPIC_API_KEY` (primary model) · `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY` (optional extra providers) · `TAVILY_API_KEY` (web search for the live agent) · `SHARE_SECRET` (16+ chars, enables share links) · `COMPOSIO_API_KEY` (optional, managed-auth lookup for live guides) · `ANTHROPIC_MODEL`, `GEMINI_MODEL`, `GEMINI_EMBED_MODEL`, `GROQ_MODEL`, `OPENROUTER_MODEL` (optional overrides).
 Deploy: import the repo in Vercel (Next.js, no build settings), add the variables, redeploy after any change. Pushes to `main` deploy automatically.
 
 ## From 10 guides to 100
@@ -57,7 +59,7 @@ Deploy: import the repo in Vercel (Next.js, no build settings), add the variable
 - Approval durations are rarely published; where unstated the guide says so.
 - Live guides are not reviewed by a person and are labelled that way. Share links carry the whole guide in the URL; very long guides get no link (copy the JSON instead).
 - Free-tier model limits are per project; heavy use will hit them, which is why Ask falls back to other providers and then to code.
-- Gemini free-tier content may be used by Google to improve its products; the agent sends only the app name and public page text.
+- The agent sends model providers only the app name and public page text. Free tiers of some providers may use inputs to improve their products.
 - Composio's managed-auth status for Google and Meta was read from the Gmail and Facebook toolkit pages; other toolkits under those providers were not each checked.
 
 
@@ -66,4 +68,4 @@ Deploy: import the repo in Vercel (Next.js, no build settings), add the variable
 - `/compare`: up to three providers side by side.
 - Guide page buttons: copy as Markdown, copy an agent brief (stops where a person must act), print or save PDF, copy a README badge.
 - `/api/guides` and `/api/guides/<slug>`: JSON for agents and tools. `/llms.txt` describes them. `/badge/<slug>` returns an SVG badge.
-- Free model fallbacks: Gemini (several models) plus Groq and OpenRouter when `GROQ_API_KEY` / `OPENROUTER_API_KEY` are set; all are raced and the first valid answer wins. Groq and OpenRouter have not been run against the live services yet.
+- Model fallbacks: Claude, Groq, Gemini and OpenRouter as described under Agents. Groq and OpenRouter answered live in testing; Gemini did not (quota).

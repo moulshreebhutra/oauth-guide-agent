@@ -98,7 +98,7 @@ export function Ask({ slug, examples }: { slug?: string; examples: string[] }) {
   return (
     <section className="ask" aria-label="Ask the guides">
       <h2>{slug ? "Ask this guide" : "Ask all the guides"}</h2>
-      <p className="muted">Answers come only from the guides, with the passage each one rests on. If the guides do not cover it, it says so.</p>
+      <p className="muted">Questions about the ten library providers are answered from the guides, with the passage each answer rests on. For any other app it researches the web live and says so.</p>
       <form onSubmit={(e) => { e.preventDefault(); if (q.trim().length > 2 && !busy) go(q.trim()); }} className="askform">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={examples[0]} maxLength={300} aria-label="Your question" />
         <button className="btn" disabled={busy || q.trim().length < 3}>{busy ? "Working…" : "Ask"}</button>

@@ -38,7 +38,7 @@ export default function Home() {
             <span className="logos">
               {guides.filter((g) => LOGOS[g.slug]).slice(0, 6).map((g) => <Logo key={g.slug} slug={g.slug} app={g.app} size={24} />)}
             </span>
-            10 providers researched
+            {guides.length} providers researched
           </p>
           <h1>Know what an OAuth app will cost you <mark className="hl">before you start</mark></h1>
           <p className="lede">
@@ -73,7 +73,7 @@ export default function Home() {
         <div className="wrap">
           <div className="sechead">
             <p className="eyebrow">The library</p>
-            <h2>Compare ten providers at a glance</h2>
+            <h2>Compare {guides.length} providers at a glance</h2>
             <p className="lede">Pick a provider to see the full guide, or sort to find the fastest one to launch.</p>
           </div>
           <RouteMap rows={rows} />
