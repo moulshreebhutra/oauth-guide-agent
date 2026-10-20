@@ -29,6 +29,11 @@ export default function Live() {
 
   const [cachedAt, setCachedAt] = useState<number | null>(null);
 
+  const showLog = (ev: any) => {
+    if (ev.type === "tool") add(friendlyTool(ev.name, String(ev.arg), String(ev.result), ev.data));
+    else if (ev.type === "warn") add({ state: "warn", title: /did not answer|unreadable/i.test(ev.msg) ? "An AI model did not answer; trying another" : String(ev.msg).slice(0, 140), detail: String(ev.msg).length > 140 || /did not answer|unreadable/i.test(ev.msg) ? String(ev.msg) : undefined });
+  };
+
   async function run(e: React.FormEvent | null, refresh = false) {
     e?.preventDefault();
     setBusy(true);
@@ -44,11 +49,13 @@ export default function Live() {
       try {
         const c = JSON.parse(localStorage.getItem(ck) ?? "null");
         if (c && Date.now() - c.at < 24 * 3600_000 && c.g) {
+          for (const ev of c.log ?? []) showLog(ev);
           setGuide({ g: c.g, notes: c.notes ?? [] }); setShare(c.share ?? null); setCachedAt(c.at); setBusy(false); return;
         }
       } catch { /* storage unavailable: carry on without it */ }
     }
     setCachedAt(null);
+    const log: any[] = [];
     try {
       const res = await fetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ app, refresh }) });
       if (!res.ok || !res.body) {
@@ -71,15 +78,14 @@ export default function Live() {
           const ev = JSON.parse(p.slice(6));
           if (ev.type === "guide") {
             got = true; setGuide({ g: ev.guide, notes: ev.notes }); if (ev.cached) setCachedAt(ev.cachedAt ?? Date.now());
-            try { localStorage.setItem(ck, JSON.stringify({ at: ev.cachedAt ?? Date.now(), g: ev.guide, notes: ev.notes })); } catch { /* ignore */ }
+            try { localStorage.setItem(ck, JSON.stringify({ at: ev.cachedAt ?? Date.now(), g: ev.guide, notes: ev.notes, log: log.slice(0, 60) })); } catch { /* ignore */ }
           }
           else if (ev.type === "share") {
             setShare(ev.path);
             try { const c = JSON.parse(localStorage.getItem(ck) ?? "null"); if (c) localStorage.setItem(ck, JSON.stringify({ ...c, share: ev.path })); } catch { /* ignore */ }
           }
           else if (ev.type === "error") { got = true; setErr(explainError(String(ev.msg))); }
-          else if (ev.type === "tool") add(friendlyTool(ev.name, String(ev.arg), String(ev.result), ev.data));
-          else if (ev.type === "warn") add({ state: "warn", title: /did not answer|unreadable/i.test(ev.msg) ? "An AI model did not answer; trying another" : String(ev.msg).slice(0, 140), detail: String(ev.msg).length > 140 || /did not answer|unreadable/i.test(ev.msg) ? String(ev.msg) : undefined });
+          else if (ev.type === "tool" || ev.type === "warn") { showLog(ev); if (log.length < 60) log.push(ev); }
           else setNow(String(ev.msg));
         }
       }

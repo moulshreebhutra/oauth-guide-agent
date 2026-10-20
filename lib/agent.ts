@@ -344,9 +344,9 @@ EXAMPLE:\n${exampleGuide()}\n\nCALIBRATION (how our researched guides judged sim
       if (left > 30_000) {
         yield { type: "status", msg: "Second check: reading every claim next to the quotes it cites" };
         try {
-          const raw = parseJson(await ask(auditPrompt(r.guide), Math.min(30_000, left - 10_000), true, 1500));
+          const raw = parseJson(await ask(auditPrompt(r.guide, fetched), Math.min(30_000, left - 10_000), true, 1500));
           const copy = JSON.parse(JSON.stringify(r.guide));
-          const extra = applyVerdicts(copy, Array.isArray(raw?.verdicts) ? (raw.verdicts as Verdict[]).slice(0, 40) : []);
+          const extra = applyVerdicts(copy, Array.isArray(raw?.verdicts) ? (raw.verdicts as Verdict[]).slice(0, 40) : [], fetched);
           const ok = GuideSchema.safeParse(copy);
           if (ok.success && !lintGuide(ok.data).length) { final = ok.data; notes = [...r.notes, ...extra]; }
           if (extra.length && ok.success) final = { ...final, uncertainties: [...final.uncertainties.filter((u) => !/^Automatic checks adjusted/.test(u)), `Automatic checks adjusted ${notes.length} item(s) (e.g. unverifiable quotes were removed or claims downgraded after a second review).`] };

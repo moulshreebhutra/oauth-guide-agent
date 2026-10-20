@@ -116,7 +116,7 @@ export function enforce(draft: unknown, fetched: Fetched[], now = new Date().toI
     if (d.gotchas.length < before) notes.push("gotchas: dropped an unsupported item that was not about setup, auth, review or limits");
   }
   // a high tier needs a stated gate (checked after the claims above were downgraded); a reported or inferred one lowers it to 2
-  if (d.difficulty?.tier >= 3 && !(d.review_process ?? []).some((c: any) => c.tag === "sourced")) { d.difficulty.tier = 2; notes.push("tier lowered to 2: the gate is only reported or inferred, not stated by an official page"); d.uncertainties = [...(d.uncertainties ?? []), "A review or partner gate was mentioned but not confirmed by an official page, so the tier was kept at 2 (light checks)."]; }
+  if (d.difficulty?.tier >= 3 && !(d.review_process ?? []).some((c: any) => c.tag === "sourced")) { d.difficulty.tier = 2; d.difficulty.label = "Light checks"; notes.push("tier lowered to 2: the gate is only reported or inferred, not stated by an official page"); d.uncertainties = [...(d.uncertainties ?? []), "A review or partner gate was mentioned but not confirmed by an official page, so the tier was kept at 2 (light checks)."]; }
   (d.steps ?? []).forEach((c: any, i: number) => fix(c, `steps[${i}]`));
   (d.blockers ?? []).forEach((c: any, i: number) => fix(c, `blockers[${i}]`));
   // clicking through the provider's own console needs the user's signed-in session: that is never "agent"

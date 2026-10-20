@@ -337,3 +337,14 @@ test("second review: only removes or downgrades, ignores bad ids and cannot rais
   assert.equal(g.wait.tag, "inferred");
   assert.ok(notes.length >= 2);
 });
+
+import { pageWindow, applyVerdicts as av2 } from "../lib/audit";
+test("auditor sees page text near the claim, and cannot downgrade a claim the page states", () => {
+  const text = "x ".repeat(400) + "Daily Limit: 5000 calls per day per connection. Minute Limit: 60 calls per minute per tenant. " + "y ".repeat(400);
+  assert.match(pageWindow(text, "Rate limits are 5000 calls per day per connection"), /5000 calls per day/);
+  const g: any = { requirements: [], scopes_and_access: [], review_process: [], gotchas: [{ text: "5000 calls per day per connection", tag: "sourced", evidence: ["e1"] }], steps: [], evidence: [{ id: "e1", url: "https://a.test/x", title: "t", excerpt: "Daily Limit", official: true }] };
+  av2(g, [{ id: "gotchas.0", verdict: "unsupported" }], [{ url: "https://a.test/x", text }]);
+  assert.equal(g.gotchas[0].tag, "sourced");
+  av2(g, [{ id: "gotchas.0", verdict: "wrong_scope" }], [{ url: "https://a.test/x", text }]);
+  assert.equal(g.gotchas[0].tag, "inferred");
+});

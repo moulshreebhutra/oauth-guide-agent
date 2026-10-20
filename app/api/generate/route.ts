@@ -22,8 +22,8 @@ export async function POST(req: Request) {
   const input = { ...raw, name: named };
 
   const key = keyOf(input);
-  const hit = body.refresh === true ? undefined : await cacheGet<{ guide: any; notes: string[] }>("guide:" + key, TTL_MS);
-  const fresh = hit ? { at: hit.at, guide: hit.value.guide, notes: hit.value.notes } : undefined;
+  const hit = body.refresh === true ? undefined : await cacheGet<{ guide: any; notes: string[]; log?: any[] }>("guide:" + key, TTL_MS);
+  const fresh = hit ? { at: hit.at, guide: hit.value.guide, notes: hit.value.notes, log: hit.value.log ?? [] } : undefined;
   // cached answers cost nothing, so they do not count against the hourly limit
   if (!fresh && !rateLimit(ip, 5)) return new Response(JSON.stringify({ error: "Rate limit: 5 live guides per hour per visitor. Browse the library or try later." }), { status: 429 });
 
@@ -35,16 +35,20 @@ export async function POST(req: Request) {
         if (fresh) {
           const mins = Math.max(1, Math.round((Date.now() - fresh.at) / 60_000));
           send({ type: "status", msg: `Reusing the guide written ${mins} minute(s) ago.` });
+          for (const ev of fresh.log) send(ev); // the research steps the agent took, as they were shown the first time
           send({ type: "guide", guide: fresh.guide, notes: fresh.notes, cached: true, cachedAt: fresh.at });
           const token = mintShareToken(fresh.guide);
           if (token) send({ type: "share", path: `/s/${token}` });
           ctl.close();
           return;
         }
+        const log: any[] = [];
+        let logBytes = 0;
         for await (const ev of generateGuide(input)) {
           send(ev);
+          if (ev.type === "tool" || ev.type === "warn") { const n = JSON.stringify(ev).length; if (log.length < 60 && logBytes + n < 200_000) { log.push(ev); logBytes += n; } }
           if (ev.type === "guide") {
-            await cacheSet("guide:" + key, { guide: ev.guide, notes: ev.notes });
+            await cacheSet("guide:" + key, { guide: ev.guide, notes: ev.notes, log });
             const token = mintShareToken(ev.guide);
             if (token) send({ type: "share", path: `/s/${token}` });
           }
