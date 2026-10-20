@@ -1,0 +1,36 @@
+Zoom
+Linear
+Dropbox
+Stripe
+Jira
+Confluence
+Asana
+Monday
+Airtable
+Zendesk
+Pipedrive
+Zoho CRM
+Xero
+GitLab
+Canva
+Calendly
+Twitter
+Trello
+Gong
+Ramp
+PagerDuty
+Docusign
+Apollo
+Supabase
+Workday
+Snowflake
+Strava
+PostHog
+Instantly
+TickTick
+Telegram
+RocketLane
+Gorgias
+Fathom.ai
+Daytona
+Slack custom app

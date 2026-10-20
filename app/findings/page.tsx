@@ -49,6 +49,9 @@ export default function Findings() {
           ))}
         </div>
 
+        <h2>Where this fits</h2>
+        <p>How Composio and seven alternatives describe their own auth: <Link href="/landscape">Composio and the alternatives</Link>. The reusable patterns are on the <Link href="/playbook">Playbook</Link>.</p>
+
         <h2>Predicted versus actual for unseen apps</h2>
         <p>The plan is to predict the difficulty tier of three apps outside the library before running the live agent, then compare with the agent and the provider&apos;s own docs. That check has not been run yet. The template is in <code>docs/TESTING.md</code>.</p>
       </div>
