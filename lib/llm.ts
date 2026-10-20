@@ -5,13 +5,14 @@ const FALLBACKS = ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.6-flas
 
 export const safeError = (e: unknown) =>
   String((e as any)?.message ?? e)
+    .replace(/^This operation was aborted$/i, "no reply before the time limit")
     .replace(/AIza[0-9A-Za-z_-]{20,}/g, "[key]")
     .replace(/\s+/g, " ")
     .slice(0, 220);
 
 export async function generate(
   prompt: string,
-  opts: { json?: boolean; timeoutMs?: number; temperature?: number; models?: string[]; deadlineMs?: number; race?: boolean } = {},
+  opts: { json?: boolean; timeoutMs?: number; temperature?: number; models?: string[]; deadlineMs?: number; race?: boolean; fast?: boolean } = {},
 ): Promise<string> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY is not set on the server");
@@ -20,15 +21,25 @@ export async function generate(
   const started = Date.now();
   const failures: string[] = [];
   const call = async (model: string, ms: number) => {
-    const res = await client.models.generateContent({
-      model,
-      contents: prompt,
-      config: {
-        temperature: opts.temperature ?? 0.2,
-        abortSignal: AbortSignal.timeout(ms),
-        ...(opts.json ? { responseMimeType: "application/json" } : {}),
-      },
-    });
+    const run = (thinkingOff: boolean) =>
+      client.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          temperature: opts.temperature ?? 0.2,
+          abortSignal: AbortSignal.timeout(ms),
+          ...(opts.json ? { responseMimeType: "application/json" } : {}),
+          ...(thinkingOff ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+        },
+      });
+    let res;
+    try {
+      // short answers do not need "thinking" time; turning it off is much faster
+      res = opts.fast ? await run(true) : await run(false);
+    } catch (e) {
+      if (opts.fast && /thinking|budget|INVALID_ARGUMENT|400/i.test(safeError(e)) && !/abort/i.test(safeError(e))) res = await run(false);
+      else throw e;
+    }
     if (!res.text) throw new Error("empty answer");
     return res.text;
   };

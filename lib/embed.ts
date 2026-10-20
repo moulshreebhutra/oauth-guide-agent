@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { getIndex, search, type Hit } from "./rag";
+import { appNamed, getIndex, search, type Hit } from "./rag";
 
 /**
  * Hybrid retrieval: keyword search (BM25 + synonym groups) decides WHICH passages are eligible,
@@ -47,7 +47,16 @@ const cos = (a: number[], b: number[]) => {
   return d / (Math.sqrt(x * y) || 1);
 };
 
+/** Embedding re-rank may take at most 4s; after that the keyword order is used (vectors keep warming in the background). */
 export async function searchHybrid(query: string, opts: { k?: number; slug?: string } = {}): Promise<{ hits: Hit[]; mode: "hybrid" | "keyword" }> {
+  const k = opts.k ?? 6;
+  const keyword = search(query, { k, slug: opts.slug });
+  // a question about one named app returns that guide in reading order; re-ranking would scramble it
+  if (!opts.slug && appNamed(query)) return { hits: keyword, mode: "keyword" };
+  return Promise.race([hybrid(query, opts), new Promise<{ hits: Hit[]; mode: "keyword" }>((r) => setTimeout(() => r({ hits: keyword, mode: "keyword" }), 4_000))]);
+}
+
+async function hybrid(query: string, opts: { k?: number; slug?: string } = {}): Promise<{ hits: Hit[]; mode: "hybrid" | "keyword" }> {
   const k = opts.k ?? 6;
   const pool = search(query, { k: 24, slug: opts.slug });
   if (pool.length < 2 || !process.env.GEMINI_API_KEY || Date.now() - failedAt < 120_000) return { hits: pool.slice(0, k), mode: "keyword" };

@@ -77,13 +77,13 @@ export function Ask({ slug, examples }: { slug?: string; examples: string[] }) {
     // 2) the written answer upgrades it when the model replies
     setPhase("writing");
     try {
-      const better = await post({ question, slug }, 34000);
+      const better = await post({ question, slug }, 52000);
       if (id !== run.current) return;
       if (better.error) throw new Error(better.error);
       setRes(better);
     } catch (e: any) {
       if (id !== run.current) return;
-      setRes((r) => (r && !r.general ? { ...r, extractive: true, message: "The AI model did not answer in time, so this is the guides' own wording. Use Try again for a written answer.", detail: e?.name === "TimeoutError" ? "No reply within 34 seconds" : String(e?.message ?? e).slice(0, 200) } : r));
+      setRes((r) => (r && !r.general ? { ...r, extractive: true, message: "The AI model did not answer in time, so this is the guides' own wording. Use Try again for a written answer.", detail: e?.name === "TimeoutError" ? "No reply within 52 seconds" : String(e?.message ?? e).slice(0, 200) } : r));
     } finally {
       if (id === run.current) setPhase("done");
     }
@@ -115,25 +115,29 @@ export function Ask({ slug, examples }: { slug?: string; examples: string[] }) {
             ))}
           </ol>
           <div className="bar" aria-hidden><i /></div>
-          <p className="muted small">{phase === "quick" ? "Searching the guides…" : `Quoted answer shown below. The written answer usually takes 5 to 20 seconds. ${secs}s so far.`}</p>
+          <p className="muted small">{phase === "quick" ? "Searching the guides…" : `Quoted answer shown below. The written answer usually takes 5 to 25 seconds. ${secs}s so far.`}</p>
         </div>
       )}
 
       {res?.error && <p className="err">{res.error}</p>}
       {res && !res.error && (
         <div className="answer" aria-live="polite">
-          {res.answer && <Answer text={res.answer} />}
-          {res.message && <p className="muted">{res.message}</p>}
-          {!busy && res.extractive && last.current && <p><button type="button" className="btn ghost" onClick={() => go(last.current)}>Try again for a written answer</button></p>}
-          {res.detail && !busy && <details><summary className="small">Technical detail</summary><p className="muted small">{res.detail}</p></details>}
+          <p className={`badge ${res.general ? "b-gen" : res.extractive || res.mode === "passages" ? "b-quote" : "b-ai"}`}>
+            {res.general ? "AI general knowledge · not from our guides" : res.extractive || res.mode === "passages" ? (busy ? "Instant result · quoted from the guides, not AI" : "Quoted from the guides · not written by AI") : "AI answer · written from the guides below"}
+          </p>
+          {res.answer && !res.extractive && res.mode === "answer" && <Answer text={res.answer} />}
+          {res.answer && res.extractive && res.passages.length === 0 && <Answer text={res.answer} />}
+          {res.message && !(busy && res.extractive) && <p className="muted small">{res.message}</p>}
+          {busy && res.extractive && <p className="muted small">The AI is writing a clearer answer from these passages. It replaces this result when ready.</p>}
+          {!busy && res.extractive && last.current && <p><button type="button" className="btn ghost" onClick={() => go(last.current)}>Try again for an AI answer</button></p>}
+          {res.detail && !busy && <details><summary className="small">Why there is no AI answer</summary><p className="muted small">{res.detail}</p></details>}
           {res.passages.length > 0 && (
             <>
-              <h3>{res.mode === "answer" ? "Passages cited" : "Most relevant passages"}</h3>
+              <h3>{res.extractive ? "What the guides say" : "Passages the answer rests on"}</h3>
               <ul className="passages">
                 {res.passages.map((p) => (
                   <li key={p.id}>
-                    <span className="pid">[{p.id}]</span>{" "}
-                    <Link href={`/guide/${p.slug}`}>{p.app} - {p.section}</Link> {p.tag && <Tag t={p.tag} />}
+                    <div className="ptop"><Link href={`/guide/${p.slug}`}>{p.app} · {p.section}</Link> {p.tag && <Tag t={p.tag} />} <span className="pid">{p.id}</span></div>
                     <p>{p.text.replace(/^[^.]*\.\s/, "")}</p>
                   </li>
                 ))}
