@@ -2,7 +2,7 @@ import { generateGuide } from "@/lib/agent";
 import { cleanAppInput, rateLimit } from "@/lib/safety";
 import { mintShareToken } from "@/lib/share";
 
-export const maxDuration = 60;
+export const maxDuration = 300; // writing a whole guide with a model takes longer than 60s; the page shows progress meanwhile
 
 export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";

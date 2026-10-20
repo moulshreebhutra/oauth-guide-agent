@@ -17,10 +17,10 @@ export type Ev =
 
 const excerpt = (t: string, n = 700) => t.replace(/\s+/g, " ").trim().slice(0, n);
 const MAX_ACTIONS = 5;
-const RESEARCH_BUDGET_MS = 15_000; // stop researching early so the whole run fits a 60s function limit
-const TOTAL_BUDGET_MS = 55_000;
+const RESEARCH_BUDGET_MS = 20_000; // stop researching early so the whole run fits a 60s function limit
+const TOTAL_BUDGET_MS = 170_000;
 const ACTION_TIMEOUT_MS = 12_000;
-const WRITE_TIMEOUT_MS = 38_000;
+const WRITE_TIMEOUT_MS = 110_000;
 const PER_PAGE_PROMPT_CHARS = 9000;
 const OFFICIAL_HINT = /(docs?|developers?|developer|learn|support|help|api)\./i;
 

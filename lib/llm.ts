@@ -107,7 +107,7 @@ type GenOpts = { heavy?: boolean; accept?: (text: string) => boolean; maxTokens?
  */
 export async function generate(prompt: string, opts: GenOpts = {}): Promise<string> {
   const started = Date.now();
-  const total = Math.min(opts.deadlineMs ?? opts.timeoutMs ?? 28_000, 50_000);
+  const total = Math.min(opts.deadlineMs ?? opts.timeoutMs ?? 28_000, 150_000);
   const temp = opts.temperature ?? 0.2;
   const p = opts.json ? `${prompt}\n\nReturn ONLY valid JSON, minified (no indentation or line breaks): no prose before or after it and no code fences.` : prompt;
   const env = process.env;
@@ -137,7 +137,7 @@ export async function generate(prompt: string, opts: GenOpts = {}): Promise<stri
     if (left < 3000) { errors.push(`${name}: no time left`); break; }
     const share = i < tiers.length - 1 ? Math.max(3000, Math.floor(left * (opts.heavy && i === 0 ? 0.8 : 0.6))) : left;
     try {
-      const out = await run[name](Math.min(share, 30_000));
+      const out = await run[name](Math.min(share, 120_000));
       // a reply that fails the caller's format check counts as a failure, so the next provider gets a turn
       if (opts.accept && !opts.accept(out)) throw new Error(`reply failed the format check (${out.trim().slice(0, 60).replace(/\s+/g, " ")}…)`);
       return out;
