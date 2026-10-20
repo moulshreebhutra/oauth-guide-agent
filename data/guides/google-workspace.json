@@ -1,0 +1,352 @@
+{
+ "app": "Google (Gmail / Workspace APIs)",
+ "slug": "google-workspace",
+ "provider_domain": "google.com",
+ "generated_by": "human-researched",
+ "summary": "Testing with your own account is quick in 'Testing' mode with test users. Going to production with sensitive or restricted scopes (such as Gmail) means Google verification, which can take several weeks, plus an annual security assessment for restricted scopes accessed via a server.",
+ "difficulty": {
+  "tier": 4,
+  "label": "Gated / partner approval",
+  "rationale": "Restricted scopes require brand verification, a demo video, justification, and a Google-empanelled security assessment (CASA), repeated at least every 12 months.",
+  "tag": "sourced",
+  "evidence": [
+   "e1"
+  ]
+ },
+ "effort": {
+  "hands_on_minutes": {
+   "min": 45,
+   "max": 120
+  },
+  "basis": "Test-mode setup only (our estimate). Production verification effort is much larger and not estimated.",
+  "tag": "inferred"
+ },
+ "wait": {
+  "range": null,
+  "statement": "Google's restricted-scope page says verification can take several weeks. None of the other Google pages we read (verification help, FAQ) state a duration, so there is no official shorter figure to quote.",
+  "tag": "sourced",
+  "evidence": [
+   "e1"
+  ],
+  "display": "Several weeks (stated by Google)"
+ },
+ "composio_managed": {
+  "status": "unknown",
+  "note": "Not checked against the Composio API yet. Managed auth would avoid your own Google verification for prototypes if available.",
+  "tag": "unknown"
+ },
+ "requirements": [
+  {
+   "text": "Brand verification before data access review: a public home page related to the app, a privacy policy on the same domain linked from the consent screen, and verified ownership of authorized domains in Google Search Console.",
+   "tag": "sourced",
+   "evidence": [
+    "e1"
+   ]
+  },
+  {
+   "text": "Upload an unlisted YouTube demo video showing the English consent flow, app name, OAuth client ID in the address bar and each sensitive/restricted scope in use.",
+   "tag": "sourced",
+   "evidence": [
+    "e1"
+   ]
+  },
+  {
+   "text": "A written justification of how restricted scopes are used and why more limited scopes are not sufficient.",
+   "tag": "sourced",
+   "evidence": [
+    "e1"
+   ]
+  },
+  {
+   "text": "To start verification the app must already be published to production; apps in development, testing or staging are not applicable.",
+   "tag": "sourced",
+   "evidence": [
+    "e6"
+   ]
+  },
+  {
+   "text": "Verification needs a demo video showing the OAuth flow and how each scope is used, plus a written justification for sensitive or restricted scopes.",
+   "tag": "sourced",
+   "evidence": [
+    "e7"
+   ]
+  }
+ ],
+ "scopes_and_access": [
+  {
+   "text": "Scopes are grouped as sensitive or restricted in the Cloud Console Data Access page; use least privilege.",
+   "tag": "sourced",
+   "evidence": [
+    "e1"
+   ]
+  },
+  {
+   "text": "Security assessment is required for restricted scope data accessed from or through a third-party server, performed by Google-empanelled assessors under the CASA framework.",
+   "tag": "sourced",
+   "evidence": [
+    "e1"
+   ]
+  },
+  {
+   "text": "Testing status: limited to up to 100 test users, who must be listed on the consent screen.",
+   "tag": "sourced",
+   "evidence": [
+    "e3"
+   ]
+  },
+  {
+   "text": "Testing status: a test user's authorization expires seven days after consent, so offline access breaks weekly until the app is in production.",
+   "tag": "sourced",
+   "evidence": [
+    "e4"
+   ]
+  },
+  {
+   "text": "Unverified apps requesting sensitive or restricted scopes hit a user cap: about 100 new users total over the project's life; Google says it cannot be reset.",
+   "tag": "sourced",
+   "evidence": [
+    "e5"
+   ]
+  },
+  {
+   "text": "Google caps refresh tokens at 100 per Google Account per OAuth client ID; creating more silently invalidates the oldest.",
+   "tag": "sourced",
+   "evidence": [
+    "e8"
+   ]
+  }
+ ],
+ "gotchas": [
+  {
+   "text": "Composio's guide: keep the app in Testing while building and add test users; once In production it is available to all Google users and you may need to submit for verification.",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  },
+  {
+   "text": "Restricted-scope apps must be reverified and complete a security assessment at least every 12 months.",
+   "tag": "sourced",
+   "evidence": [
+    "e1"
+   ]
+  },
+  {
+   "text": "Brand verification results are valid for 7 days, then status changes to 'Need to re-verify'.",
+   "tag": "sourced",
+   "evidence": [
+    "e1"
+   ]
+  },
+  {
+   "text": "Google may email follow-up requests; keep developer and support contacts current and add extra project owners.",
+   "tag": "sourced",
+   "evidence": [
+    "e1"
+   ]
+  },
+  {
+   "text": "An insufficient justification can get the verification request rejected, which restarts your wait.",
+   "tag": "sourced",
+   "evidence": [
+    "e9"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "n": 1,
+   "title": "Create or pick a Google Cloud project",
+   "detail": "Needed to configure OAuth clients and APIs.",
+   "who": "you",
+   "why_not_agent": "Needs your signed-in Google account.",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  },
+  {
+   "n": 2,
+   "title": "Enable the API and configure the consent screen",
+   "detail": "Enable the API (e.g. Gmail), open the OAuth consent screen, complete App Information, Audience (Internal or External), and Contact Information.",
+   "who": "you",
+   "why_not_agent": "Needs your signed-in Google account.",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  },
+  {
+   "n": 3,
+   "title": "Create the OAuth client",
+   "detail": "Create OAuth client (Web application); add the redirect URI from your Composio auth config; copy client ID, then create a client secret.",
+   "who": "you",
+   "why_not_agent": "Secret goes to your secret store.",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  },
+  {
+   "n": 4,
+   "title": "Stay in Testing mode and add test users",
+   "detail": "Add the Google accounts that will connect. Good for prototypes.",
+   "who": "you",
+   "why_not_agent": "Needs your Google account.",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  },
+  {
+   "n": 5,
+   "title": "Create the Composio auth config and connect",
+   "detail": "Own credentials, paste client ID/secret, confirm redirect URI matches.",
+   "who": "either",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  },
+  {
+   "n": 6,
+   "title": "For public production use: start verification early",
+   "detail": "Declare scopes, pass brand verification, submit video and justification, and if restricted scopes apply, arrange a CASA assessment.",
+   "who": "you",
+   "why_not_agent": "Legal, domain and security-assessment decisions and communication with Google are yours.",
+   "tag": "sourced",
+   "evidence": [
+    "e1"
+   ]
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "'App not verified' / access blocked for users outside the test list",
+   "likely_cause": "App is in Testing mode, or In production without completed verification for sensitive/restricted scopes.",
+   "fix": "Add the user as a test user for prototyping, or complete verification for production.",
+   "escalate_when": "Verification is rejected or needs more info and Trust & Safety emails arrive.",
+   "tag": "inferred",
+   "evidence": [
+    "e1",
+    "e2"
+   ]
+  }
+ ],
+ "review_process": [
+  {
+   "text": "Verification: brand verification first, then data-access review of sensitive/restricted scopes; restricted scopes can require a security assessment by an empanelled assessor.",
+   "tag": "sourced",
+   "evidence": [
+    "e1"
+   ]
+  }
+ ],
+ "next_actions": [
+  "Prototype in Testing mode with test users.",
+  "If you will ship Gmail/Drive-like restricted scopes publicly, begin domain, privacy policy and video work early and budget for weeks plus a security assessment."
+ ],
+ "agent_vs_you": {
+  "agent_can": [
+   "Draft the scope justification and a demo-video script from your design.",
+   "Check that your privacy policy and home page are public and on the same domain."
+  ],
+  "you_must": [
+   "Own the Google project and domains.",
+   "Record and upload the video.",
+   "Engage with Google and the security assessor."
+  ]
+ },
+ "evidence": [
+  {
+   "id": "e1",
+   "url": "https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification",
+   "title": "Google - Restricted scope verification",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "can potentially take several weeks to complete",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e2",
+   "url": "https://composio.dev/auth/googleapps",
+   "title": "Composio - Google Apps OAuth2 credentials",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "Keep your app in testing while building.",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e3",
+   "url": "https://support.google.com/cloud/answer/15549945",
+   "title": "Google Cloud Help - Manage OAuth app audience",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "Projects configured with a publishing status of Testing are limited to up to 100 test users",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e4",
+   "url": "https://support.google.com/cloud/answer/15549945",
+   "title": "Google Cloud Help - Manage OAuth app audience",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "Authorizations by a test user will expire seven days from the time of consent.",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e5",
+   "url": "https://support.google.com/cloud/answer/15549945",
+   "title": "Google Cloud Help - Manage OAuth app audience",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "The user cap limits the number of users that can grant permission to your app",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e6",
+   "url": "https://support.google.com/cloud/answer/13461325",
+   "title": "Google Cloud Help - OAuth app verification",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "Apps in development, testing or staging are not applicable for verification",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e7",
+   "url": "https://support.google.com/cloud/answer/13461325",
+   "title": "Google Cloud Help - OAuth app verification",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "Provide a video that demonstrates the functionality, the OAuth flow of the app and shows how the scopes are being used.",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e8",
+   "url": "https://developers.google.com/identity/protocols/oauth2",
+   "title": "Google Identity - OAuth 2.0 overview",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "There is currently a limit of 100 refresh tokens per Google Account per OAuth 2.0 client ID.",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e9",
+   "url": "https://support.google.com/cloud/answer/13464321",
+   "title": "Google Cloud Help - OAuth verification FAQ",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "If your justification is deemed insufficient, your app verification request may be rejected.",
+   "official": true,
+   "quote_check": "unchecked"
+  }
+ ],
+ "tested_log": [],
+ "last_verified": "2026-10-20",
+ "uncertainties": [
+  "No Google page we read gives a number of days or weeks for the OAuth review; 'several weeks' is the only stated figure and it comes from the restricted-scope page.",
+  "Cost of the third-party security assessment is not stated on the pages read.",
+  "Which scopes are sensitive vs restricted for a given API was not enumerated.",
+  "Brand verification timing was not found.",
+  "No hands-on test logged yet."
+ ]
+}

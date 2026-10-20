@@ -1,0 +1,305 @@
+{
+ "app": "Salesforce",
+ "slug": "salesforce",
+ "provider_domain": "salesforce.com",
+ "generated_by": "human-researched",
+ "summary": "Create an External Client App (the preferred framework). Creating Connected Apps is disabled by default and may need Salesforce Support to enable. No marketplace review is needed for your own org.",
+ "difficulty": {
+  "tier": 2,
+  "label": "Light checks",
+  "rationale": "Self-serve in a dev org, but Connected Apps are disabled by default and need enablement; many settings (scopes, secret/PKCE, policies) can silently break the flow.",
+  "tag": "sourced",
+  "evidence": [
+   "e1"
+  ]
+ },
+ "effort": {
+  "hands_on_minutes": {
+   "min": 30,
+   "max": 60
+  },
+  "basis": "Our estimate from the number of settings. Composio's guide shows only a 4-minute reading time.",
+  "tag": "inferred"
+ },
+ "wait": {
+  "range": {
+   "min_days": 0,
+   "max_days": 0
+  },
+  "statement": "Creating the app takes about 10 minutes to provision, per Composio's guide. Only if you distribute a package, Salesforce's security review adds stated stages: 1-2 weeks verification plus 3-4 weeks testing (retests 2-3 weeks). Salesforce says these are estimates.",
+  "tag": "sourced",
+  "evidence": [
+   "e2"
+  ],
+  "display": "~10 min to start; listing review 4-6 wks (our sum)"
+ },
+ "composio_managed": {
+  "status": "unknown",
+  "note": "Not checked against the Composio API yet.",
+  "tag": "unknown"
+ },
+ "requirements": [
+  {
+   "text": "A Salesforce org (a free developer account gives a dev org) where you can open Setup.",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  },
+  {
+   "text": "For a Connected App: Salesforce says creating them is now disabled by default; contact Salesforce Customer Support to enable it (one-time per org), then turn on 'Allow creation of connected apps'.",
+   "tag": "sourced",
+   "evidence": [
+    "e1"
+   ]
+  },
+  {
+   "text": "An external client app is Salesforce's packageable framework for letting a third-party application integrate through APIs and OAuth.",
+   "tag": "sourced",
+   "evidence": [
+    "e6"
+   ]
+  },
+  {
+   "text": "OAuth secrets are kept out of packages: external client apps split settings into a global file (consumer credentials) and a local file.",
+   "tag": "sourced",
+   "evidence": [
+    "e7"
+   ]
+  }
+ ],
+ "scopes_and_access": [
+  {
+   "text": "Typical scopes: api, refresh_token/offline_access (and optionally openid). Salesforce's own CLI example sets refresh-token expiry to 90 days or less as a security best practice.",
+   "tag": "sourced",
+   "evidence": [
+    "e1",
+    "e2"
+   ]
+  }
+ ],
+ "gotchas": [
+  {
+   "text": "External Client Apps are called the preferred integration framework; Connected Apps are being deprecated.",
+   "tag": "sourced",
+   "evidence": [
+    "e1"
+   ]
+  },
+  {
+   "text": "Composio's guide says keep 'Require Secret' options checked and uncheck 'Require PKCE' unless you want PKCE.",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  },
+  {
+   "text": "The Composio auth config also needs your My Domain subdomain (without .salesforce.com).",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "n": 1,
+   "title": "Get a Salesforce org",
+   "detail": "Use an existing org or sign up for a developer account.",
+   "who": "you",
+   "why_not_agent": "Account creation and email verification.",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  },
+  {
+   "n": 2,
+   "title": "Create an External Client App",
+   "detail": "Setup > App Manager > New External Client App; name, contact email, Distribution State Local.",
+   "who": "you",
+   "why_not_agent": "Needs your signed-in Salesforce admin session.",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  },
+  {
+   "n": 3,
+   "title": "Enable OAuth with Composio's callback URL",
+   "detail": "Enable OAuth, set the callback URL from your Composio auth config, add scopes (api, refresh_token/offline_access).",
+   "who": "you",
+   "why_not_agent": "Needs your Salesforce session.",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  },
+  {
+   "n": 4,
+   "title": "Copy consumer key and secret",
+   "detail": "Found in the app's OAuth settings consumer details; you may be asked for an emailed verification code.",
+   "who": "you",
+   "why_not_agent": "Verification code goes to you; secret goes to your secret store.",
+   "tag": "sourced",
+   "evidence": [
+    "e1",
+    "e2"
+   ]
+  },
+  {
+   "n": 5,
+   "title": "Create the Composio auth config",
+   "detail": "Enter key, secret, redirect URI and your My Domain subdomain.",
+   "who": "either",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "You cannot find the option to create a Connected App",
+   "likely_cause": "Connected App creation is disabled by default in newer orgs.",
+   "fix": "Use an External Client App instead, or ask Salesforce Support to enable Connected App creation.",
+   "escalate_when": "You specifically need a Connected App.",
+   "tag": "sourced",
+   "evidence": [
+    "e1"
+   ]
+  },
+  {
+   "symptom": "App just created but login fails",
+   "likely_cause": "A new Connected App can take about 10 minutes to provision.",
+   "fix": "Wait and retry.",
+   "escalate_when": "Still failing after about an hour.",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  }
+ ],
+ "review_process": [
+  {
+   "text": "Salesforce's security review applies to managed packages and Salesforce Platform API solutions you distribute (Salesforce's page now calls it the AgentExchange security review).",
+   "tag": "sourced",
+   "evidence": [
+    "e5"
+   ]
+  },
+  {
+   "text": "Stated stage durations: verification of submission 1-2 weeks, first-time Product Security testing 3-4 weeks, retest of a resubmission 2-3 weeks. Salesforce says 'The time frames are estimates.'",
+   "tag": "sourced",
+   "evidence": [
+    "e3"
+   ]
+  },
+  {
+   "text": "Our sum of the first-submission stages is roughly 4-6 weeks end to end; Salesforce does not state a total.",
+   "tag": "inferred",
+   "evidence": [
+    "e3"
+   ]
+  },
+  {
+   "text": "The page gives no fee amount; if you distribute for free you do not pay the review fee.",
+   "tag": "sourced",
+   "evidence": [
+    "e4"
+   ]
+  },
+  {
+   "text": "Connecting Composio to your own org through an external client app is not described as needing the security review; the review is about distributing a package.",
+   "tag": "inferred",
+   "evidence": [
+    "e5"
+   ]
+  }
+ ],
+ "next_actions": [
+  "Prefer the External Client App path.",
+  "Set the My Domain subdomain correctly in Composio."
+ ],
+ "agent_vs_you": {
+  "agent_can": [
+   "Explain settings and build the Composio config from credentials you provide safely."
+  ],
+  "you_must": [
+   "Operate Setup in your org and contact Salesforce Support if needed."
+  ]
+ },
+ "evidence": [
+  {
+   "id": "e1",
+   "url": "https://developer.salesforce.com/docs/platform/sfdx-dev/guide/sfdx-dev-auth-connected-app.html",
+   "title": "Salesforce DX Dev Guide - Create a Connected App in Your Org",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "Creating connected apps is now disabled by default.",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e2",
+   "url": "https://composio.dev/auth/salesforce",
+   "title": "Composio - Salesforce OAuth2 credentials",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "Salesforce may take ~10 minutes to fully provision it.",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e3",
+   "url": "https://developer.salesforce.com/docs/atlas.en-us.packagingGuide.meta/packagingGuide/security_review_how_it_works.htm",
+   "title": "Salesforce Developers - How the security review works",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "The time frames are estimates.",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e4",
+   "url": "https://developer.salesforce.com/docs/atlas.en-us.packagingGuide.meta/packagingGuide/security_review_how_it_works.htm",
+   "title": "Salesforce Developers - How the security review works",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "If you plan to distribute your solution for free, you don't pay the fee.",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e5",
+   "url": "https://developer.salesforce.com/docs/atlas.en-us.packagingGuide.meta/packagingGuide/security_review_how_it_works.htm",
+   "title": "Salesforce Developers - How the security review works",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "To distribute managed packages, Salesforce Platform API solutions, or Marketing Cloud Engagement API solutions",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e6",
+   "url": "https://help.salesforce.com/s/articleView?id=xcloud.external_client_apps.htm&type=5",
+   "title": "Salesforce Help - External client apps",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "packageable frameworks to enable a third-party application to integrate with Salesforce using APIs and security protocols",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e7",
+   "url": "https://help.salesforce.com/s/articleView?id=xcloud.external_client_apps.htm&type=5",
+   "title": "Salesforce Help - External client apps",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "OAuth settings contain sensitive information like OAuth secrets that must not be packaged or distributed.",
+   "official": true,
+   "quote_check": "unchecked"
+  }
+ ],
+ "tested_log": [],
+ "last_verified": "2026-10-20",
+ "uncertainties": [
+  "Salesforce's help article on the connected-app to external-client-app change did not load; we could not quote whether new connected apps can still be created.",
+  "Org edition differences (Developer vs production orgs) were not researched.",
+  "The 1-2 / 3-4 / 2-3 week figures were read through a page summary; verify-quotes should confirm the wording.",
+  "No hands-on test logged yet."
+ ]
+}

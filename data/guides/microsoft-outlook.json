@@ -1,0 +1,326 @@
+{
+ "app": "Microsoft (Outlook / Graph)",
+ "slug": "microsoft-outlook",
+ "provider_domain": "microsoft.com",
+ "generated_by": "human-researched",
+ "summary": "Register an app in Microsoft Entra (Azure). For multi-tenant apps that ask for more than basic sign-in, unverified publishers can face consent warnings or blocks; publisher verification is free but needs a verified Partner account.",
+ "difficulty": {
+  "tier": 3,
+  "label": "Review required",
+  "rationale": "Registration is instant, but Microsoft says users may be unable to consent to newly registered multitenant apps that are not publisher verified when risk-based step-up consent is enabled; verification needs a verified partner account and domain.",
+  "tag": "sourced",
+  "evidence": [
+   "e1"
+  ]
+ },
+ "effort": {
+  "hands_on_minutes": {
+   "min": 30,
+   "max": 60
+  },
+  "basis": "Our estimate for registration plus secret and permissions. Publisher verification time is unknown.",
+  "tag": "inferred"
+ },
+ "wait": {
+  "range": null,
+  "display": "Minutes once prerequisites are met",
+  "tag": "sourced",
+  "evidence": [
+   "e1",
+   "e8"
+  ],
+  "statement": "Microsoft says developers who already meet the publisher-verification requirements can be verified in minutes. How long it takes to get the Partner account itself verified is not stated."
+ },
+ "composio_managed": {
+  "status": "unknown",
+  "note": "Not checked against the Composio API yet.",
+  "tag": "unknown"
+ },
+ "requirements": [
+  {
+   "text": "Publisher verification needs a verified Microsoft AI Cloud Partner Program (formerly MPN) account that is the partner global account, an app registered in a Microsoft Entra work/school tenant, a publisher domain that is not *.onmicrosoft.com, and MFA for the initiating user.",
+   "tag": "sourced",
+   "evidence": [
+    "e1"
+   ]
+  },
+  {
+   "text": "No charges are associated with completing the prerequisites for publisher verification.",
+   "tag": "sourced",
+   "evidence": [
+    "e1"
+   ]
+  },
+  {
+   "text": "Publisher verification needs a Partner One ID on a verified Microsoft AI Cloud Partner Program account.",
+   "tag": "sourced",
+   "evidence": [
+    "e9"
+   ]
+  }
+ ],
+ "scopes_and_access": [
+  {
+   "text": "Composio's example uses delegated Microsoft Graph permissions Mail.Read, Mail.Send, offline_access and openid/profile/email.",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  }
+ ],
+ "gotchas": [
+  {
+   "text": "The client secret you need is the secret Value, not the secret ID, and it is shown only once.",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  },
+  {
+   "text": "Secrets expire (6 or 12 months recommended in Composio's guide); plan rotation.",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  },
+  {
+   "text": "Choosing 'Allow all tenants' means any Microsoft organization can authenticate with your app.",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  },
+  {
+   "text": "Apps registered with a personal Microsoft account cannot be publisher-verified.",
+   "tag": "sourced",
+   "evidence": [
+    "e1"
+   ]
+  },
+  {
+   "text": "Client secrets expire: the maximum lifetime is 24 months and Microsoft recommends under 12. Calendar the renewal or your connection will fail one day.",
+   "tag": "sourced",
+   "evidence": [
+    "e3",
+    "e4"
+   ]
+  },
+  {
+   "text": "Redirect URIs are case-sensitive and must match the path of your running app exactly.",
+   "tag": "sourced",
+   "evidence": [
+    "e6"
+   ]
+  },
+  {
+   "text": "Wildcard redirect URIs are not supported for apps that sign in both personal Microsoft accounts and work/school accounts.",
+   "tag": "sourced",
+   "evidence": [
+    "e7"
+   ]
+  },
+  {
+   "text": "Microsoft recommends a certificate rather than a client secret before production.",
+   "tag": "sourced",
+   "evidence": [
+    "e5"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "n": 1,
+   "title": "Register the app in Entra",
+   "detail": "App registrations > New registration; choose supported account types (Composio uses 'any organizational directory and personal Microsoft accounts'); platform Web; redirect URI from your Composio auth config.",
+   "who": "you",
+   "why_not_agent": "Needs your signed-in Azure/Entra session.",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  },
+  {
+   "n": 2,
+   "title": "Create a client secret",
+   "detail": "Certificates & secrets > New client secret; copy the Value immediately.",
+   "who": "you",
+   "why_not_agent": "Secret goes to your secret store.",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  },
+  {
+   "n": 3,
+   "title": "Add delegated Graph permissions",
+   "detail": "For Outlook mail: Mail.Read, Mail.Send, offline_access, openid, profile, email.",
+   "who": "you",
+   "why_not_agent": "Needs your Entra session.",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  },
+  {
+   "n": 4,
+   "title": "Create the Composio auth config and connect",
+   "detail": "Own developer credentials; enter client ID, secret, redirect URI; connect an account and test a tool.",
+   "who": "either",
+   "tag": "sourced",
+   "evidence": [
+    "e2"
+   ]
+  },
+  {
+   "n": 5,
+   "title": "If other organizations will use it: pursue publisher verification",
+   "detail": "Set a publisher domain, verify your Partner account, associate the PartnerID with the app.",
+   "who": "you",
+   "why_not_agent": "Needs partner account, MFA and domain ownership.",
+   "tag": "sourced",
+   "evidence": [
+    "e1"
+   ]
+  }
+ ],
+ "blockers": [
+  {
+   "symptom": "Users from another company see a warning or cannot consent",
+   "likely_cause": "Unverified publisher on a multitenant app requesting permissions beyond basic sign-in.",
+   "fix": "Complete publisher verification, or ask the tenant admin to grant consent.",
+   "escalate_when": "Tenant policy blocks all unverified apps and the admin will not grant consent.",
+   "tag": "sourced",
+   "evidence": [
+    "e1"
+   ]
+  }
+ ],
+ "review_process": [
+  {
+   "text": "Publisher verification verifies the organization is authentic; the badge does not indicate app quality.",
+   "tag": "sourced",
+   "evidence": [
+    "e1"
+   ]
+  },
+  {
+   "text": "Multitenant apps that are not publisher verified show a warning on the consent screen for users in other tenants.",
+   "tag": "sourced",
+   "evidence": [
+    "e10"
+   ]
+  }
+ ],
+ "next_actions": [
+  "Register the app and test with your own tenant.",
+  "Start partner account verification early if other organizations will connect."
+ ],
+ "agent_vs_you": {
+  "agent_can": [
+   "Check your publisher-verification prerequisites against the list.",
+   "Build the Composio config from credentials."
+  ],
+  "you_must": [
+   "Register the app, handle secrets, and own the partner/domain verification."
+  ]
+ },
+ "evidence": [
+  {
+   "id": "e1",
+   "url": "https://learn.microsoft.com/en-ca/entra/identity-platform/publisher-verification-overview",
+   "title": "Microsoft Learn - Publisher verification",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "No charges are associated with completing the prerequisites for publisher verification.",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e2",
+   "url": "https://composio.dev/auth/outlook",
+   "title": "Composio - Microsoft Outlook OAuth2 credentials",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "The client secret is Value not the secret ID.",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e3",
+   "url": "https://learn.microsoft.com/en-us/entra/identity-platform/how-to-add-credentials",
+   "title": "Microsoft Learn - Add and manage app credentials",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "Client secret lifetime is limited to two years (24 months) or less.",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e4",
+   "url": "https://learn.microsoft.com/en-us/entra/identity-platform/how-to-add-credentials",
+   "title": "Microsoft Learn - Add and manage app credentials",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "Microsoft recommends that you set an expiration value of less than 12 months.",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e5",
+   "url": "https://learn.microsoft.com/en-us/entra/identity-platform/how-to-add-credentials",
+   "title": "Microsoft Learn - Add and manage app credentials",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "Microsoft recommends that you use a certificate instead of a client secret before moving the application to a production environment.",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e6",
+   "url": "https://learn.microsoft.com/en-us/entra/identity-platform/reply-url",
+   "title": "Microsoft Learn - Redirect URI restrictions",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "Redirect URIs are case-sensitive and must match the case of the URL path of your running application.",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e7",
+   "url": "https://learn.microsoft.com/en-us/entra/identity-platform/reply-url",
+   "title": "Microsoft Learn - Redirect URI restrictions",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "Wildcard URIs are currently unsupported in app registrations configured to sign in personal Microsoft accounts and work or school accounts.",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e8",
+   "url": "https://learn.microsoft.com/en-us/entra/identity-platform/publisher-verification-overview",
+   "title": "Microsoft Learn - Publisher verification",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "Developers who have already met these requirements can be verified in minutes.",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e9",
+   "url": "https://learn.microsoft.com/en-us/entra/identity-platform/publisher-verification-overview",
+   "title": "Microsoft Learn - Publisher verification",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "The developer must have a Partner One ID for a valid Microsoft AI Cloud Partner Program account that has completed the verification process.",
+   "official": true,
+   "quote_check": "unchecked"
+  },
+  {
+   "id": "e10",
+   "url": "https://learn.microsoft.com/en-us/entra/identity-platform/publisher-verification-overview",
+   "title": "Microsoft Learn - Publisher verification",
+   "retrieved_at": "2026-10-20",
+   "excerpt": "a warning appears on the consent screen",
+   "official": true,
+   "quote_check": "unchecked"
+  }
+ ],
+ "tested_log": [],
+ "last_verified": "2026-10-20",
+ "uncertainties": [
+  "Time to verify the Microsoft AI Cloud Partner Program account is not stated.",
+  "Admin consent flows and which Graph permissions require admin consent were not covered in this pass.",
+  "No hands-on test logged yet."
+ ]
+}

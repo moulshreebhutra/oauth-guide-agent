@@ -1,0 +1,95 @@
+import { assertSafeUrl } from "./safety";
+
+const UA = "Mozilla/5.0 (compatible; OAuthGuideAgent/0.1; research bot for a take-home demo)";
+const MAX_BYTES = 1_500_000;
+const MAX_TEXT = 40_000;
+
+export function htmlToText(html: string): { title: string; text: string } {
+  const title = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "").replace(/\s+/g, " ").trim();
+  const text = html
+    .replace(/<(script|style|noscript|svg|nav|footer|header)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<br\s*\/?>|<\/(p|div|li|h[1-6]|tr)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&rsquo;|&lsquo;/g, "'")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s*\n+/g, "\n")
+    .trim();
+  return { title, text };
+}
+
+/** Fetch with SSRF checks on every redirect hop, size and time caps. */
+export async function fetchPage(url: string): Promise<{ url: string; title: string; text: string; status: number }> {
+  let current = (await assertSafeUrl(url)).toString();
+  for (let hop = 0; hop < 4; hop++) {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 12_000);
+    const res = await fetch(current, { redirect: "manual", signal: ctl.signal, headers: { "user-agent": UA, accept: "text/html,application/json;q=0.9,*/*;q=0.5" } }).finally(() => clearTimeout(t));
+    if (res.status >= 300 && res.status < 400 && res.headers.get("location")) {
+      current = (await assertSafeUrl(new URL(res.headers.get("location")!, current).toString())).toString();
+      continue;
+    }
+    const ct = res.headers.get("content-type") ?? "";
+    if (!/text|json|xml/.test(ct)) throw new Error(`unsupported content-type ${ct}`);
+    const buf = await res.arrayBuffer();
+    const raw = new TextDecoder().decode(buf.slice(0, MAX_BYTES));
+    const { title, text } = /html/.test(ct) ? htmlToText(raw) : { title: current, text: raw };
+    return { url: current, title, text: text.slice(0, MAX_TEXT), status: res.status };
+  }
+  throw new Error("too many redirects");
+}
+
+/** Web search through DuckDuckGo's HTML endpoint (no key needed). Best effort; may be blocked. */
+export async function searchWeb(query: string): Promise<{ title: string; url: string }[]> {
+  const res = await fetch("https://html.duckduckgo.com/html/?q=" + encodeURIComponent(query), { headers: { "user-agent": UA } });
+  if (!res.ok) throw new Error(`search failed ${res.status}`);
+  const html = await res.text();
+  const out: { title: string; url: string }[] = [];
+  const re = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) && out.length < 8) {
+    let href = m[1].replace(/&amp;/g, "&");
+    const u = href.match(/[?&]uddg=([^&]+)/);
+    if (u) href = decodeURIComponent(u[1]);
+    if (href.startsWith("//")) href = "https:" + href;
+    out.push({ title: m[2].replace(/<[^>]+>/g, "").trim(), url: href });
+  }
+  return out;
+}
+
+/** OAuth/OIDC discovery documents are machine-readable facts about endpoints, grant types and scopes. */
+export async function probeOAuthDiscovery(domain: string) {
+  const host = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  const paths = ["/.well-known/openid-configuration", "/.well-known/oauth-authorization-server"];
+  const found: { url: string; title: string; text: string }[] = [];
+  for (const p of paths) {
+    try {
+      const r = await fetchPage(`https://${host}${p}`);
+      if (r.status === 200 && r.text.includes("{")) found.push({ url: r.url, title: `OAuth discovery document (${host})`, text: r.text });
+    } catch {
+      /* not published */
+    }
+  }
+  return found;
+}
+
+/** Composio's managed-auth flag for a toolkit. Needs COMPOSIO_API_KEY; response shape is unverified, so we only report what we can read. */
+export async function checkComposioManaged(slug: string): Promise<{ status: "yes" | "no" | "unknown"; note: string }> {
+  const key = process.env.COMPOSIO_API_KEY;
+  if (!key) return { status: "unknown", note: "COMPOSIO_API_KEY not configured on this server." };
+  try {
+    const res = await fetch(`https://backend.composio.dev/api/v3.1/toolkits/${encodeURIComponent(slug)}`, { headers: { "x-api-key": key } });
+    if (res.status === 404) return { status: "unknown", note: `No Composio toolkit named '${slug}' was found.` };
+    if (!res.ok) return { status: "unknown", note: `Composio API returned ${res.status}.` };
+    const j: any = await res.json();
+    const schemes = j.composio_managed_auth_schemes ?? j.composioManagedAuthSchemes;
+    if (Array.isArray(schemes)) return schemes.length ? { status: "yes", note: `Composio API lists managed auth schemes: ${schemes.join(", ")}.` } : { status: "no", note: "Composio API lists no managed auth schemes for this toolkit." };
+    return { status: "unknown", note: "Composio toolkit found but the managed-auth field was not present in the response." };
+  } catch (e: any) {
+    return { status: "unknown", note: `Composio lookup failed: ${e.message}` };
+  }
+}
