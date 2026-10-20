@@ -70,6 +70,21 @@ async function callBedrock(prompt: string, ms: number, temperature: number): Pro
   return String(t);
 }
 
+/** xAI Grok (OpenAI-compatible endpoint). Model is set with XAI_MODEL. */
+async function callXai(prompt: string, ms: number, temperature: number): Promise<string> {
+  const res = await fetch("https://api.x.ai/v1/chat/completions", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${process.env.XAI_API_KEY}` },
+    body: JSON.stringify({ model: process.env.XAI_MODEL || "grok-4", temperature, max_tokens: 900, messages: [{ role: "user", content: prompt }] }),
+    signal: AbortSignal.timeout(ms),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 160)}`);
+  const j: any = await res.json();
+  const t = j?.choices?.[0]?.message?.content;
+  if (!t) throw new Error("empty answer");
+  return String(t);
+}
+
 export async function generate(
   prompt: string,
   opts: { json?: boolean; timeoutMs?: number; temperature?: number; models?: string[]; deadlineMs?: number; race?: boolean; fast?: boolean } = {},
@@ -91,6 +106,7 @@ export async function generate(
   })();
   if (process.env.ANTHROPIC_API_KEY) paid.push(twice("claude", (ms) => callAnthropic(prompt, ms, opts.temperature ?? 0.2)));
   if (process.env.AWS_BEARER_TOKEN_BEDROCK) paid.push(twice("bedrock", (ms) => callBedrock(prompt, ms, opts.temperature ?? 0.2)));
+  if (process.env.XAI_API_KEY) paid.push(twice("grok", (ms) => callXai(prompt, ms, opts.temperature ?? 0.2)));
   if (paid.length) {
     try { return await Promise.any(paid); }
     catch (e) { primaryErr = ((e as AggregateError).errors ?? []).map((x: any) => x.message).join(" | "); }
@@ -190,4 +206,4 @@ export async function generate(
 }
 
 /** True when any text model is configured. */
-export const hasModel = () => !!(process.env.ANTHROPIC_API_KEY || process.env.AWS_BEARER_TOKEN_BEDROCK || process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY || process.env.OPENROUTER_API_KEY);
+export const hasModel = () => !!(process.env.ANTHROPIC_API_KEY || process.env.AWS_BEARER_TOKEN_BEDROCK || process.env.XAI_API_KEY || process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY || process.env.OPENROUTER_API_KEY);
