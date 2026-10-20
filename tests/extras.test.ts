@@ -110,3 +110,5 @@ test("repairDraft fixes labels but not facts", () => {
   assert.equal(d.steps[0].tag, "reported");
   assert.equal(d.generated_by, "agent");
 });
+
+test("skill: brackets are for passage ids only", () => { assert.match(skillText("x"), /Square brackets are ONLY for passage ids/); });

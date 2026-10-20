@@ -43,7 +43,7 @@ Short answer: one or two sentences that directly answer the question, with the k
 Likely, from general knowledge (not checked against the pages): add this single last line ONLY when the sources leave real gaps. Give the usual ordering of steps. No numbers, fees, dates or limits in it.`;
 
 /** Link policy. The interface turns [id] into a link to the page or guide behind it. */
-export const LINKS = `LINKS: cite with the passage id in square brackets, one id per bracket, like [w1#3] or [meta#4]. Never write a URL yourself and never cite an id that is not in the passages. Prefer official-docs passages over community ones; when only community sources exist, say "reported, not official".`;
+export const LINKS = `LINKS: cite with the passage id in square brackets, one id per bracket, like [w1#3] or [meta#4]. Square brackets are ONLY for passage ids: never write "[Not stated in the pages we read]" or any other text in brackets. Never write a URL yourself and never cite an id that is not in the passages. Prefer official-docs passages over community ones; when only community sources exist, say "reported, not official".`;
 
 /** Question-specific moves, chosen by a simple match on the question. */
 export function questionMoves(q: string): string {

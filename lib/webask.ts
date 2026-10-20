@@ -103,7 +103,10 @@ export async function researchApp(app: string, question: string, budgetMs = 20_0
     }
   }
   const second = ((await Promise.all(follow.slice(0, 5).map((u) => readOne(u, 8_000)))).filter(Boolean) as { url: string; title: string; text: string; links: string[] }[]);
-  const pages = [...first, ...second].map((p, i) => ({ i, ...p }));
+  // keep only pages that are about this app: a name like "France" must not pull in unrelated OAuth pages
+  const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const aboutApp = (p: { url: string; title: string; text: string }) => p.url.toLowerCase().includes(slug) || new RegExp(`\\b${esc(app)}\\b`, "i").test(`${p.title} ${p.text.slice(0, 6000)}`);
+  const pages = [...first, ...second].filter(aboutApp).map((p, i) => ({ i, ...p }));
   steps.push(`read ${first.length} page(s)` + (second.length ? ` + followed ${second.length} link(s)` : ""));
 
   // 4. chunk and rank against the question

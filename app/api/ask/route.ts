@@ -38,6 +38,9 @@ export async function POST(req: Request) {
   const quick = phase === "quick";
   // quick: keyword search only, no network call, answers in milliseconds. write: hybrid retrieval + the model.
   const GENERAL_NOTE = "Not from our guides: this is the AI's general knowledge, so it may be out of date and nothing here is tagged or sourced. For a researched, quote-checked guide, use the live agent.";
+  // a sentence that is not about connecting or registering an app is out of scope: say so, do not research "France" as if it were an app
+  const onTopic = question.split(/\s+/).length < 4 || /\b(oauth2?|auth|authori[sz]\w*|authenticat\w*|api|apis|app|apps|integrat\w*|connect\w*|register\w*|scopes?|tokens?|review\w*|approv\w*|verif\w*|developers?|login|sign.?in|sdk|webhooks?|permissions?|credentials?|redirect\w*|client|composio|marketplace|install\w*|agents?|toolkits?|sso|secret|keys?)\b/i.test(question);
+  if (!onTopic) return Response.json({ mode: "none", offTopic: true, answer: null, passages: [], message: "This tool answers questions about connecting an app with OAuth: how to register it, whether the provider reviews it, how long that takes, and what an agent can do. Try asking about one of those, for example: How long does Google verification take?" });
   const noGuides = !!other || !search(question, { k: 1, slug }).length;
   if (noGuides) {
     if (quick) return Response.json({ mode: "none", general: true, answer: null, passages: [], message: "Not in our library. Researching it on the web now…", app: other ? other[0].toUpperCase() + other.slice(1) : extractApp(question) ?? null });
