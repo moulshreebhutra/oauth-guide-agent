@@ -27,7 +27,7 @@ export function About() {
             <h3>Why I am a good fit</h3>
             <ul>
               <li><b>I have owned a product through integrations and AI.</b> At Vudio.ai I worked across three roles as it grew from a video-commerce tool into an AI marketing platform with 10+ modules, including Shopify-connected widgets and the product side of its Campaign agent.</li>
-              <li><b>Results I can point to.</b> Revenue grew about 7x ($30K to $0.2M) over two years. I redesigned the shoppable widgets module, lifting adoption by 15 points, and rebuilt onboarding so setup turnaround dropped from 7 days to 3.</li>
+              <li><b>Results I can point to.</b> I contributed to about 7x ARR growth ($30K to $0.2M) over two years through 0 to 1 launches. I redesigned Shoppable Widgets and built self-serve onboarding: activation rose about 74% and turnaround fell from 13 days to 4. I led AI Studio from 0 to 1 (ARPU up 5% among fashion brands) and built an analytics dashboard that lifted free-to-paid conversion about 10%.</li>
               <li><b>I build to understand.</b> I have a computer science degree and I prototype my own ideas, so I can talk to engineers about trade-offs. Top 3 of 200+ in NextLeap&apos;s Product Management Fellowship.</li>
               <li><b>I write down what I do not know.</b> This project lists its own gaps, including that the hands-on registrations are still being run.</li>
             </ul>

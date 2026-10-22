@@ -7,5 +7,5 @@ export const ABOUT = {
   portfolio: "https://moulshree-portfolio.vercel.app",
   linkedin: "https://www.linkedin.com/in/moulshree-bhutra-159a99118",
   repo: "https://github.com/moulshreebhutra/oauth-guide-agent",
-  resumeUrl: "", // e.g. "/Moulshree_Bhutra_PM_Resume.pdf" after adding the PDF to /public
+  resumeUrl: "https://drive.google.com/file/d/1GHfC6ox5rxPm594xy54xIWD2Hj_x71h_/view",
 };
