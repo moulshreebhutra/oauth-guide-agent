@@ -3,6 +3,7 @@ import Link from "next/link";
 import "@fontsource-variable/geist";
 import "@fontsource-variable/jetbrains-mono";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next";
 import { About } from "@/components/About";
 import { ABOUT } from "@/lib/about";
 
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         </nav>
         <div id="main">{children}</div>
+        <Analytics />
         <About />
         <footer>
           <div className="wrap">
